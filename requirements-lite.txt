@@ -1,0 +1,6 @@
+# AIO Downloader - Lite Requirements (without Spotify)
+# =====================================================
+
+# Core dependencies
+yt-dlp>=2025.11.12
+requests>=2.32.5
