@@ -111,5 +111,5 @@ $RECYCLE.BIN/
 
 # Keep asset folder but not its contents (except .txt)
 asset/*
-!asset/*.txt
+!asset/teto-2.txt
 !asset/.gitkeep
