@@ -257,10 +257,10 @@ def main_menu():
         elif choice == "5":
             menu_settings()
 
-        elif choice == "5":
+        elif choice == "6":
             menu_about()
 
-        elif choice == "5":
+        elif choice == "7":
             save_config()
             print_neutral("Keluar.", "[-]")
             break
