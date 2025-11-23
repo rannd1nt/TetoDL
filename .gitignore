@@ -1,5 +1,3 @@
-# AIO Downloader .gitignore
-
 # ==== Python ====
 # Byte-compiled / optimized / DLL files
 __pycache__/
