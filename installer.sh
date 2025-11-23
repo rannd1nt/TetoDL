@@ -1,5 +1,5 @@
 #!/bin/bash
-# AIO Downloader - Auto Installer for Termux
+# TetoDL - Auto Installer for Termux
 # by rannd1nt
 
 set -e
