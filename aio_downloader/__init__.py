@@ -1,0 +1,7 @@
+"""
+AIO Downloader Package
+Main package for modular downloader
+"""
+
+__version__ = "1.0.0"
+__author__ = "rannd1nt"

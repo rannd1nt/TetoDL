@@ -1,0 +1,14 @@
+# AIO Downloader - Full Requirements (with Spotify)
+# =====================================================
+# PERINGATAN: Instalasi spotdl di Android akan sangat lama!
+# Estimasi: 30-60 menit karena harus compile Rust
+# Jika tidak butuh Spotify, gunakan requirements-lite.txt
+# =====================================================
+
+# Core dependencies
+yt-dlp>=2025.11.12
+requests>=2.32.5
+
+# Spotify support (OPTIONAL)
+# Membutuhkan: pkg install rust -y
+spotdl>=4.4.3
