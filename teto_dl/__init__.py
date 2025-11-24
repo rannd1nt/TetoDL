@@ -1,6 +1,5 @@
 """
-AIO Downloader Package
-Main package for modular downloader
+TetoDL Downloader Package
 """
 
 __version__ = "1.0.0"
