@@ -4,5 +4,5 @@
 # Core dependencies
 yt-dlp>=2025.11.12
 requests>=2.32.5
-spotdl>=3.9.8
+spotdl>=3.9.6
 mutagen>=1.46.1
