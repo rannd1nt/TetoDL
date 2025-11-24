@@ -1,4 +1,4 @@
-# AIO Downloader - Lite Requirements (without Spotify)
+# TetoDL Downloader - Lite Requirements (without Spotify)
 # =====================================================
 
 # Core dependencies
