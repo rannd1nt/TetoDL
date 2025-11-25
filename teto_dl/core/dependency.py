@@ -5,10 +5,11 @@ import os
 import sys
 import subprocess
 import importlib.util
+import time
 from ..constants import RuntimeConfig
 from ..utils.colors import (
     print_process, print_success, print_error, 
-    print_info, Colors
+    print_info, print_neutral, Colors
 )
 from .config import save_config
 
@@ -87,7 +88,7 @@ def check_python_package(package_name, import_name=None):
 def verify_core_dependencies():
     """Verify all core dependencies (required)"""
     print_process("Verifying core dependencies...")
-    
+    time.sleep(2)
     checks = {
         'python': check_python_version(),
         'ffmpeg': check_ffmpeg(),
@@ -101,16 +102,16 @@ def verify_core_dependencies():
         print_success("All core dependencies verified!")
     else:
         print_error("Some core dependencies are missing")
-        print_info("\nTo install missing dependencies:")
+        print_info("To install missing dependencies:")
         
         if not checks['ffmpeg']:
-            print_info("  pkg install ffmpeg -y")
+            print_neutral("pkg install ffmpeg -y")
         
         if not checks['yt-dlp']:
-            print_info("  pip install yt-dlp")
+            print_neutral("pip install yt-dlp")
         
         if not checks['requests']:
-            print_info("  pip install requests")
+            print_neutral("pip install requests")
     
     return all_passed
 
@@ -118,6 +119,7 @@ def verify_core_dependencies():
 def verify_spotify_dependency():
     """Verify Spotify dependency (optional)"""
     print_process("Checking Spotify support...")
+    time.sleep(1.25)
     
     if check_python_package('spotdl'):
         print_success("Spotify support available")
@@ -147,6 +149,7 @@ def verify_dependencies():
     
     print_info("Verifying dependencies for the first time...")
     print_info("This only happens once.\n")
+    time.sleep(1.5)
     
     # Verify core dependencies
     core_ok = verify_core_dependencies()
@@ -159,19 +162,19 @@ def verify_dependencies():
     print()
     
     # Update RuntimeConfig
-    RuntimeConfig.SPOTIFY_AVAILABLE = spotify_ok
+    RuntimeConfig.SPOTIFY_AVAILABLE = spotify_ok # pyright: ignore[reportAttributeAccessIssue]
     
     # Consider verified if either:
     # 1. All dependencies OK (including Spotify)
     # 2. Core OK but Spotify not available (acceptable)
     if core_ok:
-        RuntimeConfig.VERIFIED_DEPENDENCIES = True
+        RuntimeConfig.VERIFIED_DEPENDENCIES = True # pyright: ignore[reportAttributeAccessIssue]
         save_config()
         
         print_success("Verification complete!")
         
         if not spotify_ok:
-            print_info("\nNote: Spotify menu akan hidden karena spotdl tidak terinstall")
+            print_info("Note: Spotify menu akan di disable karena spotdl tidak terinstall")
         
         print()
         input("Tekan Enter untuk melanjutkan...")
@@ -180,9 +183,8 @@ def verify_dependencies():
         RuntimeConfig.VERIFIED_DEPENDENCIES = False
         save_config()
         
-        print_error("\nVerification gagal - core dependencies tidak lengkap")
-        print_info("Silakan install dependencies yang missing, lalu jalankan lagi")
-        print()
+        print_error("Verification failed - core dependencies tidak lengkap")
+        print_info("Silakan install missing dependencies, lalu jalankan lagi\n")
         input("Tekan Enter untuk keluar...")
         return False
 

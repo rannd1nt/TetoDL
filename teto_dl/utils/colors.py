@@ -5,6 +5,7 @@ import os
 
 class Colors:
     """ANSI color codes"""
+    RESET = '\033[0m'
     BLUE = '\033[94m'
     LIGHT_GREEN = '\033[92m'
     GREEN = '\033[92m'
@@ -12,7 +13,13 @@ class Colors:
     RED = '\033[91m'
     WHITE = '\033[0m'
     BOLD = '\033[1m'
+    CYAN = '\033[96m'
+    LIGHT_GRAY = '\033[37m'
 
+    BOLD = '\033[1m'
+
+def bold_key(txt: str, ansi=Colors.CYAN):
+    return f'{ansi}{Colors.BOLD}{txt}{Colors.RESET}'
 
 def print_process(message):
     """Print untuk proses/progress (biru)"""

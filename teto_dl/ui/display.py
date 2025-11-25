@@ -3,17 +3,28 @@ Display utilities and ASCII art
 """
 import time
 import os
-from ..utils.colors import print_error
+from ..utils.colors import print_error, clear, Colors as C
 
 
 def show_ascii(filename):
     """Display ASCII art from txt file"""
+    header = r'''
+  ______     __        ____  __ 
+ /_  __/__  / /_____  / __ \/ / 
+  / / / _ \/ __/ __ \/ / / / /  
+ / / /  __/ /_/ /_/ / /_/ / /___
+/_/  \___/\__/\____/_____/_____/
+                                
+'''
     try:
         with open(f"asset/{filename}.txt", "r", encoding="utf-8") as f:
             print(f.read())
     except Exception:
         print_error("Gagal menampilkan ASCII art.")
         time.sleep(1)
+        clear()
+        print(f'{(C.CYAN)}{header}{C.RESET}')
+        
 
 
 def visit_instagram():

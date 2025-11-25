@@ -6,14 +6,15 @@ import sys
 import time
 import threading
 from ..constants import RuntimeConfig, DEFAULT_MUSIC_ROOT, DEFAULT_VIDEO_ROOT
-from ..utils.colors import (
+from ..utils.i18n import get_text as _
+from ..utils.colors import (    
     print_process, print_info, print_success, 
-    print_error, print_neutral, Colors
+    print_error, print_neutral, clear, Colors as C
 )
 from ..core.config import (
     initialize_config, save_config, reset_to_defaults,
     toggle_simple_mode, toggle_skip_existing, toggle_video_resolution,
-    clear_cache, clear_history
+    clear_cache, clear_history, get_language_name, toggle_language
 )
 from ..core.history import display_history, load_history
 from ..core.dependency import reset_verification
@@ -36,12 +37,12 @@ def run_in_thread(fn, *args):
 def menu_folder():
     """Menu for managing root download folders"""
     while True:
-        os.system("clear")
-        print(f"\n{(Colors.LIGHT_GREEN)}=== Root Download Folder Settings ===\n")
-        print(f"{(Colors.YELLOW)}1) Music root: {(Colors.GREEN)}{RuntimeConfig.MUSIC_ROOT}")
-        print(f"{Colors.YELLOW}2) Video root: {(Colors.GREEN)}{RuntimeConfig.VIDEO_ROOT}\n")
-        print(f"{(Colors.YELLOW)}3) Reset ke default")
-        print(f"{Colors.YELLOW}4) Kembali{(Colors.RED)}\n")
+        clear()
+        print(f"\n{(C.LIGHT_GREEN)}=== Root Download Folder Settings ===\n")
+        print(f"{(C.YELLOW)}1) Music root: {(C.GREEN)}{RuntimeConfig.MUSIC_ROOT}")
+        print(f"{C.YELLOW}2) Video root: {(C.GREEN)}{RuntimeConfig.VIDEO_ROOT}\n")
+        print(f"{(C.YELLOW)}3) Reset ke default")
+        print(f"{C.YELLOW}4) Kembali{(C.RED)}\n")
 
         choice = input("Pilihan > ").strip()
 
@@ -79,54 +80,67 @@ def menu_folder():
 
 
 def menu_settings():
-    """Menu for app settings"""
+    """Menu for app settings - WITH I18N"""
     while True:
-        os.system("clear")
-        print(f"\n{(Colors.LIGHT_GREEN)}======== TetoDL Settings ========\n")
+        clear()
+        lang_name = get_language_name(RuntimeConfig.LANGUAGE)
+        print(f"\n{C.LIGHT_GREEN}======== {_('menu.settings.title')} ========\n")
         
-        simple_mode_status = f"{Colors.GREEN}Aktif" if RuntimeConfig.SIMPLE_MODE else f"{Colors.RED}Nonaktif"
-        print(f"{Colors.YELLOW}1) Simple Mode: {simple_mode_status}{Colors.WHITE}")
-        print("→ Langsung download ke root folder, tanpa pilih subfolder\n")
+        # Simple Mode
+        simple_status = _('common.active') if RuntimeConfig.SIMPLE_MODE else _('common.inactive')
+        print(f"{C.YELLOW}1) {_('menu.settings.simple_mode', status=simple_status)}{C.WHITE}")
+        print(f"{_('menu.settings.simple_mode_desc')}\n")
         
-        skip_status = f"{Colors.GREEN}Aktif" if RuntimeConfig.SKIP_EXISTING_FILES else f"{Colors.RED}Nonaktif"
-        print(f"{Colors.YELLOW}2) Skip Existing Files: {skip_status}{Colors.WHITE}")
-        print("→ Skip file yang sudah ada di folder tujuan\n")
+        # Skip Existing
+        skip_status = _('common.active') if RuntimeConfig.SKIP_EXISTING_FILES else _('common.inactive')
+        print(f"{C.YELLOW}2) {_('menu.settings.skip_existing', status=skip_status)}{C.WHITE}")
+        print(f"{_('menu.settings.skip_existing_desc')}\n")
         
-        print(f"{Colors.YELLOW}3) Max Video Resolution: {Colors.GREEN}{RuntimeConfig.MAX_VIDEO_RESOLUTION}{Colors.WHITE}")
-        print("→ Batas maksimal resolusi video (bukan fixed res)")
-        print("→ Cek & pakai kualitas terbaik sampai batas ini\n")
+        # Max Resolution
+        print(f"{C.YELLOW}3) {_('menu.settings.max_resolution', resolution=RuntimeConfig.MAX_VIDEO_RESOLUTION)}{C.WHITE}")
+        print(f"{_('menu.settings.max_resolution_desc_1')}")
+        print(f"{_('menu.settings.max_resolution_desc_2')}\n")
         
-        print(f"{Colors.YELLOW}4) Download History{Colors.WHITE}")
-        print("→ Lihat riwayat download sebelumnya\n")
+        # History
+        print(f"{C.YELLOW}4) {_('menu.settings.history')}{C.WHITE}")
+        print(f"{_('menu.settings.history_desc')}\n")
         
-        print(f"{Colors.YELLOW}5) Clear Cache{Colors.WHITE}")
-        print("→ Hapus cache metadata\n")
+        # Clear Cache
+        print(f"{C.YELLOW}5) {_('menu.settings.clear_cache')}{C.WHITE}")
+        print(f"{_('menu.settings.clear_cache_desc')}\n")
         
-        print(f"{Colors.YELLOW}6) Clear History{Colors.WHITE}")
-        print("→ Hapus riwayat download\n")
+        # Clear History
+        print(f"{C.YELLOW}6) {_('menu.settings.clear_history')}{C.WHITE}")
+        print(f"{_('menu.settings.clear_history_desc')}\n")
         
-        print(f"{Colors.YELLOW}7) Reset Dependency Verification{Colors.WHITE}")
-        print("→ Verify ulang dependencies saat run berikutnya\n")
+        # Reset Verification
+        print(f"{C.YELLOW}7) {_('menu.settings.reset_verification')}{C.WHITE}")
+        print(f"{_('menu.settings.reset_verification_desc')}\n")
+        
+        # Language Setting
+        print(f"{C.YELLOW}8) {_('menu.settings.language', lang=lang_name)}{C.WHITE}")
+        print(f"{_('menu.settings.language_desc')}\n")
+        
+        # Back
+        print(f"{C.YELLOW}9) {_('common.back')}\n{C.WHITE}")
 
-        print(f"{Colors.YELLOW}8) Kembali\n{Colors.WHITE}")
-
-        choice = input("Pilihan > ").strip()
+        choice = input(f"{_('menu.main.choose')} > ").strip()
 
         if choice == "1":
             toggle_simple_mode(not RuntimeConfig.SIMPLE_MODE)
-            status = "diaktifkan" if RuntimeConfig.SIMPLE_MODE else "dinonaktifkan"
-            print_success(f"Simple Mode {status}.")
+            status = _('config.simple_mode_enabled') if RuntimeConfig.SIMPLE_MODE else _('config.simple_mode_disabled')
+            print_success(status)
             time.sleep(1)
 
         elif choice == "2":
             toggle_skip_existing(not RuntimeConfig.SKIP_EXISTING_FILES)
-            status = "diaktifkan" if RuntimeConfig.SKIP_EXISTING_FILES else "dinonaktifkan"
-            print_success(f"Skip Existing Files {status}.")
-            time.sleep(1)   
+            status = _('config.skip_existing_enabled') if RuntimeConfig.SKIP_EXISTING_FILES else _('config.skip_existing_disabled')
+            print_success(status)
+            time.sleep(1)
 
         elif choice == "3":
             new_resolution = toggle_video_resolution()
-            print_success(f"Max Video Resolution diubah ke: {new_resolution}")
+            print_success(_('config.resolution_changed', resolution=new_resolution))
             time.sleep(1)
 
         elif choice == "4":
@@ -134,21 +148,21 @@ def menu_settings():
             wait_and_clear_prompt()
 
         elif choice == "5":
-            confirm = input("Yakin ingin menghapus cache? (y/n): ").strip().lower()
-            if confirm == 'y':
+            confirm = input(_('config.confirm_clear_cache')).strip().lower()
+            if confirm == _('common.yes'):
                 if clear_cache():
-                    print_success("Cache berhasil dihapus")
+                    print_success(_('config.cache_deleted'))
                 else:
-                    print_info("Cache sudah kosong atau gagal dihapus")
+                    print_info(_('config.cache_empty'))
             time.sleep(1)
 
         elif choice == "6":
-            confirm = input("Yakin ingin menghapus history? (y/n): ").strip().lower()
-            if confirm == 'y':
+            confirm = input(_('config.confirm_clear_history')).strip().lower()
+            if confirm == _('common.yes'):
                 if clear_history():
-                    print_success("History berhasil dihapus")
+                    print_success(_('config.history_deleted'))
                 else:
-                    print_info("History sudah kosong atau gagal dihapus")
+                    print_info(_('config.history_empty'))
             time.sleep(1)
 
         elif choice == "7":
@@ -156,27 +170,33 @@ def menu_settings():
             time.sleep(1)
 
         elif choice == "8":
+            # Toggle Language
+            new_lang = toggle_language()
+            lang_name = get_language_name(new_lang)
+            print_success(_('config.language_changed', lang=lang_name))
+            time.sleep(2)
+
+        elif choice == "9":
             return
 
         else:
-            print_error("Input tidak valid!")
+            print_error(_('error.invalid_input'))
             time.sleep(0.6)
-
 
 def menu_about():
     """About menu"""
     while True:
-        os.system("clear")
-        print(f"\n{Colors.LIGHT_GREEN}> TetoDL v1.0, by rannd1nt <{Colors.WHITE}")
-        print("The author kins Kasane Teto\n")
-        print("1) View documentation >")
-        print("2) Visit author's GitHub >")
-        print("3) Visit author's Instagram >")
-        print("4) Kembali")
+        clear()
+        print(f"\n{C.LIGHT_GREEN}>{_('about.title')}<{C.WHITE}")
+        print(f"{_('about.subtittle')}\n")
+        print(f"1) {_('about.documentation')}")
+        print(f"2) {_('about.github')}")
+        print(f"3) {_('about.instagram')}")
+        print(f"4 {_('common.back')}")
         choice = input("\nPilihan > ").strip()
 
         if choice == "1":
-            print_info("Dokumentasi belum tersedia.")
+            print_info(_('error.document_unavailable'))
             time.sleep(1)
         elif choice == "2":
             visit_github()
@@ -188,67 +208,67 @@ def menu_about():
             print_error("Input tidak valid!")
             time.sleep(0.6)
 
-
 def main_menu():
-    """Main menu loop"""
+    """Main menu loop - WITH I18N"""
     # Initialize configuration
     initialize_config()
     load_history()
     
-    # Dependency verification (only on first run)
-    if not RuntimeConfig.VERIFIED_DEPENDENCIES:
-        from ..core.dependency import verify_dependencies
-        if not verify_dependencies():
-            # Core dependencies not met, exit
-            sys.exit(1)
+    # Dependency verification
+    # if not RuntimeConfig.VERIFIED_DEPENDENCIES:
+    #     from ..core.dependency import verify_dependencies
+    #     if not verify_dependencies():
+    #         sys.exit(1)
     
     while True:
-        os.system("clear")
+        clear()
         show_ascii('teto-2')
-        print(f"{Colors.LIGHT_GREEN}\n=== TetoDL by rannd1nt {Colors.RED}(ft. Kasane Teto){(Colors.LIGHT_GREEN)} ==={Colors.WHITE}")
-        print("\nPilih:")
-        print("1) YouTube Audio/YouTube Music → MP3")
-        print(f"2) YouTube Video → MP4 (Max: {RuntimeConfig.MAX_VIDEO_RESOLUTION})")
+        print(f"{C.LIGHT_GREEN}\n=== {_('menu.main.title')} {C.RED}{_('menu.main.subtitle')}{C.LIGHT_GREEN} ==={C.WHITE}")
         
-        # Show Spotify menu only if available
+        print(f"\n{_('menu.main.choose')}")
+        print(f"1) {_('menu.main.youtube_audio')}")
+        print(f"2) {_('menu.main.youtube_video', resolution=RuntimeConfig.MAX_VIDEO_RESOLUTION)}")
+        
+        # Spotify menu
         if RuntimeConfig.SPOTIFY_AVAILABLE:
-            print("3) Spotify → MP3")
+            print(f"3) {_('menu.main.spotify')}")
         else:
-            print(f"3) Spotify → MP3 {Colors.RED}(tidak tersedia){Colors.WHITE}")
-        print(f"4) Ubah Root Folder Download")
-        print(f"5) Pengaturan")
-        print(f"6) Tentang")
-        print(f"7) Keluar\n")
+            print(f"3) {_('menu.main.spotify_unavailable')}")
         
-        choice = input("Pilihan > ").strip()
+        print(f"4) {_('menu.main.root_folder')}")
+        print(f"5) {_('menu.main.settings')}")
+        print(f"6) {_('menu.main.about')}")
+        print(f"7) {_('menu.main.exit')}\n")
+        
+        choice = input(f"{_('menu.main.choose')} > ").strip()
 
         if choice == "1":
-            url = input("Link YouTube/YouTube Music: ").strip()
+            url = input(f"{_('menu.main.youtube_audio')}: ").strip()
             if RuntimeConfig.SIMPLE_MODE:
-                print_process("Simple Mode: Memulai download...")
+                print_process(_('download.youtube.simple_mode_start', type='audio'))
             t = run_in_thread(download_audio_youtube, url)
             t.join()
             wait_and_clear_prompt()
 
         elif choice == "2":
-            url = input("Link YouTube: ").strip()
+            url = input(f"{_('menu.main.youtube_video')}: ").strip()
             if RuntimeConfig.SIMPLE_MODE:
-                print_process("Simple Mode: Memulai download...")
+                print_process(_('download.youtube.simple_mode_start', type='video'))
             t = run_in_thread(download_video_youtube, url)
             t.join()
             wait_and_clear_prompt()
 
         elif choice == "3":
             if RuntimeConfig.SPOTIFY_AVAILABLE:
-                url = input("Link Spotify: ").strip()
+                url = input(f"{_('menu.main.spotify')}: ").strip()
                 if RuntimeConfig.SIMPLE_MODE:
-                    print_process("Simple Mode: Memulai download...")
+                    print_process(_('download.youtube.simple_mode_start', type='spotify'))
                 download_spotify(url)
                 wait_and_clear_prompt()
             else:
-                print_error("Spotify tidak tersedia!")
-                print_info("Install dengan: pip install spotdl")
-                print_info("Atau reset verification di menu Pengaturan")
+                print_error(_('download.spotify.not_available'))
+                print_info(_('download.spotify.install_instruction'))
+                print_info(_('download.spotify.reset_verification_hint'))
                 time.sleep(3.5)
 
         elif choice == "4":
@@ -262,9 +282,11 @@ def main_menu():
 
         elif choice == "7":
             save_config()
-            print_neutral("Keluar.", "[-]")
+            print_neutral(_('menu.main.exit'), "[-]")
             break
 
         else:
-            print_error("Input tidak valid!")
+            print_error(_('error.invalid_input'))
             time.sleep(0.6)
+
+

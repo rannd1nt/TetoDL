@@ -1,0 +1,226 @@
+{
+  "common": {
+    "yes": "y",
+    "no": "n",
+    "back": "Back",
+    "cancel": "Cancel",
+    "confirm": "Are you sure you want to {action}?",
+    "success": "{item} successfully {action}",
+    "failed": "{item} failed to {action}",
+    "active": "Active",
+    "inactive": "Inactive",
+    "available": "available",
+    "not_available": "not available",
+    "press_enter": "Press Enter to {action}...",
+    "loading": "Loading...",
+    "processing": "Processing...",
+    "downloading": "Downloading...",
+    "skipped": "Skipped",
+    "error": "Error",
+    "unknown": "Unknown",
+    "total": "Total"
+  },
+  
+  "menu": {
+    "main": {
+      "title": "TetoDL by rannd1nt",
+      "subtitle": "(ft. Kasane Teto)",
+      "choose": "Choose:",
+      "youtube_audio": "YouTube Audio/YouTube Music → MP3",
+      "youtube_video": "YouTube Video → MP4 (Max: {resolution})",
+      "spotify": "Spotify → MP3",
+      "spotify_unavailable": "Spotify → MP3 (unavailable)",
+      "root_folder": "Change Root Download Folder",
+      "settings": "Settings",
+      "about": "About",
+      "exit": "Exit"
+    },
+    
+    "settings": {
+      "title": "TetoDL Settings",
+      "simple_mode": "Simple Mode: {status}",
+      "simple_mode_desc": "→ Download directly to root folder without subfolder selection",
+      "skip_existing": "Skip Existing Files: {status}",
+      "skip_existing_desc": "→ Skip files that already exist in target folder",
+      "max_resolution": "Max Video Resolution: {resolution}",
+      "max_resolution_desc_1": "→ Maximum video resolution limit (not fixed res)",
+      "max_resolution_desc_2": "→ Check & use best quality up to this limit",
+      "history": "Download History",
+      "history_desc": "→ View previous download history",
+      "clear_cache": "Clear Cache",
+      "clear_cache_desc": "→ Clear metadata cache",
+      "clear_history": "Clear History",
+      "clear_history_desc": "→ Clear download history",
+      "reset_verification": "Reset Dependency Verification",
+      "reset_verification_desc": "→ Re-verify dependencies on next run",
+      "language": "Bahasa / Language: {lang}",
+      "language_desc": "→ Change application language"
+    },
+    
+    "root_folder": {
+      "title": "Root Download Folder Settings",
+      "music_root": "Music root: {path}",
+      "video_root": "Video root: {path}",
+      "reset": "Reset to default"
+    },
+    
+    "about": {
+      "title": "TetoDL v1.0, by rannd1nt",
+      "subtitle": "The author kins Kasane Teto",
+      "documentation": "View documentation >",
+      "github": "Visit author's GitHub >",
+      "instagram": "Visit author's Instagram >"
+    }
+  },
+  
+  "download": {
+    "youtube": {
+      "invalid_url": "Invalid YouTube/YouTube Music URL.",
+      "no_internet": "No internet connection.",
+      "detected": "{type} detected",
+      "yt_music_detected": "YouTube Music detected - Downloading with metadata and cover art...",
+      "thumbnail_crop": "Thumbnail will be cropped to square ratio 1:1...",
+      "yt_audio_plain": "Regular YouTube Audio - No metadata and cover art",
+      "extracting": "Extracting playlist content...",
+      "extracted": "Successfully extracted {count} {type}",
+      "found_playlist": "Found {count} {type} in playlist/album: {title}",
+      "simple_mode_start": "Simple Mode: Starting {type} download...",
+      "start_download": "Starting {type} download → {path}",
+      "checking_existing": "Checking existing file: {title}",
+      "file_exists": "File already exists, skipping: {title}",
+      "using_cache": "Using cache for: {title}",
+      "downloading_item": "Downloading: {title}",
+      "processing_cover": "Processing cover art...",
+      "embedding_cover": "Embedding cover art...",
+      "cover_success": "Cover art successfully embedded",
+      "cover_failed": "Failed to embed cover art to MP3",
+      "file_not_found": "MP3 file not found: {filename}",
+      "cover_process_failed": "Failed to process cover art",
+      "skip_cover": "Skipping cover art processing",
+      "max_resolution": "Max video resolution: {resolution}",
+      "progress": "Progress: {current}/{total}",
+      "downloading_url": "Downloading URL: {url} as {type}.",
+      "success": "Success: {title}",
+      "failed": "Failed: {title}",
+      "wait_delay": "Waiting {delay} seconds before next download...",
+      "summary": "Summary: {success} successful, {skipped} skipped, {failed} failed out of {total} {type}",
+      "failed_items": "{count} {type} failed to download",
+      "extract_failed": "Failed to extract content: {error}",
+      "error_downloading": "Error downloading {type}: {error}",
+      "complete": "Download successful: {title}",
+      "complete_metadata": "Download successful with metadata: {title}",
+      "cancelled": "Cancelled."
+    },
+    
+    "spotify": {
+      "invalid_url": "Invalid Spotify URL.",
+      "no_internet": "No internet connection or unstable connection.",
+      "detected": "Spotify {type} detected",
+      "classification_failed": "URL classification failed, unknown URL.",
+      "downloading": "Downloading...",
+      "success": "Spotify download complete.",
+      "failed": "Download failed.",
+      "spotdl_error": "Failed to run spotdl: {error}",
+      "not_available": "Spotify not available!",
+      "install_instruction": "Install with: pip install spotdl",
+      "reset_verification_hint": "Or reset verification in Settings menu"
+    },
+    
+    "folder": {
+      "select_location": "Select Save Location ({type})",
+      "root": "Root: {path}",
+      "create_new": "Create new subfolder",
+      "browse_system": "Browse and use system subfolders",
+      "save_to_root": "Save to root folder",
+      "enter_name": "New subfolder name: ",
+      "create_failed": "Failed to create folder: {error}",
+      "not_found": "Subfolder '{name}' not found, removing from config...",
+      "choose_again": "Please choose again."
+    },
+    
+    "navigation": {
+      "title": "Select Folder",
+      "current_location": "Current location:",
+      "go_up": "Go to previous folder",
+      "select_this": "Select this folder",
+      "cannot_read": "Cannot read folder: {error}",
+      "cannot_go_up_root": "Cannot go above root folder",
+      "cannot_go_up": "Cannot go higher"
+    }
+  },
+  
+  "history": {
+    "title": "Download History",
+    "empty": "No download history yet.",
+    "total_duration": "Total Duration: {duration}",
+    "entries": "entries"
+  },
+  
+  "dependency": {
+    "title": "TetoDL - First Run Setup",
+    "verifying": "Verifying dependencies for the first time...",
+    "once_only": "This only happens once.",
+    "core_verifying": "Verifying core dependencies...",
+    "python_version": "Python {version}",
+    "python_old": "Python {version} - Required: 3.8+",
+    "ffmpeg_version": "FFmpeg {version}",
+    "ffmpeg_not_found": "FFmpeg not found",
+    "package_installed": "{package} {version}",
+    "package_simple": "{package} (installed)",
+    "package_not_found": "{package} not found",
+    "core_success": "All core dependencies verified!",
+    "core_failed": "Some core dependencies are missing",
+    "install_missing": "To install missing dependencies:",
+    "install_ffmpeg": "  pkg install ffmpeg -y",
+    "install_ytdlp": "  pip install yt-dlp",
+    "install_requests": "  pip install requests",
+    "checking_spotify": "Checking Spotify support...",
+    "spotify_available": "Spotify support available",
+    "spotify_unavailable": "Spotify support not available (optional)",
+    "spotify_install": "Install with: pip install spotdl",
+    "spotify_warning": "WARNING: Installation may take 30-60 minutes on Termux",
+    "verification_complete": "Verification complete!",
+    "spotify_hidden": "Note: Spotify menu will be hidden because spotdl is not installed",
+    "verification_failed": "Verification failed - core dependencies incomplete",
+    "install_and_retry": "Please install missing dependencies, then run again",
+    "verification_reset": "Verification status reset",
+    "verify_next_run": "Program will verify again on next run"
+  },
+  
+  "config": {
+    "simple_mode_enabled": "Simple Mode enabled.",
+    "simple_mode_disabled": "Simple Mode disabled.",
+    "skip_existing_enabled": "Skip Existing Files enabled.",
+    "skip_existing_disabled": "Skip Existing Files disabled.",
+    "resolution_changed": "Max Video Resolution changed to: {resolution}",
+    "music_root_set": "Music root set to: {path}",
+    "video_root_set": "Video root set to: {path}",
+    "reset_default": "Reset to default.",
+    "cache_deleted": "Cache successfully deleted",
+    "cache_empty": "Cache already empty or failed to delete",
+    "history_deleted": "History successfully deleted",
+    "history_empty": "History already empty or failed to delete",
+    "confirm_clear_cache": "Are you sure you want to clear cache? (y/n): ",
+    "confirm_clear_history": "Are you sure you want to clear history? (y/n): ",
+    "ghost_folder_removed": "Removing ghost subfolder '{type}/{name}' from config",
+    "save_failed": "Failed to save config.",
+    "language_changed": "Language changed to: {lang}. Restart application to see changes."
+  },
+  
+  "media": {
+    "scanning": "Starting media scan...",
+    "scan_complete": "Media scan complete...",
+    "scan_failed": "Failed to scan media: {error}",
+    "crop_failed": "FFmpeg crop failed: {error}",
+    "crop_error": "Error cropping thumbnail: {error}",
+    "thumbnail_error": "Error processing thumbnail: {error}",
+    "embed_error": "Error embedding thumbnail: {error}",
+    "temp_clean_error": "Error cleaning temp files: {error}"
+  },
+  
+  "error": {
+    "invalid_input": "Invalid input!",
+    "file_check_failed": "Error checking existing files: {error}",
+    "documentation_unavailable": "Documentation not yet available."
+  }
+}

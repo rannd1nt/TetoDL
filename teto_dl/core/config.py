@@ -28,6 +28,11 @@ def load_config():
         RuntimeConfig.SKIP_EXISTING_FILES = cfg.get("skip_existing_files", RuntimeConfig.SKIP_EXISTING_FILES)
         RuntimeConfig.VERIFIED_DEPENDENCIES = cfg.get("verified_dependencies", RuntimeConfig.VERIFIED_DEPENDENCIES)
         RuntimeConfig.SPOTIFY_AVAILABLE = cfg.get("spotify_available", RuntimeConfig.SPOTIFY_AVAILABLE)
+        RuntimeConfig.LANGUAGE = cfg.get("language", RuntimeConfig.LANGUAGE)
+        
+        # Load language after loading config
+        from ..utils.i18n import set_language
+        set_language(RuntimeConfig.LANGUAGE)
     except Exception:
         pass
 
@@ -42,7 +47,8 @@ def save_config():
         "max_video_resolution": RuntimeConfig.MAX_VIDEO_RESOLUTION,
         "skip_existing_files": RuntimeConfig.SKIP_EXISTING_FILES,
         "verified_dependencies": RuntimeConfig.VERIFIED_DEPENDENCIES,
-        "spotify_available": RuntimeConfig.SPOTIFY_AVAILABLE
+        "spotify_available": RuntimeConfig.SPOTIFY_AVAILABLE,
+        "language": RuntimeConfig.LANGUAGE
     }
     
     try:
@@ -117,20 +123,20 @@ def reset_to_defaults():
 
 def toggle_simple_mode(enabled: bool):
     """Toggle simple mode"""
-    RuntimeConfig.SIMPLE_MODE = enabled
+    RuntimeConfig.SIMPLE_MODE = enabled # pyright: ignore[reportAttributeAccessIssue]
     save_config()
 
 
 def toggle_skip_existing(enabled: bool):
     """Toggle skip existing files"""
-    RuntimeConfig.SKIP_EXISTING_FILES = enabled
+    RuntimeConfig.SKIP_EXISTING_FILES = enabled # pyright: ignore[reportAttributeAccessIssue]
     save_config()
 
 
 def toggle_video_resolution():
     """Toggle between 720p and 1080p for max video resolution"""
     if RuntimeConfig.MAX_VIDEO_RESOLUTION == "720p":
-        RuntimeConfig.MAX_VIDEO_RESOLUTION = "1080p"
+        RuntimeConfig.MAX_VIDEO_RESOLUTION = "1080p" # pyright: ignore[reportAttributeAccessIssue]
     else:
         RuntimeConfig.MAX_VIDEO_RESOLUTION = "720p"
     
@@ -177,3 +183,26 @@ def clear_history():
     except Exception:
         pass
     return False
+
+
+def toggle_language():
+    """Toggle between Indonesian and English"""
+    from ..utils.i18n import set_language, get_current_language
+    
+    current = get_current_language()
+    new_lang = "en" if current == "id" else "id"
+    
+    if set_language(new_lang):
+        RuntimeConfig.LANGUAGE = new_lang # pyright: ignore[reportAttributeAccessIssue]
+        save_config()
+        return new_lang
+    return current
+
+
+def get_language_name(lang_code: str) -> str:
+    """Get language display name"""
+    names = {
+        "id": "Indonesia",
+        "en": "English"
+    }
+    return names.get(lang_code, lang_code)
