@@ -132,7 +132,7 @@
     },
     
     "folder": {
-      "select_location": "Pilih Lokasi Penyimpanan {(type)}",
+      "select_location": "Pilih Lokasi Penyimpanan ({type})",
       "root": "Root: {path}",
       "create_new": "Buat subfolder baru",
       "browse_system": "Lihat dan gunakan subfolder sistem",

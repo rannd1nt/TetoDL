@@ -220,10 +220,10 @@ def main_menu():
     initialize_config()
     load_history()
     
-    if not RuntimeConfig.VERIFIED_DEPENDENCIES:
-        from ..core.dependency import verify_dependencies
-        if not verify_dependencies():
-            sys.exit(1)
+    # if not RuntimeConfig.VERIFIED_DEPENDENCIES:
+    #     from ..core.dependency import verify_dependencies
+    #     if not verify_dependencies():
+    #         sys.exit(1)
     
     while True:
         clear()
