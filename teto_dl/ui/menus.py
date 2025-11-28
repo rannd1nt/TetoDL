@@ -5,11 +5,12 @@ import os
 import sys
 import time
 import threading
-from ..constants import RuntimeConfig, DEFAULT_MUSIC_ROOT, DEFAULT_VIDEO_ROOT
+from ..constants import RuntimeConfig
+
 from ..utils.i18n import get_text as _
 from ..utils.colors import (    
     print_process, print_info, print_success, 
-    print_error, print_neutral, clear, Colors as C
+    print_error, print_neutral, clear, colored_switch, color, Colors as C
 )
 from ..core.config import (
     initialize_config, save_config, reset_to_defaults,
@@ -17,6 +18,7 @@ from ..core.config import (
     clear_cache, clear_history, get_language_name, toggle_language
 )
 from ..core.history import display_history, load_history
+from ..core.cache import get_cache_size
 from ..core.dependency import reset_verification
 from ..utils.file_utils import create_nomedia_file
 from ..ui.navigation import navigate_folders
@@ -38,32 +40,34 @@ def menu_folder():
     """Menu for managing root download folders"""
     while True:
         clear()
-        print(f"\n{(C.LIGHT_GREEN)}=== Root Download Folder Settings ===\n")
-        print(f"{(C.YELLOW)}1) Music root: {(C.GREEN)}{RuntimeConfig.MUSIC_ROOT}")
-        print(f"{C.YELLOW}2) Video root: {(C.GREEN)}{RuntimeConfig.VIDEO_ROOT}\n")
-        print(f"{(C.YELLOW)}3) Reset ke default")
-        print(f"{C.YELLOW}4) Kembali{(C.RED)}\n")
+        print(color("\n=== Root Download Folder Settings ===\n", "c"))
 
-        choice = input("Pilihan > ").strip()
+        print(color(f"1) Music root: {color(RuntimeConfig.MUSIC_ROOT, 'lgrn')}", "c"))
+        print(color(f"2) Video root: {color(RuntimeConfig.VIDEO_ROOT, 'lgrn')}\n", "c"))
+
+        print(color(f"3) {_('menu.root_folder.reset')}", "c"))
+        print(color(f"4) {_('common.back')}\n", "c"))
+
+        choice = input(_('common.choose')).strip()
 
         if choice == "1":
-            new_dir = navigate_folders("/storage/emulated/0", "Pilih Folder Dasar", restrict_to_start=False)
+            new_dir = navigate_folders("/storage/emulated/0", _('download.navigation.title'), restrict_to_start=False)
             if new_dir:
                 RuntimeConfig.MUSIC_ROOT = new_dir
                 os.makedirs(RuntimeConfig.MUSIC_ROOT, exist_ok=True)
                 create_nomedia_file(RuntimeConfig.MUSIC_ROOT)
                 save_config()
-                print_success(f"Music root diset ke: {RuntimeConfig.MUSIC_ROOT}")
+                print_success(_('download.navigation.setted_music', music_root=color(RuntimeConfig.MUSIC_ROOT, 'lgrn')))
                 time.sleep(1)
 
         elif choice == "2":
-            new_dir = navigate_folders("/storage/emulated/0", "Pilih Folder Dasar", restrict_to_start=False)
+            new_dir = navigate_folders("/storage/emulated/0", _('download.navigation.title'), restrict_to_start=False)
             if new_dir:
                 RuntimeConfig.VIDEO_ROOT = new_dir
                 os.makedirs(RuntimeConfig.VIDEO_ROOT, exist_ok=True)
                 create_nomedia_file(RuntimeConfig.VIDEO_ROOT)
                 save_config()
-                print_success(f"Video root diset ke: {RuntimeConfig.VIDEO_ROOT}")
+                print_success(_('download.navigation.setted_video', video_root=color(RuntimeConfig.VIDEO_ROOT, 'lgrn')))
                 time.sleep(1)
 
         elif choice == "3":
@@ -80,51 +84,52 @@ def menu_folder():
 
 
 def menu_settings():
-    """Menu for app settings - WITH I18N"""
+    """Menu for app settings"""
     while True:
         clear()
         lang_name = get_language_name(RuntimeConfig.LANGUAGE)
-        print(f"\n{C.LIGHT_GREEN}======== {_('menu.settings.title')} ========\n")
-        
+
+        print(color(f"\n======== {_('menu.settings.title')} ========\n", "c"))
+
         # Simple Mode
-        simple_status = _('common.active') if RuntimeConfig.SIMPLE_MODE else _('common.inactive')
-        print(f"{C.YELLOW}1) {_('menu.settings.simple_mode', status=simple_status)}{C.WHITE}")
+        simple_status = colored_switch(RuntimeConfig.SIMPLE_MODE, _('common.active'), _('common.inactive'))
+        print(color(f"1) {_('menu.settings.simple_mode', status=simple_status)}", "c"))
         print(f"{_('menu.settings.simple_mode_desc')}\n")
         
         # Skip Existing
-        skip_status = _('common.active') if RuntimeConfig.SKIP_EXISTING_FILES else _('common.inactive')
-        print(f"{C.YELLOW}2) {_('menu.settings.skip_existing', status=skip_status)}{C.WHITE}")
+        skip_status = colored_switch(RuntimeConfig.SKIP_EXISTING_FILES, _('common.active'), _('common.inactive'))
+        print(color(f"2) {_('menu.settings.skip_existing', status=skip_status)}", "c"))
         print(f"{_('menu.settings.skip_existing_desc')}\n")
-        
+
         # Max Resolution
-        print(f"{C.YELLOW}3) {_('menu.settings.max_resolution', resolution=RuntimeConfig.MAX_VIDEO_RESOLUTION)}{C.WHITE}")
+        print(color(f"3) {_('menu.settings.max_resolution', resolution=color(RuntimeConfig.MAX_VIDEO_RESOLUTION, 'g'))}", "c"))
         print(f"{_('menu.settings.max_resolution_desc_1')}")
         print(f"{_('menu.settings.max_resolution_desc_2')}\n")
-        
-        # History
-        print(f"{C.YELLOW}4) {_('menu.settings.history')}{C.WHITE}")
-        print(f"{_('menu.settings.history_desc')}\n")
-        
-        # Clear Cache
-        print(f"{C.YELLOW}5) {_('menu.settings.clear_cache')}{C.WHITE}")
-        print(f"{_('menu.settings.clear_cache_desc')}\n")
-        
-        # Clear History
-        print(f"{C.YELLOW}6) {_('menu.settings.clear_history')}{C.WHITE}")
-        print(f"{_('menu.settings.clear_history_desc')}\n")
-        
-        # Reset Verification
-        print(f"{C.YELLOW}7) {_('menu.settings.reset_verification')}{C.WHITE}")
-        print(f"{_('menu.settings.reset_verification_desc')}\n")
-        
-        # Language Setting
-        print(f"{C.YELLOW}8) {_('menu.settings.language', lang=lang_name)}{C.WHITE}")
-        print(f"{_('menu.settings.language_desc')}\n")
-        
-        # Back
-        print(f"{C.YELLOW}9) {_('common.back')}\n{C.WHITE}")
 
-        choice = input(f"{_('menu.main.choose')} > ").strip()
+        # History
+        print(color(f"4) {_('menu.settings.history')}", "c"))
+        print(f"{_('menu.settings.history_desc')}\n")
+
+        # Clear Cache
+        print(color(f"5) {_('menu.settings.clear_cache')} {color(f'(Total Cache: {get_cache_size()})', 'g')}", "c"))
+        print(f"{_('menu.settings.clear_cache_desc')}\n")
+
+        # Clear History
+        print(color(f"6) {_('menu.settings.clear_history')} {color(f'({len(RuntimeConfig.DOWNLOAD_HISTORY)} Entries)', 'lgrn')}", "c"))
+        print(f"{_('menu.settings.clear_history_desc')}\n")
+
+        # Reset Verification
+        print(color(f"7) {_('menu.settings.reset_verification')}", "c"))
+        print(f"{_('menu.settings.reset_verification_desc')}\n")
+
+        # Language
+        print(color(f"8) {_('menu.settings.language', lang=color(lang_name, 'g'))}", "c"))
+        print(f"{_('menu.settings.language_desc')}\n")
+
+        # Back
+        print(color(f"9) {_('common.back')}", "c"))
+
+        choice = input(_('common.choose')).strip()
 
         if choice == "1":
             toggle_simple_mode(not RuntimeConfig.SIMPLE_MODE)
@@ -187,12 +192,13 @@ def menu_about():
     """About menu"""
     while True:
         clear()
-        print(f"\n{C.LIGHT_GREEN}>{_('about.title')}<{C.WHITE}")
-        print(f"{_('about.subtittle')}\n")
-        print(f"1) {_('about.documentation')}")
-        print(f"2) {_('about.github')}")
-        print(f"3) {_('about.instagram')}")
-        print(f"4 {_('common.back')}")
+        print(color(f"\n> {_('menu.about.title')} <", "c"))
+        print(f"{color(_('menu.about.subtitle'), 'r')}\n")
+        print(f"1) {color(_('menu.about.documentation'), 'c')}")
+        print(f"2) {color(_('menu.about.github'), 'c')}")
+        print(f"3) {color(_('menu.about.instagram'), 'c')}")
+        print(f"4) {color(_('common.back'), 'c')}")
+        
         choice = input("\nPilihan > ").strip()
 
         if choice == "1":
@@ -209,41 +215,47 @@ def menu_about():
             time.sleep(0.6)
 
 def main_menu():
-    """Main menu loop - WITH I18N"""
-    # Initialize configuration
+    """Main menu loop"""
+    
     initialize_config()
     load_history()
     
-    # Dependency verification
-    # if not RuntimeConfig.VERIFIED_DEPENDENCIES:
-    #     from ..core.dependency import verify_dependencies
-    #     if not verify_dependencies():
-    #         sys.exit(1)
+    if not RuntimeConfig.VERIFIED_DEPENDENCIES:
+        from ..core.dependency import verify_dependencies
+        if not verify_dependencies():
+            sys.exit(1)
     
     while True:
         clear()
-        show_ascii('teto-2')
-        print(f"{C.LIGHT_GREEN}\n=== {_('menu.main.title')} {C.RED}{_('menu.main.subtitle')}{C.LIGHT_GREEN} ==={C.WHITE}")
+        show_ascii()
+        print(
+            color(
+                f"\n{_('menu.main.title')} ", 
+                "c"
+            ) +
+            color(f"{_('menu.main.subtitle')}", "r")
+        )
         
-        print(f"\n{_('menu.main.choose')}")
-        print(f"1) {_('menu.main.youtube_audio')}")
-        print(f"2) {_('menu.main.youtube_video', resolution=RuntimeConfig.MAX_VIDEO_RESOLUTION)}")
-        
-        # Spotify menu
+        print(C.CYAN)
+        print(f"{_('menu.main.choose')}")
+        print("1) " + _('menu.main.youtube_audio'))
+        print("2) " + _('menu.main.youtube_video', resolution=RuntimeConfig.MAX_VIDEO_RESOLUTION))
+
         if RuntimeConfig.SPOTIFY_AVAILABLE:
-            print(f"3) {_('menu.main.spotify')}")
+            print("3) " + _('menu.main.spotify'))
         else:
-            print(f"3) {_('menu.main.spotify_unavailable')}")
-        
-        print(f"4) {_('menu.main.root_folder')}")
-        print(f"5) {_('menu.main.settings')}")
-        print(f"6) {_('menu.main.about')}")
-        print(f"7) {_('menu.main.exit')}\n")
-        
-        choice = input(f"{_('menu.main.choose')} > ").strip()
+            print("3) " + _('menu.main.spotify_unavailable'))
+
+        print("4) " + _('menu.main.root_folder'))
+        print("5) " + _('menu.main.settings'))
+        print("6) " + _('menu.main.about'))
+        print("7) " + _('menu.main.exit'))
+
+        print(C.RESET)
+        choice = input(_('common.choose')).strip()
 
         if choice == "1":
-            url = input(f"{_('menu.main.youtube_audio')}: ").strip()
+            url = input(_('download.youtube.url_input_ytm')).strip()
             if RuntimeConfig.SIMPLE_MODE:
                 print_process(_('download.youtube.simple_mode_start', type='audio'))
             t = run_in_thread(download_audio_youtube, url)
@@ -251,7 +263,7 @@ def main_menu():
             wait_and_clear_prompt()
 
         elif choice == "2":
-            url = input(f"{_('menu.main.youtube_video')}: ").strip()
+            url = input(_('download.youtube.url_input_ytv')).strip()
             if RuntimeConfig.SIMPLE_MODE:
                 print_process(_('download.youtube.simple_mode_start', type='video'))
             t = run_in_thread(download_video_youtube, url)
@@ -260,7 +272,7 @@ def main_menu():
 
         elif choice == "3":
             if RuntimeConfig.SPOTIFY_AVAILABLE:
-                url = input(f"{_('menu.main.spotify')}: ").strip()
+                url = input(_('download.spotify.url_input')).strip()
                 if RuntimeConfig.SIMPLE_MODE:
                     print_process(_('download.youtube.simple_mode_start', type='spotify'))
                 download_spotify(url)

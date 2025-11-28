@@ -4,9 +4,10 @@ Display utilities and ASCII art
 import time
 import os
 from ..utils.colors import print_error, clear, Colors as C
+from ..utils.i18n import get_text as _
 
 
-def show_ascii(filename):
+def show_ascii(filename=None):
     """Display ASCII art from txt file"""
     header = r'''
   ______     __        ____  __ 
@@ -21,7 +22,7 @@ def show_ascii(filename):
             print(f.read())
     except Exception:
         print_error("Gagal menampilkan ASCII art.")
-        time.sleep(1)
+        time.sleep(0.45)
         clear()
         print(f'{(C.CYAN)}{header}{C.RESET}')
         
@@ -40,7 +41,7 @@ def visit_github():
 def wait_and_clear_prompt():
     """Wait for user input and clear screen"""
     try:
-        input("\nTekan Enter untuk kembali ke menu...")
+        input(f"\n{_('common.press_enter')}")
     except (KeyboardInterrupt, EOFError):
         pass
-    os.system("clear")
+    clear()

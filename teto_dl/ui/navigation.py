@@ -4,7 +4,8 @@ Folder navigation system
 import os
 import time
 from ..constants import RuntimeConfig
-from ..utils.colors import print_error, print_info
+from ..utils.i18n import get_text as _
+from ..utils.colors import print_error, print_info, clear, color, Colors as C
 from ..utils.file_utils import create_nomedia_file
 from ..core.config import save_config, cleanup_ghost_subfolders
 
@@ -17,9 +18,9 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
     current_path = start_path
     
     while True:
-        os.system("clear")
-        print(f"=== {title} ===")
-        print(f"Lokasi sekarang:\n{current_path}\n")
+        clear()
+        print(color(f'=== {title} ===', 'c'))
+        print(f"\n{color(_('download.navigation.current_location'), 'c')} {color(current_path, 'lgrn')}\n")
 
         try:
             # Get all folders in current dir
@@ -35,17 +36,21 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
 
         # Display choices
         for i, folder in enumerate(entries, start=1):
-            print(f"{i}) {folder}/")
+            f_name = f'{i}) {folder}/'
+            print(color(f_name, 'lgrn'))
         
         # Display option to go to parent if not restricted or not at restricted root
-        if not restrict_to_start or current_path != start_path:
-            print("0) Naik ke folder sebelumnya")
         
-        print("99) Pilih folder ini")
-        print("100) Batal")
-
-        choice = input("\nPilih > ").strip()
-
+        print(C.CYAN)
+        if not restrict_to_start or current_path != start_path:
+            print(f"0) {_('download.navigation.go_up')}")
+        
+        print(f"99) {_('download.navigation.select_this')} ")
+        print(f"100) {_('common.cancel')}")
+        
+        print(C.RESET)
+        choice = input(f"{_('common.choose')}").strip()
+        
         if choice == "0" and (not restrict_to_start or current_path != start_path):
             # Go to parent directory
             parent = os.path.dirname(current_path.rstrip("/"))
@@ -80,90 +85,90 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
 
 def select_download_folder(root_dir, type_key):
     """
-    Download folder selection:
-    1) user subfolders
-    2) create new subfolder
-    3) view and use system subfolders
-    0) save to root
-    100) cancel
+    Download folder selection with full i18n
     """
-    # If simple mode is active, directly return root_dir
+
     if RuntimeConfig.SIMPLE_MODE:
         return root_dir
         
-    # Clean ghost subfolders before showing choices
     cleanup_ghost_subfolders()
     
     while True:
-        os.system("clear")
-        print(f"\n=== Pilih Lokasi Penyimpanan ({type_key}) ===\n")
-        print(f"Root: {root_dir}\n")
+        clear()
+        print(f"\n=== {color(_('download.folder.select_location', type=type_key), 'c')} ===\n")
+        print(f"{color(_('download.folder.root', path=color(root_dir, 'lgrn')), 'c')}\n")
 
         # Display user-created subfolders
         user_subfolders = RuntimeConfig.USER_SUBFOLDERS.get(type_key, [])
         for i, name in enumerate(user_subfolders, start=1):
-            print(f"{i}) {name}")
+            print(color(f"{i}) {name}", "c"))
 
         option_index = len(user_subfolders) + 1
-        print(f"{option_index}) Buat subfolder baru")
+        print(f"{color(f'{option_index}) {_('download.folder.create_new')}', 'c')}")
         option_index += 1
-        print(f"{option_index}) Lihat dan gunakan subfolder sistem")
-        print("0) Simpan di root folder ini")
-        print("100) Batal\n")
+        print(f"{color(f'{option_index}) {_('download.folder.browse_system')}', 'c')}")
+        print(f"{color(f'0) {_('download.folder.save_to_root')}', 'c')}")
+        print(f"{color(f'100) {_('common.cancel')}', 'c')}\n")
 
-        choice = input("Pilihan > ").strip()
+        choice = input(_('common.choose')).strip()
 
         # Save to root
         if choice == "0":
             return root_dir
+
         # Cancel
         elif choice == "100":
             return None
+
         # Create new subfolder
-        elif choice == str(len(user_subfolders)+1):
-            name = input("Nama subfolder baru: ").strip()
+        elif choice == str(len(user_subfolders) + 1):
+            name = input(_('download.folder.enter_name')).strip()
             if not name:
                 continue
+
             new_path = os.path.join(root_dir, name)
+
             try:
                 os.makedirs(new_path, exist_ok=True)
-                # Remove .nomedia from new folder to show in gallery
                 create_nomedia_file(new_path)
+
                 if name not in RuntimeConfig.USER_SUBFOLDERS[type_key]:
                     RuntimeConfig.USER_SUBFOLDERS[type_key].append(name)
                     save_config()
+
                 return new_path
+
             except Exception as e:
-                print_error(f"Gagal membuat folder: {e}")
+                print_error(_('download.folder.create_failed', error=e))
                 time.sleep(1)
                 continue
-        # View and use system subfolders (limited)
-        elif choice == str(len(user_subfolders)+2):
+
+        # System subfolders
+        elif choice == str(len(user_subfolders) + 2):
             selected_path = navigate_folders(
-                root_dir, 
-                f"Subfolder Sistem ({type_key})",
-                restrict_to_start=True  # Limit navigation only within root_dir
+                root_dir,
+                f"System Subfolders ({type_key})",
+                restrict_to_start=True
             )
             if selected_path:
                 return selected_path
-            # If cancelled, continue loop
             continue
-            
-        # Select user subfolder
+
+        # Select existing user subfolder
         elif choice.isdigit() and 1 <= int(choice) <= len(user_subfolders):
-            selected_folder = user_subfolders[int(choice)-1]
+            selected_folder = user_subfolders[int(choice) - 1]
             selected_path = os.path.join(root_dir, selected_folder)
-            
-            # Double check: ensure folder still exists
+
             if not os.path.exists(selected_path):
-                print_info(f"Subfolder '{selected_folder}' tidak ditemukan, menghapus dari config...")
+                print_info(_('download.folder.not_found', name=selected_folder))
                 RuntimeConfig.USER_SUBFOLDERS[type_key].remove(selected_folder)
                 save_config()
-                print_info("Silakan pilih lagi.")
+                print_info(_('download.folder.choose_again'))
                 time.sleep(1.5)
                 continue
-                
+
             return selected_path
+
         else:
-            print_error("Input tidak valid!")
+            print_error(_('error.invalid_input'))
             time.sleep(0.6)

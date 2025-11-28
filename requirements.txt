@@ -2,7 +2,7 @@
 # =====================================================
 
 # Core dependencies
-yt-dlp>=2025.11.12
-requests>=2.32.5
-spotdl>=4.4.3
-mutagen>=1.46.1
+yt-dlp==2025.11.12
+requests==2.32.5
+spotdl==4.4.3
+mutagen==1.46.1

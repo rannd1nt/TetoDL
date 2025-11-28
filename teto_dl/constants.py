@@ -4,7 +4,7 @@ Constants and Path Configuration
 import os
 
 # ==== BASE PATHS ====
-BASE_PATH = "/storage/emulated/0/Download/AIO-Downloader"
+BASE_PATH = "/storage/emulated/0/TetoDL"
 CONFIG_PATH = os.path.join(BASE_PATH, "config.json")
 CACHE_PATH = os.path.join(BASE_PATH, "cache.json")
 HISTORY_PATH = os.path.join(BASE_PATH, "history.json")

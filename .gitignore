@@ -83,6 +83,7 @@ videos/
 *.backup
 
 # Test files
+test/
 test_*.py
 *_test.py
 

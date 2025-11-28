@@ -4,6 +4,9 @@ Utility functions package
 
 from .colors import (
     Colors,
+    color,
+    colored_info,
+    colored_switch,
     print_process,
     print_info,
     print_success,
@@ -33,6 +36,9 @@ from .file_utils import (
 
 __all__ = [
     'Colors',
+    'color',
+    'colored_info',
+    'colored_switch',
     'print_process',
     'print_info',
     'print_success',

@@ -3,6 +3,7 @@
     "yes": "y",
     "no": "n",
     "back": "Back",
+    "choose": "Choose > ",
     "cancel": "Cancel",
     "confirm": "Are you sure you want to {action}?",
     "success": "{item} successfully {action}",
@@ -11,7 +12,7 @@
     "inactive": "Inactive",
     "available": "available",
     "not_available": "not available",
-    "press_enter": "Press Enter to {action}...",
+    "press_enter": "Press Enter to back to menu...",
     "loading": "Loading...",
     "processing": "Processing...",
     "downloading": "Downloading...",
@@ -25,7 +26,7 @@
     "main": {
       "title": "TetoDL by rannd1nt",
       "subtitle": "(ft. Kasane Teto)",
-      "choose": "Choose:",
+      "choose": "Option:",
       "youtube_audio": "YouTube Audio/YouTube Music → MP3",
       "youtube_video": "YouTube Video → MP4 (Max: {resolution})",
       "spotify": "Spotify → MP3",
@@ -45,7 +46,7 @@
       "max_resolution": "Max Video Resolution: {resolution}",
       "max_resolution_desc_1": "→ Maximum video resolution limit (not fixed res)",
       "max_resolution_desc_2": "→ Check & use best quality up to this limit",
-      "history": "Download History",
+      "history": "View Download History >",
       "history_desc": "→ View previous download history",
       "clear_cache": "Clear Cache",
       "clear_cache_desc": "→ Clear metadata cache",
@@ -53,7 +54,7 @@
       "clear_history_desc": "→ Clear download history",
       "reset_verification": "Reset Dependency Verification",
       "reset_verification_desc": "→ Re-verify dependencies on next run",
-      "language": "Bahasa / Language: {lang}",
+      "language": "Current language: {lang}",
       "language_desc": "→ Change application language"
     },
     
@@ -75,6 +76,8 @@
   
   "download": {
     "youtube": {
+      "url_input_ytm": "Youtube/Youtube Music URL: ",
+      "url_input_ytv": "Youtube URL: ",
       "invalid_url": "Invalid YouTube/YouTube Music URL.",
       "no_internet": "No internet connection.",
       "detected": "{type} detected",
@@ -113,6 +116,7 @@
     },
     
     "spotify": {
+      "url_input": "Spotify URL: ",
       "invalid_url": "Invalid Spotify URL.",
       "no_internet": "No internet connection or unstable connection.",
       "detected": "Spotify {type} detected",
@@ -131,7 +135,7 @@
       "root": "Root: {path}",
       "create_new": "Create new subfolder",
       "browse_system": "Browse and use system subfolders",
-      "save_to_root": "Save to root folder",
+      "save_to_root": "Save in this root folder",
       "enter_name": "New subfolder name: ",
       "create_failed": "Failed to create folder: {error}",
       "not_found": "Subfolder '{name}' not found, removing from config...",
@@ -139,13 +143,15 @@
     },
     
     "navigation": {
-      "title": "Select Folder",
+      "title": "Select Root Folder",
       "current_location": "Current location:",
       "go_up": "Go to previous folder",
       "select_this": "Select this folder",
       "cannot_read": "Cannot read folder: {error}",
       "cannot_go_up_root": "Cannot go above root folder",
-      "cannot_go_up": "Cannot go higher"
+      "cannot_go_up": "Cannot go higher",
+      "setted_music": "Music root setted to: {music_root}",
+      "setted_video": "Video root setted to: {video_root}"
     }
   },
   
@@ -204,7 +210,7 @@
     "confirm_clear_history": "Are you sure you want to clear history? (y/n): ",
     "ghost_folder_removed": "Removing ghost subfolder '{type}/{name}' from config",
     "save_failed": "Failed to save config.",
-    "language_changed": "Language changed to: {lang}. Restart application to see changes."
+    "language_changed": "Language changed to: {lang}."
   },
   
   "media": {

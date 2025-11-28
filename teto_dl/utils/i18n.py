@@ -2,10 +2,11 @@
 Internationalization (i18n) utilities
 """
 import os
+import locale
 import json
 from typing import Dict, Any
 
-_current_lang = "id"
+_current_lang = 'id'
 _translations: Dict[str, Any] = {}
 _locales_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "locales")
 
@@ -23,7 +24,7 @@ def load_language(lang_code: str = "id") -> bool:
         return True
     except FileNotFoundError:
         if lang_code != "id":
-            return load_language("id")
+            return load_language('id')
         return False
     except Exception:
         return False
@@ -34,7 +35,7 @@ def get_text(key: str, **kwargs) -> str:
     Get translated text by key with optional formatting
     
     Args:
-        key: Translation key (dot notation supported, e.g., "menu.main.title")
+        key: Translation key (dot notation supported, example: "menu.main.title")
         **kwargs: Format arguments for string formatting
     
     Returns:
@@ -59,6 +60,26 @@ def get_text(key: str, **kwargs) -> str:
     
     return value if isinstance(value, str) else key
 
+def detect_system_language() -> str:
+    """
+    Detect system locale and return language code ('id' or 'en').
+    """
+    try:
+        loc, _ = locale.getdefaultlocale()
+
+        if loc is None:
+            return "en"
+
+        loc = loc.lower()
+
+        if loc.startswith("id"):
+            return "id"
+        
+        return "en"
+
+    except Exception:
+        return "en"
+
 
 def get_current_language() -> str:
     """Get current language code"""
@@ -80,5 +101,4 @@ def get_available_languages() -> list:
 
 
 _ = get_text
-
-load_language("id")
+load_language(detect_system_language())

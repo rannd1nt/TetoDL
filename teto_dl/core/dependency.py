@@ -7,6 +7,7 @@ import subprocess
 import importlib.util
 import time
 from ..constants import RuntimeConfig
+from ..utils.i18n import get_text as _
 from ..utils.colors import (
     print_process, print_success, print_error, 
     print_info, print_neutral, Colors
@@ -18,10 +19,12 @@ def check_python_version():
     """Check if Python version is 3.8 or higher"""
     version = sys.version_info
     if version.major >= 3 and version.minor >= 8:
-        print_success(f"Python {version.major}.{version.minor}.{version.micro}")
+        print_success(_("dependency.python_version",
+                        version=f"{version.major}.{version.minor}.{version.micro}"))
         return True
     else:
-        print_error(f"Python {version.major}.{version.minor} - Required: 3.8+")
+        print_error(_("dependency.python_old",
+                      version=f"{version.major}.{version.minor}"))
         return False
 
 
@@ -52,12 +55,12 @@ def check_ffmpeg():
             if result.returncode == 0:
                 version_line = result.stdout.split('\n')[0]
                 version = version_line.split()[2] if len(version_line.split()) > 2 else "unknown"
-                print_success(f"FFmpeg {version}")
+                print_success(_("dependency.ffmpeg_version", version=version))
                 return True
         except Exception:
             pass
     
-    print_error("FFmpeg not found")
+    print_error(_("dependency.ffmpeg_not_found"))
     return False
 
 
@@ -69,26 +72,27 @@ def check_python_package(package_name, import_name=None):
     try:
         spec = importlib.util.find_spec(import_name)
         if spec is not None:
-            # Try to get version
             try:
                 module = importlib.import_module(import_name)
                 version = getattr(module, '__version__', 'unknown')
-                print_success(f"{package_name} {version}")
+                print_success(_("dependency.package_installed",
+                                package=package_name, version=version))
             except Exception:
-                print_success(f"{package_name} (installed)")
+                print_success(_("dependency.package_simple", package=package_name))
             return True
         else:
-            print_error(f"{package_name} not found")
+            print_error(_("dependency.package_not_found", package=package_name))
             return False
     except Exception:
-        print_error(f"{package_name} not found")
+        print_error(_("dependency.package_not_found", package=package_name))
         return False
 
 
 def verify_core_dependencies():
     """Verify all core dependencies (required)"""
-    print_process("Verifying core dependencies...")
+    print_process(_("dependency.core_verifying"))
     time.sleep(2)
+
     checks = {
         'python': check_python_version(),
         'ffmpeg': check_ffmpeg(),
@@ -99,100 +103,88 @@ def verify_core_dependencies():
     all_passed = all(checks.values())
     
     if all_passed:
-        print_success("All core dependencies verified!")
+        print_success(_("dependency.core_success"))
     else:
-        print_error("Some core dependencies are missing")
-        print_info("To install missing dependencies:")
-        
+        print_error(_("dependency.core_failed"))
+        print_info(_("dependency.install_missing"))
+
         if not checks['ffmpeg']:
-            print_neutral("pkg install ffmpeg -y")
+            print_neutral(_("dependency.install_ffmpeg"))
         
         if not checks['yt-dlp']:
-            print_neutral("pip install yt-dlp")
+            print_neutral(_("dependency.install_ytdlp"))
         
         if not checks['requests']:
-            print_neutral("pip install requests")
+            print_neutral(_("dependency.install_requests"))
     
     return all_passed
 
 
 def verify_spotify_dependency():
     """Verify Spotify dependency (optional)"""
-    print_process("Checking Spotify support...")
+    print_process(_("dependency.checking_spotify"))
     time.sleep(1.25)
     
     if check_python_package('spotdl'):
-        print_success("Spotify support available")
+        print_success(_("dependency.spotify_available"))
         return True
     else:
-        print_info("Spotify support not available (optional)")
-        print_info("Install with: pip install spotdl")
-        print_info("WARNING: Installation may take 30-60 minutes on Termux")
+        print_info(_("dependency.spotify_unavailable"))
+        print_info(_("dependency.spotify_install"))
+        print_info(_("dependency.spotify_warning"))
         return False
 
 
 def display_verification_header():
     """Display verification header"""
     os.system("clear")
-    print(f"{Colors.BLUE}╔════════════════════════════════════════╗{Colors.WHITE}")
-    print(f"{Colors.BLUE}║        TetoDL - First Run Setup        ║{Colors.WHITE}")
-    print(f"{Colors.BLUE}╚════════════════════════════════════════╝{Colors.WHITE}")
+    print(f"{Colors.CYAN}╔════════════════════════════════════════╗{Colors.WHITE}")
+    print(f"{Colors.CYAN}║        { _('dependency.title') }        ║{Colors.WHITE}")
+    print(f"{Colors.CYAN}╚════════════════════════════════════════╝{Colors.WHITE}")
     print()
 
 
 def verify_dependencies():
-    """
-    Main dependency verification function
-    Returns: (core_ok, spotify_ok)
-    """
+    """Main dependency verification function"""
     display_verification_header()
     
-    print_info("Verifying dependencies for the first time...")
-    print_info("This only happens once.\n")
+    print_info(_("dependency.verifying"))
+    print_info(_("dependency.once_only") + "\n")
     time.sleep(1.5)
     
-    # Verify core dependencies
     core_ok = verify_core_dependencies()
-    
     print()
-    
-    # Verify Spotify (optional)
     spotify_ok = verify_spotify_dependency()
-    
     print()
     
-    # Update RuntimeConfig
-    RuntimeConfig.SPOTIFY_AVAILABLE = spotify_ok # pyright: ignore[reportAttributeAccessIssue]
+    RuntimeConfig.SPOTIFY_AVAILABLE = spotify_ok # type: ignore
     
-    # Consider verified if either:
-    # 1. All dependencies OK (including Spotify)
-    # 2. Core OK but Spotify not available (acceptable)
     if core_ok:
-        RuntimeConfig.VERIFIED_DEPENDENCIES = True # pyright: ignore[reportAttributeAccessIssue]
+        RuntimeConfig.VERIFIED_DEPENDENCIES = True # type: ignore
         save_config()
         
-        print_success("Verification complete!")
+        print_success(_("dependency.verification_complete"))
         
         if not spotify_ok:
-            print_info("Note: Spotify menu akan di disable karena spotdl tidak terinstall")
+            print_info(_("dependency.spotify_hidden"))
         
         print()
-        input("Tekan Enter untuk melanjutkan...")
+        input("Press enter to continue...")
         return True
     else:
         RuntimeConfig.VERIFIED_DEPENDENCIES = False
         save_config()
         
-        print_error("Verification failed - core dependencies tidak lengkap")
-        print_info("Silakan install missing dependencies, lalu jalankan lagi\n")
-        input("Tekan Enter untuk keluar...")
+        print_error(_("dependency.verification_failed"))
+        print_info(_("dependency.install_and_retry") + "\n")
+        input("Press enter to exit...")
         return False
 
 
 def reset_verification():
-    """Reset verification status - for re-checking dependencies"""
+    """Reset verification status"""
     RuntimeConfig.VERIFIED_DEPENDENCIES = False
     RuntimeConfig.SPOTIFY_AVAILABLE = False
     save_config()
-    print_success("Verification status direset")
-    print_info("Program akan verify ulang saat dijalankan berikutnya")
+    print_success(_("dependency.verification_reset"))
+    print_info(_("dependency.verify_next_run"))
