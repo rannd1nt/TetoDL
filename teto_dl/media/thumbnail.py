@@ -110,13 +110,11 @@ def embed_thumbnail_to_audio(audio_path, thumbnail_path, audio_format="mp3"):
                 FFMPEG_CMD,
                 '-i', audio_path,
                 '-i', thumbnail_path,
-                '-map', '0:0',
-                '-map', '1:0',
+                '-map', '0',
+                '-map', '1',
                 '-c:a', 'copy',
-                '-c:v', 'copy',
-                '-disposition:v:0', 'attached_pic',
-                '-metadata:s:v', 'title="Album cover"',
-                '-metadata:s:v', 'comment="Cover (front)"',
+                '-c:v', 'libtheora',
+                '-q:v', '8',
                 '-y',
                 temp_output
             ]
