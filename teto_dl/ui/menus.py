@@ -54,7 +54,7 @@ def menu_audio_quality():
         
         # MP3 Option
         mp3_info = AUDIO_QUALITY_OPTIONS['mp3']
-        selected_mp3 = " [✓]" if current_quality == "mp3" else ""
+        selected_mp3 = f" {color(' [✓]', 'lgrn')}" if current_quality == "mp3" else ""
         print(color(f"1) {_('menu.audio_quality.mp3_title')}{selected_mp3}", "c"))
         print(f"   {_('menu.audio_quality.mp3_desc_1')}")
         print(f"   {_('menu.audio_quality.mp3_desc_2')}")
@@ -62,7 +62,7 @@ def menu_audio_quality():
         
         # M4A Option
         m4a_info = AUDIO_QUALITY_OPTIONS['m4a']
-        selected_m4a = " [✓]" if current_quality == "m4a" else ""
+        selected_m4a = f" {color(' [✓]', 'lgrn')}" if current_quality == "m4a" else ""
         print(color(f"2) {_('menu.audio_quality.m4a_title')}{selected_m4a}", "c"))
         print(f"   {_('menu.audio_quality.m4a_desc_1')}")
         print(f"   {_('menu.audio_quality.m4a_desc_2')}")
@@ -70,7 +70,7 @@ def menu_audio_quality():
         
         # OPUS Option
         opus_info = AUDIO_QUALITY_OPTIONS['opus']
-        selected_opus = " [✓]" if current_quality == "opus" else ""
+        selected_opus = f" {color(' [✓]', 'lgrn')}" if current_quality == "opus" else ""
         print(color(f"3) {_('menu.audio_quality.opus_title')}{selected_opus}", "c"))
         print(f"   {_('menu.audio_quality.opus_desc_1')}")
         print(f"   {_('menu.audio_quality.opus_desc_2')}")
@@ -184,7 +184,7 @@ def menu_settings():
         print(f"{_('menu.settings.clear_cache_desc')}\n")
 
         # Clear History
-        print(color(f"7) {_('menu.settings.clear_history')} {color(f'({len(RuntimeConfig.DOWNLOAD_HISTORY)} Entries)', 'lgrn')}", "c"))
+        print(color(f"7) {_('menu.settings.clear_history')} {color(f'({len(RuntimeConfig.DOWNLOAD_HISTORY)} Entries)', 'g')}", "c"))
         print(f"{_('menu.settings.clear_history_desc')}\n")
 
         # Reset Verification

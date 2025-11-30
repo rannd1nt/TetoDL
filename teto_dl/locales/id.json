@@ -46,7 +46,7 @@
       "max_resolution": "Max Video Resolution: {resolution}",
       "max_resolution_desc_1": "→ Batas maksimal resolusi video (bukan fixed res)",
       "max_resolution_desc_2": "→ Cek & pakai kualitas terbaik sampai batas ini",
-      "audio_quality": "Audio Quality Settings ({format})",
+      "audio_quality": "Audio Quality Settings: {format}",
       "audio_quality_desc": "→ Ubah kualitas/format audio download",
       "history": "Lihat Histori Download >",
       "history_desc": "→ Lihat riwayat download sebelumnya",
