@@ -294,14 +294,14 @@ def main_menu():
     initialize_config()
     load_history()
     
-    # if not RuntimeConfig.VERIFIED_DEPENDENCIES:
-    #     from ..core.dependency import verify_dependencies
-    #     if not verify_dependencies():
-    #         sys.exit(1)
+    if not RuntimeConfig.VERIFIED_DEPENDENCIES:
+        from ..core.dependency import verify_dependencies
+        if not verify_dependencies():
+            sys.exit(1)
     
     while True:
         clear()
-        show_ascii()
+        show_ascii('asa-mitaka-35x16')
         
         # Get audio quality info for display
         audio_quality_info = get_audio_quality_info()

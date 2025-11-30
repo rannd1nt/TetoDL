@@ -63,9 +63,9 @@ fi
 
 # Step 2: Install system dependencies
 print_step "Step 2/6: Install system dependencies..."
-print_info "Installing: python, ffmpeg, git"
+print_info "Installing: python, ffmpeg"
 
-if pkg install -y python ffmpeg git > /dev/null 2>&1; then
+if pkg install -y python ffmpeg > /dev/null 2>&1; then
     print_success "System dependencies installed"
 else
     print_error "Gagal install system dependencies"
