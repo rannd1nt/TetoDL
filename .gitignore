@@ -107,8 +107,3 @@ $RECYCLE.BIN/
 # ==== Keep Structure ====
 # Keep empty directories with .gitkeep
 !.gitkeep
-
-# Keep asset folder but not its contents (except .txt)
-asset/*
-!asset/teto-2.txt
-!asset/.gitkeep
