@@ -5,7 +5,7 @@ import os
 import sys
 import time
 import threading
-from ..constants import RuntimeConfig
+from ..constants import RuntimeConfig, AUDIO_QUALITY_OPTIONS
 
 from ..utils.i18n import get_text as _
 from ..utils.colors import (    
@@ -15,7 +15,8 @@ from ..utils.colors import (
 from ..core.config import (
     initialize_config, save_config, reset_to_defaults,
     toggle_simple_mode, toggle_skip_existing, toggle_video_resolution,
-    clear_cache, clear_history, get_language_name, toggle_language
+    clear_cache, clear_history, get_language_name, toggle_language,
+    toggle_audio_quality, get_audio_quality_info
 )
 from ..core.history import display_history, load_history
 from ..core.cache import get_cache_size
@@ -36,14 +37,77 @@ def run_in_thread(fn, *args):
     return t
 
 
+def menu_audio_quality():
+    """Menu for audio quality settings"""
+    while True:
+        clear()
+        current_quality = RuntimeConfig.AUDIO_QUALITY
+        quality_info = AUDIO_QUALITY_OPTIONS[current_quality]
+        
+        print(color(f"\n======== {_('menu.audio_quality.title')} ========\n", "c"))
+        print(_('menu.audio_quality.current', 
+                format=color(quality_info['ext'].upper(), 'lgrn'),
+                bitrate=color(quality_info['bitrate'], 'g')))
+        print()
+        print(_('menu.audio_quality.select'))
+        print()
+        
+        # MP3 Option
+        mp3_info = AUDIO_QUALITY_OPTIONS['mp3']
+        selected_mp3 = " [✓]" if current_quality == "mp3" else ""
+        print(color(f"1) {_('menu.audio_quality.mp3_title')}{selected_mp3}", "c"))
+        print(f"   {_('menu.audio_quality.mp3_desc_1')}")
+        print(f"   {_('menu.audio_quality.mp3_desc_2')}")
+        print(f"   {_('menu.audio_quality.mp3_desc_3')}\n")
+        
+        # M4A Option
+        m4a_info = AUDIO_QUALITY_OPTIONS['m4a']
+        selected_m4a = " [✓]" if current_quality == "m4a" else ""
+        print(color(f"2) {_('menu.audio_quality.m4a_title')}{selected_m4a}", "c"))
+        print(f"   {_('menu.audio_quality.m4a_desc_1')}")
+        print(f"   {_('menu.audio_quality.m4a_desc_2')}")
+        print(f"   {_('menu.audio_quality.m4a_desc_3')}\n")
+        
+        # OPUS Option
+        opus_info = AUDIO_QUALITY_OPTIONS['opus']
+        selected_opus = " [✓]" if current_quality == "opus" else ""
+        print(color(f"3) {_('menu.audio_quality.opus_title')}{selected_opus}", "c"))
+        print(f"   {_('menu.audio_quality.opus_desc_1')}")
+        print(f"   {_('menu.audio_quality.opus_desc_2')}")
+        print(f"   {_('menu.audio_quality.opus_desc_3')}\n")
+        
+        # Back
+        print(color(f"4) {_('common.back')}\n", "c"))
+        
+        choice = input(_('common.choose')).strip()
+        
+        if choice == "1":
+            toggle_audio_quality("mp3")
+            print_success(_('menu.audio_quality.changed', format=color("MP3", 'lgrn')))
+            time.sleep(1)
+        elif choice == "2":
+            toggle_audio_quality("m4a")
+            print_success(_('menu.audio_quality.changed', format=color("M4A", 'lgrn')))
+            time.sleep(1)
+        elif choice == "3":
+            toggle_audio_quality("opus")
+            print_success(_('menu.audio_quality.changed', format=color("OPUS", 'lgrn')))
+            time.sleep(1)
+        elif choice == "4":
+            return
+        else:
+            print_error(_('error.invalid_input'))
+            time.sleep(0.6)
+
+
 def menu_folder():
     """Menu for managing root download folders"""
     while True:
         clear()
-        print(color("\n=== Root Download Folder Settings ===\n", "c"))
+        print(color(f"\n=== {_('menu.root_folder.title')} ===\n", "c"))
 
-        print(color(f"1) Music root: {color(RuntimeConfig.MUSIC_ROOT, 'lgrn')}", "c"))
-        print(color(f"2) Video root: {color(RuntimeConfig.VIDEO_ROOT, 'lgrn')}\n", "c"))
+        print(color(f"1) {_('menu.root_folder.music_root', path=color(RuntimeConfig.MUSIC_ROOT, 'lgrn'))}", "c"))
+        print(color(f"2) {_('menu.root_folder.video_root', path=color(RuntimeConfig.VIDEO_ROOT, 'lgrn'))}\n", "c"))
 
         print(color(f"3) {_('menu.root_folder.reset')}", "c"))
         print(color(f"4) {_('common.back')}\n", "c"))
@@ -72,14 +136,14 @@ def menu_folder():
 
         elif choice == "3":
             reset_to_defaults()
-            print_success("Reset ke default.")
+            print_success(_('config.reset_default'))
             time.sleep(1)
 
         elif choice == "4":
             return
 
         else:
-            print_error("Input tidak valid!")
+            print_error(_('error.invalid_input'))
             time.sleep(0.6)
 
 
@@ -88,6 +152,7 @@ def menu_settings():
     while True:
         clear()
         lang_name = get_language_name(RuntimeConfig.LANGUAGE)
+        audio_quality_info = get_audio_quality_info()
 
         print(color(f"\n======== {_('menu.settings.title')} ========\n", "c"))
 
@@ -106,28 +171,32 @@ def menu_settings():
         print(f"{_('menu.settings.max_resolution_desc_1')}")
         print(f"{_('menu.settings.max_resolution_desc_2')}\n")
 
+        # Audio Quality
+        print(color(f"4) {_('menu.settings.audio_quality', format=color(audio_quality_info['ext'].upper(), 'g'))}", 'c'))
+        print(f"{_('menu.settings.audio_quality_desc')}\n")
+        
         # History
-        print(color(f"4) {_('menu.settings.history')}", "c"))
+        print(color(f"5) {_('menu.settings.history')}", "c"))
         print(f"{_('menu.settings.history_desc')}\n")
 
         # Clear Cache
-        print(color(f"5) {_('menu.settings.clear_cache')} {color(f'(Total Cache: {get_cache_size()})', 'g')}", "c"))
+        print(color(f"6) {_('menu.settings.clear_cache')} {color(f'(Total Cache: {get_cache_size()})', 'g')}", "c"))
         print(f"{_('menu.settings.clear_cache_desc')}\n")
 
         # Clear History
-        print(color(f"6) {_('menu.settings.clear_history')} {color(f'({len(RuntimeConfig.DOWNLOAD_HISTORY)} Entries)', 'lgrn')}", "c"))
+        print(color(f"7) {_('menu.settings.clear_history')} {color(f'({len(RuntimeConfig.DOWNLOAD_HISTORY)} Entries)', 'lgrn')}", "c"))
         print(f"{_('menu.settings.clear_history_desc')}\n")
 
         # Reset Verification
-        print(color(f"7) {_('menu.settings.reset_verification')}", "c"))
+        print(color(f"8) {_('menu.settings.reset_verification')}", "c"))
         print(f"{_('menu.settings.reset_verification_desc')}\n")
 
         # Language
-        print(color(f"8) {_('menu.settings.language', lang=color(lang_name, 'g'))}", "c"))
+        print(color(f"9) {_('menu.settings.language', lang=color(lang_name, 'g'))}", "c"))
         print(f"{_('menu.settings.language_desc')}\n")
 
         # Back
-        print(color(f"9) {_('common.back')}", "c"))
+        print(color(f"10) {_('common.back')}", "c"))
 
         choice = input(_('common.choose')).strip()
 
@@ -149,10 +218,13 @@ def menu_settings():
             time.sleep(1)
 
         elif choice == "4":
+            menu_audio_quality()
+        
+        elif choice == "5":
             display_history()
             wait_and_clear_prompt()
 
-        elif choice == "5":
+        elif choice == "6":
             confirm = input(_('config.confirm_clear_cache')).strip().lower()
             if confirm == _('common.yes'):
                 if clear_cache():
@@ -161,7 +233,7 @@ def menu_settings():
                     print_info(_('config.cache_empty'))
             time.sleep(1)
 
-        elif choice == "6":
+        elif choice == "7":
             confirm = input(_('config.confirm_clear_history')).strip().lower()
             if confirm == _('common.yes'):
                 if clear_history():
@@ -170,23 +242,24 @@ def menu_settings():
                     print_info(_('config.history_empty'))
             time.sleep(1)
 
-        elif choice == "7":
+        elif choice == "8":
             reset_verification()
             time.sleep(1)
 
-        elif choice == "8":
+        elif choice == "9":
             # Toggle Language
             new_lang = toggle_language()
             lang_name = get_language_name(new_lang)
             print_success(_('config.language_changed', lang=lang_name))
             time.sleep(2)
 
-        elif choice == "9":
+        elif choice == "10":
             return
 
         else:
             print_error(_('error.invalid_input'))
             time.sleep(0.6)
+
 
 def menu_about():
     """About menu"""
@@ -199,10 +272,10 @@ def menu_about():
         print(f"3) {color(_('menu.about.instagram'), 'c')}")
         print(f"4) {color(_('common.back'), 'c')}")
         
-        choice = input("\nPilihan > ").strip()
+        choice = input("\n" + _('common.choose')).strip()
 
         if choice == "1":
-            print_info(_('error.document_unavailable'))
+            print_info(_('error.documentation_unavailable'))
             time.sleep(1)
         elif choice == "2":
             visit_github()
@@ -211,8 +284,9 @@ def menu_about():
         elif choice == "4":
             break
         else:
-            print_error("Input tidak valid!")
+            print_error(_('error.invalid_input'))
             time.sleep(0.6)
+
 
 def main_menu():
     """Main menu loop"""
@@ -228,6 +302,10 @@ def main_menu():
     while True:
         clear()
         show_ascii()
+        
+        # Get audio quality info for display
+        audio_quality_info = get_audio_quality_info()
+        
         print(
             color(
                 f"\n{_('menu.main.title')} ", 
@@ -238,7 +316,9 @@ def main_menu():
         
         print(C.CYAN)
         print(f"{_('menu.main.choose')}")
-        print("1) " + _('menu.main.youtube_audio'))
+        print("1) " + _('menu.main.youtube_audio', 
+                      format=audio_quality_info['ext'].upper(),
+                      bitrate=audio_quality_info['bitrate']))
         print("2) " + _('menu.main.youtube_video', resolution=RuntimeConfig.MAX_VIDEO_RESOLUTION))
 
         if RuntimeConfig.SPOTIFY_AVAILABLE:
@@ -300,5 +380,3 @@ def main_menu():
         else:
             print_error(_('error.invalid_input'))
             time.sleep(0.6)
-
-

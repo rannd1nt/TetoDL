@@ -143,6 +143,20 @@ def toggle_video_resolution():
     save_config()
     return RuntimeConfig.MAX_VIDEO_RESOLUTION
 
+def toggle_audio_quality(new_quality):
+    """Toggle audio quality setting"""
+    from ..constants import RuntimeConfig, AUDIO_QUALITY_OPTIONS
+    
+    if new_quality in AUDIO_QUALITY_OPTIONS:
+        RuntimeConfig.AUDIO_QUALITY = new_quality
+        save_config()
+        return new_quality
+    return RuntimeConfig.AUDIO_QUALITY
+
+def get_audio_quality_info():
+    """Get current audio quality information"""
+    from ..constants import RuntimeConfig, AUDIO_QUALITY_OPTIONS
+    return AUDIO_QUALITY_OPTIONS.get(RuntimeConfig.AUDIO_QUALITY, AUDIO_QUALITY_OPTIONS["m4a"])
 
 def get_video_format_string():
     """Get format string based on max resolution setting"""

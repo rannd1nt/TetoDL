@@ -4,7 +4,8 @@ File operation utilities
 import os
 import re
 import glob
-from .colors import print_error
+from .colors import print_error, print_process
+from .i18n import get_text as _
 
 
 def create_nomedia_file(folder_path):
@@ -20,40 +21,48 @@ def create_nomedia_file(folder_path):
             print_error(f"Gagal menghapus .nomedia: {e}")
 
 
-def check_file_exists(title, target_dir, file_type="audio"):
+def check_file_exists(title, target_dir, file_type="audio", audio_format=None):
     """
     Check if file already exists in target directory with robust pattern matching
+    
+    Args:
+        title: File title to search for
+        target_dir: Target directory to search in
+        file_type: Type of file ("audio" or "video")
+        audio_format: Specific audio format to check (mp3, m4a, opus) - if None, checks all formats
+    
+    Returns:
+        (exists: bool, file_path: str or None)
     """
     try:
-        # Clean title for pattern matching
         clean_title = re.sub(r'[<>:"/\\|?*]', '', title)
         
         patterns = []
+        
         if file_type == "audio":
-            extensions = ['*.mp3', '*.m4a', '*.webm']
-        else:  # video
+            if audio_format:
+                extensions = [f'*.{audio_format}']
+            else:
+                extensions = ['*.mp3', '*.m4a', '*.opus']
+        else:
             extensions = ['*.mp4', '*.webm', '*.mkv']
         
-        # Pattern 1: Original title (cleaned)
         if clean_title:
             for ext in extensions:
                 patterns.append(f"*{clean_title}*{ext}")
         
-        # Pattern 2: Truncated title if too long
         if len(clean_title) > 30:
             short_title = clean_title[:30]
             for ext in extensions:
                 patterns.append(f"*{short_title}*{ext}")
         
-        # Pattern 3: Search by parts (for Japanese characters)
-        words = re.findall(r'[a-zA-Z0-9\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]+', title)
+        words = re.findall(r'[a-zA-Z0-9\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]+', title)
         if words:
-            for word in words[:3]:  # Take first 3 words
-                if len(word) > 2:  # Minimum 3 characters
+            for word in words[:3]:
+                if len(word) > 2:
                     for ext in extensions:
                         patterns.append(f"*{word}*{ext}")
         
-        # Remove duplicate patterns
         patterns = list(set(patterns))
         
         for pattern in patterns:
@@ -61,12 +70,10 @@ def check_file_exists(title, target_dir, file_type="audio"):
                 for file_path in glob.glob(os.path.join(target_dir, pattern)):
                     if os.path.isfile(file_path):
                         file_size = os.path.getsize(file_path)
-                        # Skip files that are too small (possibly corrupt)
-                        if file_size > 1024 * 10:  # Minimum 10KB
-                            # Verify with similarity check
+                        if file_size > 1024 * 10:
                             filename = os.path.basename(file_path)
                             similarity = calculate_similarity(title, filename)
-                            if similarity > 0.3:  # 30% similarity threshold
+                            if similarity > 0.3:
                                 return True, file_path
             except Exception:
                 continue
@@ -74,22 +81,27 @@ def check_file_exists(title, target_dir, file_type="audio"):
         return False, None
         
     except Exception as e:
-        print_error(f"Error checking existing files: {e}")
+        print_error(_('error.file_check_failed', error=str(e)))
         return False, None
 
 
 def calculate_similarity(str1, str2):
     """
-    Calculate simple similarity between two strings
+    Calculate simple similarity between two strings using Jaccard similarity
+    
+    Args:
+        str1: First string
+        str2: Second string
+    
+    Returns:
+        float: Similarity score between 0 and 1
     """
     try:
-        # Convert to lowercase for case insensitive comparison
         s1 = str1.lower()
         s2 = str2.lower()
         
-        # Calculate Jaccard similarity using words
-        words1 = set(re.findall(r'[a-zA-Z0-9\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]+', s1))
-        words2 = set(re.findall(r'[a-zA-Z0-9\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]+', s2))
+        words1 = set(re.findall(r'[a-zA-Z0-9\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]+', s1))
+        words2 = set(re.findall(r'[a-zA-Z0-9\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af]+', s2))
         
         if not words1 or not words2:
             return 0
@@ -104,7 +116,11 @@ def calculate_similarity(str1, str2):
 
 def clean_temp_files(download_folder, video_id):
     """
-    Clean temporary files after processing
+    Clean temporary files after processing (thumbnails, temp files, etc.)
+    
+    Args:
+        download_folder: Folder containing temporary files
+        video_id: YouTube video ID to identify temp files
     """
     try:
         patterns = [
@@ -124,10 +140,10 @@ def clean_temp_files(download_folder, video_id):
                         os.remove(file_path)
                         deleted_files.append(os.path.basename(file_path))
                     except Exception as e:
-                        print_error(f"Gagal menghapus {file_path}: {e}")
+                        print_error(_('media.temp_clean_error', error=str(e)))
         
-        # if deleted_files:
-        #     print_process(f"Menghapus {len(deleted_files)} file temporary")
+        if deleted_files:
+            print_process(f"Cleaned {len(deleted_files)} temporary files")
             
     except Exception as e:
-        print_error(f"Error cleaning temp files: {e}")
+        print_error(_('media.temp_clean_error', error=str(e)))

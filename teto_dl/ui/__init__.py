@@ -16,6 +16,7 @@ from .display import (
 
 from .menus import (
     run_in_thread,
+    menu_audio_quality,
     menu_folder,
     menu_settings,
     menu_about,
@@ -30,6 +31,7 @@ __all__ = [
     'visit_github',
     'wait_and_clear_prompt',
     'run_in_thread',
+    'menu_audio_quality',
     'menu_folder',
     'menu_settings',
     'menu_about',

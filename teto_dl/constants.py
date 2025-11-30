@@ -20,6 +20,25 @@ SPOTDL_CMD = "/data/data/com.termux/files/usr/bin/spotdl"
 # ==== DOWNLOAD SETTINGS ====
 DOWNLOAD_DELAY = 2  # Delay antara download (seconds)
 
+# ==== AUDIO QUALITY OPTIONS ====
+AUDIO_QUALITY_OPTIONS = {
+    "mp3": {
+        "ext": "mp3",
+        "bitrate": "~192 kbps",
+        "codec": "MP3 (Lossy)"
+    },
+    "m4a": {
+        "ext": "m4a",
+        "bitrate": "~128 kbps",
+        "codec": "AAC (M4A)"
+    },
+    "opus": {
+        "ext": "opus",
+        "bitrate": "~160-180 kbps",
+        "codec": "Opus (Best Quality)"
+    }
+}
+
 # ==== RUNTIME VARIABLES (will be loaded from config) ====
 class RuntimeConfig:
     """Runtime configuration that can be modified"""
@@ -33,6 +52,7 @@ class RuntimeConfig:
     SKIP_EXISTING_FILES = True
     MAX_VIDEO_RESOLUTION = "720p"  # Default: 720p
     DOWNLOAD_HISTORY = []
+    AUDIO_QUALITY = "m4a"  # Default: m4a
     
     # Dependency verification
     VERIFIED_DEPENDENCIES = False

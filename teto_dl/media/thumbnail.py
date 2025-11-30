@@ -1,11 +1,12 @@
 """
-Thumbnail processing and embedding
+Thumbnail processing and embedding for all audio formats
 """
 import os
 import subprocess
 import requests
 from ..constants import FFMPEG_CMD
-from ..utils.colors import print_error, print_process, print_success
+from ..utils.i18n import get_text as _
+from ..utils.colors import print_error
 
 
 def crop_thumbnail_to_square(thumbnail_path):
@@ -30,11 +31,11 @@ def crop_thumbnail_to_square(thumbnail_path):
             os.rename(output_path, thumbnail_path)
             return True
         else:
-            print_error(f"FFmpeg crop failed: {result.stderr}")
+            print_error(_('media.crop_failed', error=result.stderr))
             return False
             
     except Exception as e:
-        print_error(f"Error cropping thumbnail: {e}")
+        print_error(_('media.crop_error', error=str(e)))
         return False
 
 
@@ -63,36 +64,72 @@ def download_and_process_thumbnail(info_dict, download_folder):
                         
         return None
     except Exception as e:
-        print_error(f"Error processing thumbnail: {e}")
+        print_error(_('media.thumbnail_error', error=str(e)))
         return None
 
 
-def embed_thumbnail_to_mp3(mp3_path, thumbnail_path):
+def embed_thumbnail_to_audio(audio_path, thumbnail_path, audio_format="mp3"):
     """
-    Embed thumbnail to MP3 file using FFmpeg
+    Embed thumbnail to audio file (MP3, M4A, OPUS) using FFmpeg
+    Supports all three formats with proper metadata handling
     """
     try:
-        temp_output = mp3_path + ".temp.mp3"
+        temp_output = audio_path + ".temp." + audio_format
         
-        cmd = [
-            FFMPEG_CMD,
-            '-i', mp3_path,
-            '-i', thumbnail_path,
-            '-map', '0:0',
-            '-map', '1:0',
-            '-c', 'copy',
-            '-id3v2_version', '3',
-            '-metadata:s:v', 'title="Album cover"',
-            '-metadata:s:v', 'comment="Cover (front)"',
-            '-y',
-            temp_output
-        ]
+        # Build FFmpeg command based on format
+        if audio_format == "mp3":
+            cmd = [
+                FFMPEG_CMD,
+                '-i', audio_path,
+                '-i', thumbnail_path,
+                '-map', '0:0',
+                '-map', '1:0',
+                '-c', 'copy',
+                '-id3v2_version', '3',
+                '-metadata:s:v', 'title="Album cover"',
+                '-metadata:s:v', 'comment="Cover (front)"',
+                '-y',
+                temp_output
+            ]
+        
+        elif audio_format == "m4a":
+            cmd = [
+                FFMPEG_CMD,
+                '-i', audio_path,
+                '-i', thumbnail_path,
+                '-map', '0:0',
+                '-map', '1:0',
+                '-c', 'copy',
+                '-disposition:v:0', 'attached_pic',
+                '-y',
+                temp_output
+            ]
+        
+        elif audio_format == "opus":
+            cmd = [
+                FFMPEG_CMD,
+                '-i', audio_path,
+                '-i', thumbnail_path,
+                '-map', '0:0',
+                '-map', '1:0',
+                '-c:a', 'copy',
+                '-c:v', 'copy',
+                '-disposition:v:0', 'attached_pic',
+                '-metadata:s:v', 'title="Album cover"',
+                '-metadata:s:v', 'comment="Cover (front)"',
+                '-y',
+                temp_output
+            ]
+        
+        else:
+            print_error(f"Unsupported audio format: {audio_format}")
+            return False
         
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode == 0 and os.path.exists(temp_output):
-            os.remove(mp3_path)
-            os.rename(temp_output, mp3_path)
+            os.remove(audio_path)
+            os.rename(temp_output, audio_path)
             return True
         else:
             print_error(f"{result.stderr}")
@@ -101,5 +138,5 @@ def embed_thumbnail_to_mp3(mp3_path, thumbnail_path):
             return False
             
     except Exception as e:
-        print_error(f"Error embedding thumbnail: {e}")
+        print_error(_('media.embed_error', error=str(e)))
         return False
