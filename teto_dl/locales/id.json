@@ -122,6 +122,7 @@
       "file_not_found": "File audio tidak ditemukan: {filename}",
       "cover_process_failed": "Gagal memproses cover art",
       "skip_cover": "Skipping cover art processing",
+      "skip_cover_opus": "Skipping cover art procesing karena format audio 'opus' tidak didukung",
       "max_resolution": "Max video resolution: {resolution}",
       "progress": "Progress: {current}/{total}",
       "downloading_url": "Downloading URL: {url} as {type}.",

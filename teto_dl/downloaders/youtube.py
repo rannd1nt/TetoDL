@@ -187,7 +187,7 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
             ydl.download([url])
             
             # Process cover art for YouTube Music
-            if is_youtube_music:
+            if is_youtube_music and audio_format != "opus":
                 print_process(_('download.youtube.processing_cover'))
                 thumbnail_path = download_and_process_thumbnail(info, target_dir)
                 
@@ -209,6 +209,9 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
                     clean_temp_files(target_dir, info.get('id', ''))
                 else:
                     print_error(_('download.youtube.cover_process_failed'))
+                    
+            elif is_youtube_music and audio_format == "opus":
+                print_info(_('download.youtube.skip_cover_opus'))
             else:
                 print_info(_('download.youtube.skip_cover'))
             

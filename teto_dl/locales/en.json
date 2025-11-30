@@ -121,6 +121,7 @@
       "file_not_found": "Audio file not found: {filename}",
       "cover_process_failed": "Failed to process cover art",
       "skip_cover": "Skipping cover art processing",
+      "skip_cover_opus": "Skipping cover art procesing because 'opus' audio format is not supported",
       "max_resolution": "Max video resolution: {resolution}",
       "progress": "Progress: {current}/{total}",
       "downloading_url": "Downloading URL: {url} as {type}.",
