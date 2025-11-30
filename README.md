@@ -1,6 +1,6 @@
-# TetoDL 🎧
-
 ![Image](https://github.com/user-attachments/assets/2b9330a7-4e83-4366-96b9-6e776152f62d)
+
+# TetoDL 🎧
 
 **TetoDL** is a CLI tool for Termux that allows you to download **YouTube Audio/Video**, **YouTube Music**, and **Spotify**.  
 Built on top of `yt-dlp` and `ffmpeg`, it offers flexible download options, including audio formats like `mp3`, `m4a`, or `opus`. For YouTube Music, it can embed cover art cropped to a square (1:1) except for opus format.
