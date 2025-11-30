@@ -1,4 +1,4 @@
-![Image](https://github.com/user-attachments/assets/2b9330a7-4e83-4366-96b9-6e776152f62d)
+![Screenshot](asset/kasane-teto-1.gif)
 
 
 # TetoDL 🎧
