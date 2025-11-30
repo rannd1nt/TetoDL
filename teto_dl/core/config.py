@@ -25,6 +25,7 @@ def load_config():
         RuntimeConfig.USER_SUBFOLDERS = cfg.get("user_subfolders", RuntimeConfig.USER_SUBFOLDERS)
         RuntimeConfig.SIMPLE_MODE = cfg.get("simple_mode", RuntimeConfig.SIMPLE_MODE)
         RuntimeConfig.MAX_VIDEO_RESOLUTION = cfg.get("max_video_resolution", RuntimeConfig.MAX_VIDEO_RESOLUTION)
+        RuntimeConfig.AUDIO_QUALITY = cfg.get("audio_quality", RuntimeConfig.AUDIO_QUALITY)
         RuntimeConfig.SKIP_EXISTING_FILES = cfg.get("skip_existing_files", RuntimeConfig.SKIP_EXISTING_FILES)
         RuntimeConfig.VERIFIED_DEPENDENCIES = cfg.get("verified_dependencies", RuntimeConfig.VERIFIED_DEPENDENCIES)
         RuntimeConfig.SPOTIFY_AVAILABLE = cfg.get("spotify_available", RuntimeConfig.SPOTIFY_AVAILABLE)
@@ -45,6 +46,7 @@ def save_config():
         "user_subfolders": RuntimeConfig.USER_SUBFOLDERS,
         "simple_mode": RuntimeConfig.SIMPLE_MODE,
         "max_video_resolution": RuntimeConfig.MAX_VIDEO_RESOLUTION,
+        "audio_quality": RuntimeConfig.AUDIO_QUALITY,
         "skip_existing_files": RuntimeConfig.SKIP_EXISTING_FILES,
         "verified_dependencies": RuntimeConfig.VERIFIED_DEPENDENCIES,
         "spotify_available": RuntimeConfig.SPOTIFY_AVAILABLE,
