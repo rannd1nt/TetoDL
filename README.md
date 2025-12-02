@@ -1,4 +1,4 @@
-![Screenshot](asset/kasane-teto-1.gif)
+![Screenshot](asset/TETOTETOTETO.gif)
 
 
 # TetoDL 🎧
