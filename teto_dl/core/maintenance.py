@@ -21,27 +21,35 @@ def perform_update() -> bool:
         print_info("Manual update required (please re-download the source code).")
         return False
 
-    print_info(f"Checking for updates in {root_dir}...")
-    try:
-        # Fetch remote changes
-        subprocess.check_call(["git", "fetch"], cwd=root_dir)
-        
-        # Check status (behind/ahead)
-        status = subprocess.check_output(
-            ["git", "status", "-uno"], cwd=root_dir
-        ).decode().lower()
+    # print_info(f"Checking for updates in {root_dir}...")
+    
+    git_env = os.environ.copy()
+    git_env["LC_ALL"] = "C"
 
-        if "up to date" in status:
+    try:
+        subprocess.check_call(["git", "fetch"], cwd=root_dir, env=git_env)
+        
+        commits_behind = subprocess.check_output(
+            ["git", "rev-list", "HEAD..origin/main", "--count"], 
+            cwd=root_dir, 
+            env=git_env
+        ).decode().strip()
+
+        if commits_behind == "0":
             print_success("TetoDL is already up to date.")
             return True
         else:
-            print_info("New version found! Pulling changes...")
-            subprocess.check_call(["git", "pull"], cwd=root_dir)
+            print_info(f"Found {commits_behind} new commit(s)! Updating...")
+            
+            subprocess.check_call(["git", "pull"], cwd=root_dir, env=git_env)
+            
             print_success("Update successful! Please restart TetoDL.")
             return True
 
     except subprocess.CalledProcessError as e:
         print_error(f"Update failed: {e}")
+        print_info("Your repository might be broken or incompatible.")
+        print_info("Try reinstalling TetoDL using the installer.")
         return False
     except FileNotFoundError:
         print_error("Command 'git' not found. Please install git.")
@@ -56,8 +64,7 @@ def perform_uninstall():
         print_error(f"Uninstaller script not found at: {script_path}")
         return
 
-    # Warning text in English
-    print_info("WARNING: This will remove global shortcuts, the launcher, and the virtual environment.")
+    print_info("This will remove global shortcuts, the launcher, and the virtual environment.")
     print_info("Your source code folder and downloaded media files will NOT be deleted.")
     
     try:
