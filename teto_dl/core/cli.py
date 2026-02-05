@@ -4,6 +4,7 @@ import os
 from ..constants import APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS, IS_TERMUX
 from ..utils.styles import print_error, print_success, print_info
 from ..core import config as config_mgr
+from ..utils.display import show_app_info
 from . import maintenance
 
 def init_parser():
@@ -53,7 +54,7 @@ def init_parser():
     # --- 2. UTILITY GROUP ---
     util_group = parser.add_argument_group('Utility & Maintenance')
 
-    # Recheck
+    util_group.add_argument('--info', action='store_true', help="Show current configuration & system info")
     util_group.add_argument('--recheck', action='store_true', help="Force dependency integrity check")
 
     # Reset
@@ -91,11 +92,16 @@ def init_parser():
 
     # ===== HANDLING =====
 
-    # 1. Version Check
+    # 1. Version Check & App Config Info
     if args.version:
         print(f"TetoDL v{APP_VERSION}")
         return True, {}
 
+    if args.info:
+        config_mgr.load_config()
+        show_app_info()
+        return True, {}
+    
     # 2. Config Handling
     if (args.header or args.progress_style or args.lang or
         args.delay or args.retries or args.media_scanner):

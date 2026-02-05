@@ -3,6 +3,7 @@ File operation utilities
 """
 import os
 import glob
+import shutil
 from ..utils.styles import print_error, print_process
 from ..utils.i18n import get_text as _
 
@@ -52,3 +53,16 @@ def clean_temp_files(download_folder, video_id):
 
     except Exception as e:
         print_error(_('media.temp_clean_error', error=str(e)))
+
+def get_free_space(path):
+    """Helper buat dapetin free space dalam format GB yang manusiawi"""
+    try:
+        if not os.path.exists(path):
+            check_path = os.path.dirname(path)
+        else:
+            check_path = path
+            
+        _, _, free = shutil.disk_usage(check_path)
+        return f"{free / (2**30):.1f} GB free"
+    except:
+        return "N/A"

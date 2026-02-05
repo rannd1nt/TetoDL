@@ -41,16 +41,3 @@ def thread_cancel_handle(t: Thread) -> SystemExit:
         t.join()
     except KeyboardInterrupt:
         sys.exit()
-
-def get_free_space(path):
-    """Helper buat dapetin free space dalam format GB yang manusiawi"""
-    try:
-        if not os.path.exists(path):
-            check_path = os.path.dirname(path)
-        else:
-            check_path = path
-            
-        _, _, free = shutil.disk_usage(check_path)
-        return f"{free / (2**30):.1f} GB free"
-    except:
-        return "N/A"

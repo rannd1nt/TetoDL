@@ -2,8 +2,14 @@
 Display utilities and ASCII art
 """
 import os
+import sys
 from rich.text import Text
+from rich.table import Table
+from rich import box
 
+from ..constants import RuntimeConfig, APP_VERSION, CONFIG_PATH, DATA_DIR
+from ..core import cache
+from ..utils.files import get_free_space
 from ..utils.network import open_url
 from ..utils.styles import print_error, clear, console
 from ..utils.i18n import get_text as _
@@ -51,6 +57,68 @@ def show_ascii(filename=None, str_only=False) -> str | None:
             print_error(f"Error tak terduga: {e}")
         return None
 
+def show_app_info() -> None:
+    """Display System & Configuration Information"""
+    
+    table = Table(
+        title=f"TetoDL v{APP_VERSION} - System & Configuration Info",
+        box=box.ROUNDED,
+        show_header=True, 
+        header_style="bold bright_cyan",
+        expand=False
+    )
+    
+    table.add_column("Parameter", style="cyan")
+    table.add_column("Value / Status", style="white")
+
+    # --- SECTION 1: SYSTEM INFO ---
+    table.add_row("[bold]> System Environment[/]", "")
+    table.add_row("Python Version", sys.version.split()[0])
+    table.add_row("Config Path", str(CONFIG_PATH))
+    table.add_row("Data Path", str(DATA_DIR))
+    table.add_row("Cache Size", f"[cyan]{cache.get_cache_size()}[/]")
+
+    # --- SECTION 2: STORAGE & PATHS ---
+    table.add_section()
+    table.add_row("[bold]> Storage & Paths[/]", "")
+    music_space = get_free_space(RuntimeConfig.MUSIC_ROOT)
+    music_val = f"{RuntimeConfig.MUSIC_ROOT}\n[cyan]({music_space})[/]" 
+    table.add_row("Music Location", music_val)
+
+    video_space = get_free_space(RuntimeConfig.VIDEO_ROOT)
+    video_val = f"{RuntimeConfig.VIDEO_ROOT}\n[cyan]({video_space})[/]"
+    table.add_row("Video Location", video_val)
+
+    # --- SECTION 3: CONFIGURATION ---
+    table.add_section()
+    table.add_row("[bold]> User Configuration[/]", "")
+
+    header_val = getattr(RuntimeConfig, 'HEADER_STYLE', 'default')
+    p_style = getattr(RuntimeConfig, 'PROGRESS_STYLE', 'minimal')
+    lang = getattr(RuntimeConfig, 'LANGUAGE', 'en')
+    delay = getattr(RuntimeConfig, 'DOWNLOAD_DELAY', 2)
+    retries = getattr(RuntimeConfig, 'MAX_RETRIES', 3)
+    scanner = getattr(RuntimeConfig, 'MEDIA_SCANNER_ENABLED', False)
+
+    scanner_str = "[green]Enabled[/]" if scanner else "[dim]Disabled[/]"
+
+    table.add_row("Header Style", str(header_val))
+    table.add_row("Progress Style", str(p_style))
+    table.add_row("Language", str(lang).upper())
+    table.add_row("Network", f"Delay: {delay}s | Retries: {retries}")
+    table.add_row("Media Scanner", scanner_str)
+
+    # Video Prefs
+    codec = getattr(RuntimeConfig, 'VIDEO_CODEC', 'default')
+    res = getattr(RuntimeConfig, 'MAX_VIDEO_RESOLUTION', '720p')
+    container = getattr(RuntimeConfig, 'VIDEO_CONTAINER', 'mp4')
+
+    table.add_row("Video Settings", f"{container.upper()} | {res} | {codec.upper()}")
+
+    # Render
+    console.print()
+    console.print(table)
+    console.print()
 
 def visit_instagram():
     """Open Instagram profile"""

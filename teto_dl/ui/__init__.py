@@ -18,7 +18,6 @@ from .analytics import (
 
 from .components import (
     console,
-    get_free_space,
     run_in_thread,
     header,
     thread_cancel_handle

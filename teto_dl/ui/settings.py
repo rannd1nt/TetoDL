@@ -14,7 +14,7 @@ from ..utils.styles import (
 from ..utils.i18n import get_language_display_name, get_available_languages, get_text as _
 from ..utils.display import formatted_video_codec
 from ..constants import RuntimeConfig, AUDIO_QUALITY_OPTIONS, VALID_RESOLUTIONS, VALID_CODECS
-from .components import get_free_space
+from ..utils.files import get_free_space
 from ..core.config import (
     save_config, reset_to_defaults, toggle_video_container,
     toggle_simple_mode, toggle_skip_existing, set_video_resolution,
