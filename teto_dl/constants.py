@@ -20,7 +20,7 @@ if not IS_WINDOWS and hasattr(os, "uname"):
         pass
 
 APP_NAME = "TetoDL"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.1.1"
 
 # ==== PATH SETUP ====
 if IS_TERMUX:
