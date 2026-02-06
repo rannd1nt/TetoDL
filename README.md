@@ -1,9 +1,5 @@
 <div align="center">
 
-  <a href="https://git.io/typing-svg">
-    <img src="https://readme-typing-svg.demolab.com?font=Montserrat+Code&weight=600&size=20&pause=650&color=33CCFF&center=true&vCenter=true&width=500&lines=;Pretty+Text+User+Interfaces+Mode;Powerful++Command+Line+Interfaces+Mode;Smart+Metadata+%26+Config+Management;Linux, +WSL, +%26+Termux+Support;The+Author+Kins+Kasane+Teto;" alt="Typing SVG" />
-  </a>
-
   <img src="docs/TETOTETOTETO.gif" alt="TetoDL Banner" width="100%">
 
   <br>

@@ -238,24 +238,37 @@ EOL
     ln -sf "$INSTALL_DIR/run.sh" "$TARGET_LINK"
     print_success "Global command set: 'tetodl'"
 
-    SHELL_CONFIG="$HOME/.bashrc"
-    if [ -n "$ZSH_VERSION" ]; then SHELL_CONFIG="$HOME/.zshrc"; fi
+    # --- SHELL DETECTION & CONFIG ---
+    CURRENT_SHELL=$(basename "$SHELL")
+    SHELL_CONFIG=""
+    
+    # Detect Config File
+    if [[ "$CURRENT_SHELL" == "zsh" ]]; then
+        SHELL_CONFIG="$HOME/.zshrc"
+    elif [[ "$CURRENT_SHELL" == "bash" ]]; then
+        SHELL_CONFIG="$HOME/.bashrc"
+    fi
+    # Note: Fish doesn't use simple file appending for PATH usually, handled in summary.
 
     if [[ ":$PATH:" != *":$USER_BIN:"* ]]; then
         print_info "Configuring PATH automatically..."
         
-        if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' "$SHELL_CONFIG"; then
-            echo "" >> "$SHELL_CONFIG"
-            echo '# Added by TetoDL Installer' >> "$SHELL_CONFIG"
-            echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_CONFIG"
-            print_success "Added configuration to $SHELL_CONFIG"
+        # Only modify file if it's Bash or Zsh
+        if [[ -n "$SHELL_CONFIG" ]]; then
+            if ! grep -q 'export PATH="$HOME/.local/bin:$PATH"' "$SHELL_CONFIG"; then
+                echo "" >> "$SHELL_CONFIG"
+                echo '# Added by TetoDL Installer' >> "$SHELL_CONFIG"
+                echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$SHELL_CONFIG"
+                print_success "Added configuration to $SHELL_CONFIG"
+            else
+                print_info "Configuration already exists in $SHELL_CONFIG"
+            fi
         else
-            print_info "Configuration already exists in $SHELL_CONFIG"
+            # For Fish or others, we skip writing to file to avoid syntax errors
+            print_info "Skipping auto-config for $CURRENT_SHELL (Manual step required)."
         fi
-        
-        NEED_RESTART=true
     else
-        NEED_RESTART=false
+        print_info "PATH is already configured correctly."
     fi
 
     # Create Uninstaller Script
@@ -283,13 +296,6 @@ echo "You can now delete this folder manually."
 EOL
     chmod +x uninstall.sh
     print_success "Created uninstaller: ./uninstall.sh"
-    
-    if [[ ":$PATH:" != *":$USER_BIN:"* ]]; then
-        echo ""
-        print_info "WARNING: $USER_BIN is not in your PATH."
-        echo "Add this to your .bashrc / .zshrc to use 'tetodl' command everywhere:"
-        echo -e "${CYAN}export PATH=\"\$HOME/.local/bin:\$PATH\"${NC}"
-    fi
 fi
 
 # Summary
@@ -300,16 +306,26 @@ echo -e "${GREEN}=========================================${NC}"
 echo ""
 
 if [ "$IS_LINUX" = true ]; then
-    if [ "$NEED_RESTART" = true ]; then
-        echo -e "${YELLOW}[IMPORTANT] Setup is done, but one last step needed:${NC}"
-        echo "Because we updated your shell configuration, please either:"
-        echo "1. Close and reopen this terminal, OR"
-        echo -e "2. Run this command now: ${GREEN}source $SHELL_CONFIG${NC}"
-        echo ""
+    if [[ "$CURRENT_SHELL" == "fish" ]]; then
+        # Specific hint for FISH users
+        echo -e "${YELLOW}[IMPORTANT] Final Step for Fish Shell:${NC}"
+        echo "Run this command manually to enable 'tetodl':"
+        echo -e "${CYAN}fish_add_path $HOME/.local/bin${NC}"
+    elif [[ -n "$SHELL_CONFIG" ]]; then
+        # Hint for Bash/Zsh users
+        if [[ ":$PATH:" != *":$USER_BIN:"* ]]; then
+            echo -e "${YELLOW}[IMPORTANT] Setup is done, but one last step needed:${NC}"
+            echo "Because we updated your shell configuration, please either:"
+            echo "1. Close and reopen this terminal, OR"
+            echo -e "2. Run this command now: ${GREEN}source $SHELL_CONFIG${NC}"
+        fi
     else
-        echo "You can now run TetoDL from anywhere!"
+        # Fallback for unknown shells
+        echo -e "${YELLOW}[WARNING] Could not auto-configure PATH.${NC}"
+        echo "Please add $HOME/.local/bin to your PATH manually."
     fi
-    echo -e "Try command: ${GREEN}tetodl${NC}"
+    
+    echo -e "\nTry command: ${GREEN}tetodl${NC}"
 else
     echo -e "Run with: ${GREEN}./main.py${NC}"
 fi
