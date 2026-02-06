@@ -4,13 +4,60 @@ import os
 from ..constants import APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS, IS_TERMUX
 from ..utils.styles import print_error, print_success, print_info
 from ..core import config as config_mgr
+from ..core import history
+from ..ui import analytics
 from ..utils.display import show_app_info
 from . import maintenance
 
-def init_parser():
+from typing import Tuple, Dict, Any
+
+from typing import Tuple, Dict, Any
+
+def init_parser() -> Tuple[bool, Dict[str, Any]]:
     """
-    Handling CLI Argument & Dispatch dengan Auto-Detect Type.
-    Menggunakan standard flag --reset.
+    Initialize and handle CLI argument parsing.
+
+    This function is responsible for:
+    - Defining all CLI arguments and flags
+    - Performing early-dispatch commands (e.g. --version, --info, --history)
+    - Validating argument combinations and usage constraints
+    - Detecting download mode automatically (audio/video) when applicable
+    - Preparing execution context and override configuration for the downloader
+
+    Returns
+    -------
+    Tuple[bool, Dict[str, Any]]
+        A tuple consisting of:
+
+        - handled (bool):
+            Indicates whether the CLI command has been fully handled
+            within this function.
+
+            * True  → The command was executed here (e.g. config change,
+                history view, reset, update, uninstall) and the program
+                should terminate afterward.
+            * False → The command requires further processing by the
+                main application logic.
+
+        - context (Dict[str, Any]):
+            A context dictionary containing execution metadata.
+            This is only meaningful when `handled` is False.
+
+            Possible keys include:
+            - "mode": str
+                Execution mode identifier (e.g. "cli_download")
+            - "overrides": Dict[str, Any]
+                Runtime override values such as URL, media type,
+                format, codec, resolution, output path, and flags.
+            - "force_recheck": bool
+                Indicates whether dependency rechecking is enforced.
+
+    Notes
+    -----
+    - This function performs both argument parsing and dispatch logic.
+    - Argument conflicts and invalid combinations are handled internally
+        with user-facing error messages.
+    - Auto-detection prioritizes explicit flags over inference logic.
     """
 
     parser = argparse.ArgumentParser(
@@ -30,7 +77,7 @@ def init_parser():
     dl_group = parser.add_argument_group('Download Options')
     dl_group.add_argument('url', nargs='?', help='Media URL to download')
     dl_group.add_argument('-a', '--audio', action='store_true', help='Audio only mode')
-    dl_group.add_argument('-v', '--video', action='store_true', help='Video mode')
+    dl_group.add_argument('-v', '--video', action='store_true', help='Video only mode')
 
     # Format Flag
     dl_group.add_argument('-f', '--format', help='Force format (mp3/m4a/opus for audio, mp4/mkv for video)')
@@ -55,6 +102,19 @@ def init_parser():
     util_group = parser.add_argument_group('Utility & Maintenance')
 
     util_group.add_argument('--info', action='store_true', help="Show current configuration & system info")
+    util_group.add_argument('--wrap', action='store_true', help="Show TetoDL Analytics/Wrap")
+    util_group.add_argument('--history',
+        nargs='?',
+        const=20,
+        type=int,
+        metavar='LIMIT',
+        help="Show download history (default last 20)"
+    )
+    util_group.add_argument('--reverse', action='store_true', help="Reverse order (e.g. show oldest history first)")
+    util_group.add_argument('--search',
+        metavar='QUERY',
+        help="Filter history by title (case-insensitive)"
+    )
     util_group.add_argument('--recheck', action='store_true', help="Force dependency integrity check")
 
     # Reset
@@ -100,6 +160,25 @@ def init_parser():
     if args.info:
         config_mgr.load_config()
         show_app_info()
+        return True, {}
+    
+    history_modifiers = [args.reverse, args.search]
+    if any(history_modifiers) and args.history is None:
+        parser.error("Flags '--reverse' and '--search' can only be used with '--history'")
+    
+    if args.history is not None:
+        config_mgr.load_config()
+        history.load_history()
+        analytics.render_history_view(
+            limit=args.history, 
+            reverse_order=args.reverse,
+            search_query=args.search
+        )
+        return True, {}
+
+    if args.wrap:
+        config_mgr.load_config() 
+        analytics.render_analytics_view()
         return True, {}
     
     # 2. Config Handling
@@ -225,7 +304,7 @@ def init_parser():
                 detected_type = 'audio'
             else:
                 detected_type = 'video'
-        
+
         overrides['type'] = detected_type
 
         # --- FORMAT VS TYPE VALIDATION ---

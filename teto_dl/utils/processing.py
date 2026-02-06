@@ -88,17 +88,37 @@ def extract_all_urls_from_content(url):
         return [url], 'Unknown', 1
 
 
-def get_platform_badge(platform, download_type):
-    if "YouTube" in platform:
-        color = "red"
-        label = "YT"
-        if "Music" in platform: label = "YTM"
-    elif "Spotify" in platform:
-        color = "green"
-        label = "SPT"
-    else:
-        color = "blue"
-        label = platform[:3].upper() if platform else "???"
+def get_platform_badge(platform: str, download_type: str = None) -> str:
+    """
+    Generate badge Content Type yang lebih informatif.
+    Format: YT-VID, YT-AUD, YT-MSC, SPOTIFY
+    """
+    if not platform:
+        return "[dim]???[/dim]"
 
-    type_code = "TR" if download_type and ("Track" in download_type or "Single" in download_type) else "PL"
-    return f"[{color}]{label}-{type_code}[/{color}]"
+    p_lower = platform.lower()
+    
+    # 1. SPOTIFY
+    if "spotify" in p_lower:
+        return "[green]SPOTIFY[/green]"
+    
+    # 2. YOUTUBE
+    if "youtube" in p_lower:
+        # YouTube Music
+        if "music" in p_lower:
+            return "[red]YT-MUSIC[/red]"
+        
+        # YouTube Audio Only
+        if "audio" in p_lower:
+            return "[red]YT-AUD[/red]"
+            
+        # YouTube Video
+        if "video" in p_lower:
+            return "[red]YT-VID[/red]"
+            
+        # Fallback
+        return "[red]YOUTUBE[/red]"
+
+    # 3. Fallback Unknown Platform
+    label = platform[:8].upper()
+    return f"[blue]{label}[/blue]"

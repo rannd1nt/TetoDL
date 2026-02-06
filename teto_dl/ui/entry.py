@@ -250,9 +250,9 @@ class App:
     def run(self):
         """Initialize resources and start the main application loop."""
         # CLI Handler Part
-        should_exit, context = cli.init_parser()
+        handled, context = cli.init_parser()
 
-        if should_exit:
+        if handled:
             return
         
         self.setup(force_recheck=context.get('force_recheck', False))
