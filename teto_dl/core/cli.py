@@ -1,7 +1,9 @@
 import argparse
 import sys
 import os
-from ..constants import APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS, IS_TERMUX
+from ..constants import (
+    APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS, IS_TERMUX, RuntimeConfig
+)
 from ..utils.styles import print_error, print_success, print_info
 from ..core import config as config_mgr
 from ..utils.files import TempManager
@@ -265,9 +267,14 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
     if args.share and not args.url:
         target_path = args.share
         
+        if args.audio:
+            target_path = RuntimeConfig.MUSIC_ROOT
+        elif args.video:
+            target_path = RuntimeConfig.VIDEO_ROOT
+        
         if target_path == 'LATEST':
             config_mgr.load_config()
-            from ..core.history import load_history, RuntimeConfig
+            from ..core.history import load_history
             load_history()
             
             history = RuntimeConfig.DOWNLOAD_HISTORY

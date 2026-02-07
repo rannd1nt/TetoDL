@@ -15,7 +15,6 @@ import webbrowser
 import requests
 from ..utils.i18n import get_text as _
 from ..utils.styles import print_info, print_error, print_success, console
-from .wsl_bridge import setup_wsl_port_forwarding, get_windows_host_ip
 from ..utils.spinner import Spinner
 from ..constants import IS_TERMUX, IS_WSL
 
@@ -26,6 +25,10 @@ class QuietHandler(http.server.SimpleHTTPRequestHandler):
 class SilentTCPServer(socketserver.TCPServer):
     allow_reuse_address = True
     
+    def server_bind(self):
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind(self.server_address)
+
     def handle_error(self, request, client_address):
         pass
 
@@ -112,13 +115,11 @@ def find_free_port(start_port=8989, max_tries=10):
                 return port
     return None
 
-def check_firewall_status(port, wsl_bridged=False):
+def check_firewall_status(port):
     """
     Memberikan HINTS kepada user jika terdeteksi di Distro yang ketat.
     """
-    if IS_WSL and not wsl_bridged:
-        console.print(f"\n[bold yellow][!] WSL Detected[/bold yellow]")
-        console.print("[dim]WSL is behind a NAT. If the bridge failed/skipped, phone connection will likely fail.[/dim]")
+    if IS_WSL:
         return
 
     if shutil.which("ufw"):
@@ -148,15 +149,11 @@ def start_share_server(file_path_str: str, start_port=8989):
     using_wsl_bridge = False
 
     if IS_WSL:
-        windows_host_ip = setup_wsl_port_forwarding(port=port)
-        
-        if windows_host_ip:
-            ip_address = windows_host_ip
-            using_wsl_bridge = True
-        else:
-            print_info("WSL bridge skipped/failed. Using internal IP (Connection might fail).")
+        console.print(f"\n[bold yellow][!] WSL Environment Detected[/bold yellow]")
+        print_info("WSL uses a separate network (NAT). Devices on your local Wi-Fi likely CANNOT connect to this IP.")
+        print_info("Tip: Move the file to Windows (/mnt/c/...) and share from there.")
 
-    if ip_address.startswith("127.") and not using_wsl_bridge:
+    if ip_address.startswith("127.") and not IS_WSL:
         print_error("Cannot detect valid LAN IP. Are you connected to Wi-Fi/Hotspot?")
         print_info("Sharing via localhost only (Phone won't connect).")
 
