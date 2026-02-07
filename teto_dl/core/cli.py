@@ -4,7 +4,8 @@ import os
 from ..constants import APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS, IS_TERMUX
 from ..utils.styles import print_error, print_success, print_info
 from ..core import config as config_mgr
-from ..core import history
+from ..utils.files import TempManager
+from ..utils.network import start_share_server
 from ..ui import analytics
 from ..utils.display import show_app_info
 from . import maintenance
@@ -115,6 +116,16 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
         metavar='QUERY',
         help="Filter history by title (case-insensitive)"
     )
+    util_group.add_argument('--share', 
+        metavar='PATH',
+        nargs='?',
+        const='LATEST',
+        help="Host a file/folder via HTTP/QR Code for mobile transfer"
+    )
+    util_group.add_argument('--share-temp', 
+        action='store_true',
+        help="Download to temp folder, share, then auto-delete (Requires URL)"
+    )
     util_group.add_argument('--recheck', action='store_true', help="Force dependency integrity check")
 
     # Reset
@@ -168,7 +179,8 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
     
     if args.history is not None:
         config_mgr.load_config()
-        history.load_history()
+        from ..core.history import load_history
+        load_history()
         analytics.render_history_view(
             limit=args.history, 
             reverse_order=args.reverse,
@@ -249,7 +261,31 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
         
         return True, {}
 
-    # 4. Handle Update & Uninstall
+    # 4. Handle Share Standalone, Update & Uninstall
+    if args.share and not args.url:
+        target_path = args.share
+        
+        if target_path == 'LATEST':
+            config_mgr.load_config()
+            from ..core.history import load_history, RuntimeConfig
+            load_history()
+            
+            history = RuntimeConfig.DOWNLOAD_HISTORY
+            if not history:
+                print_error("No download history found to share.")
+                return True, {}
+                
+            last_download = next((x for x in reversed(history) if x['success']), None)
+            
+            if last_download and os.path.exists(last_download['file_path']):
+                target_path = last_download['file_path']
+            else:
+                print_error("Last downloaded file no longer exists.")
+                return True, {}
+
+        start_share_server(target_path)
+        return True, {}
+    
     if args.update:
         print_info("Checking for updates...")
         maintenance.perform_update()
@@ -264,7 +300,10 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
     if args.recheck:
         context['force_recheck'] = True
 
-    # 6. Download Logic
+    # 6. Download Logic & Share Validation
+    if args.share_temp and not args.url:
+        parser.error("--share-temp requires a URL to download.")
+
     if args.url:
         if args.audio and args.video:
             print_error("Ambiguous mode. Choose -a or -v.")
@@ -275,6 +314,20 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
             'simple_mode': True,
             'url': args.url
         }
+
+        if args.share_temp:
+            # Aktifkan mode share after download
+            overrides['share_after_download'] = True
+            
+            # Override Output Path ke Folder Temp
+            temp_path = TempManager.get_temp_dir()
+            overrides['output_path'] = str(temp_path)
+            
+            # Tandai context kalau ini adalah 'temp_session'
+            context['is_temp_session'] = True
+            
+        elif args.share:
+            overrides['share_after_download'] = True
 
         # --- TYPE DETECTION CONTROL FLOW ---
         detected_type = None

@@ -3,14 +3,31 @@ Network utilities: internet check, URL validation
 """
 import re
 import os
+import socket
+import http.server
+import socketserver
+import shutil
+import qrcode
+from urllib.parse import quote
+from pathlib import Path
 import subprocess
 import webbrowser
 import requests
 from ..utils.i18n import get_text as _
-from ..utils.styles import print_info, print_error, print_success
+from ..utils.styles import print_info, print_error, print_success, console
+from .wsl_bridge import setup_wsl_port_forwarding, get_windows_host_ip
 from ..utils.spinner import Spinner
 from ..constants import IS_TERMUX, IS_WSL
 
+class QuietHandler(http.server.SimpleHTTPRequestHandler):
+    def log_message(self, format, *args):
+        pass 
+
+class SilentTCPServer(socketserver.TCPServer):
+    allow_reuse_address = True
+    
+    def handle_error(self, request, client_address):
+        pass
 
 def check_internet() -> bool:
     """Check if internet connection is available"""
@@ -65,8 +82,126 @@ def open_url(url: str) -> bool:
     except Exception:
         return False
 
+
+def get_best_ip():
+    """
+    Mencoba mendapatkan IP LAN yang paling valid.
+    """
+    ip = '127.0.0.1'
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.settimeout(0.1)
+    try:
+        s.connect(('8.8.8.8', 1))
+        ip = s.getsockname()[0]
+    except Exception:
+        try:
+            ip = socket.gethostbyname(socket.gethostname())
+        except:
+            pass
+    finally:
+        s.close()
+    return ip
+
+def find_free_port(start_port=8989, max_tries=10):
+    """
+    Mencari port kosong mulai dari start_port.
+    """
+    for port in range(start_port, start_port + max_tries):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            if s.connect_ex(('localhost', port)) != 0:
+                return port
+    return None
+
+def check_firewall_status(port, wsl_bridged=False):
+    """
+    Memberikan HINTS kepada user jika terdeteksi di Distro yang ketat.
+    """
+    if IS_WSL and not wsl_bridged:
+        console.print(f"\n[bold yellow][!] WSL Detected[/bold yellow]")
+        console.print("[dim]WSL is behind a NAT. If the bridge failed/skipped, phone connection will likely fail.[/dim]")
+        return
+
+    if shutil.which("ufw"):
+        console.print(f"\n[dim][Tip] If connection fails, allow port in UFW:[/dim]")
+        console.print(f"[dim cyan]  sudo ufw allow {port}/tcp[/dim cyan]")
+    
+    elif shutil.which("firewall-cmd"):
+        console.print(f"\n[dim][Tip] If connection fails, allow port in FirewallD:[/dim]")
+        console.print(f"[dim cyan]  sudo firewall-cmd --add-port={port}/tcp --temporary[/dim cyan]")
+
+
+# --- MAIN SHARING FUNCTION ---
+
+def start_share_server(file_path_str: str, start_port=8989):
+    path = Path(file_path_str).resolve()
+    
+    if not path.exists():
+        print_error(f"File/Directory not found: {path}")
+        return
+
+    port = find_free_port(start_port)
+    if port is None:
+        print_error(f"All ports from {start_port} to {start_port+10} are busy.")
+        return
+
+    ip_address = get_best_ip()
+    using_wsl_bridge = False
+
+    if IS_WSL:
+        windows_host_ip = setup_wsl_port_forwarding(port=port)
+        
+        if windows_host_ip:
+            ip_address = windows_host_ip
+            using_wsl_bridge = True
+        else:
+            print_info("WSL bridge skipped/failed. Using internal IP (Connection might fail).")
+
+    if ip_address.startswith("127.") and not using_wsl_bridge:
+        print_error("Cannot detect valid LAN IP. Are you connected to Wi-Fi/Hotspot?")
+        print_info("Sharing via localhost only (Phone won't connect).")
+
+    if path.is_file():
+        serve_dir = path.parent
+        filename_url = quote(path.name)
+        target_url = f"http://{ip_address}:{port}/{filename_url}"
+    else:
+        serve_dir = path
+        target_url = f"http://{ip_address}:{port}/"
+
+    os.chdir(serve_dir)
+
+    qr = qrcode.QRCode(version=1, box_size=1, border=1)
+    qr.add_data(target_url)
+    qr.make(fit=True)
+
+    print_success("TetoDL Sharing started!")
+    console.print()
+
+    if using_wsl_bridge:
+        console.print("[bold cyan][WINDOWS BRIDGE ACTIVE][/bold cyan]", justify="center")
+
+    console.print(f"Hosting: [cyan]{path.name}[/cyan]")
+    console.print(f"Address: [yellow]{target_url}[/yellow]")
+    
+    check_firewall_status(port, wsl_bridged=using_wsl_bridge)
+    
+    console.print()
+    qr.print_ascii(invert=True) 
+    
+    console.print()
+    console.print("[dim]Scan QR above with your phone camera.[/dim]")
+    console.print("[bold red]Press Ctrl+C to stop server.[/bold red]")
+
+    try:
+        with SilentTCPServer(("", port), QuietHandler) as httpd:
+            httpd.serve_forever()
+    except OSError as e:
+        print_error(f"Network error: {str(e)}")
+    except KeyboardInterrupt:
+        console.print("\n[yellow]Sharing stopped.[/yellow]")
+        raise KeyboardInterrupt
+
 def perform_update():
-    # Cek apakah ini git repo
     if not os.path.isdir(".git"):
         print_error("Not a git repository. Cannot auto-update.")
         # print_info("If you installed via AUR, please use 'yay -Syu'.")

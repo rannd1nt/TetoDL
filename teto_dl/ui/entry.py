@@ -1,6 +1,7 @@
 """
 The main application facade that orchestrates the TetoDL lifecycle.
 """
+import os
 import sys
 import time
 import threading
@@ -25,7 +26,9 @@ from ..ui.settings import menu_folder, menu_settings
 from ..ui.about import menu_about
 from ..ui.components import header, thread_cancel_handle, run_in_thread
 from ..utils.display import wait_and_clear_prompt
+from ..utils.files import TempManager
 from ..downloaders.spotify import download_spotify
+from ..utils.network import start_share_server
 import teto_dl.downloaders.youtube as yt_downloader_module 
 from teto_dl.downloaders.youtube import download_audio_youtube, download_video_youtube
 
@@ -249,8 +252,11 @@ class App:
 
     def run(self):
         """Initialize resources and start the main application loop."""
-        # CLI Handler Part
-        handled, context = cli.init_parser()
+        try:
+            handled, context = cli.init_parser()
+        except KeyboardInterrupt:
+            print()
+            sys.exit(0)
 
         if handled:
             return
@@ -259,6 +265,7 @@ class App:
 
         if context.get('mode') == 'cli_download':
             overrides = context.get('overrides', {})
+            is_temp_session = context.get('is_temp_session', False)
             
             # Dependency & Silence Injection
             self._apply_runtime_overrides(overrides)
@@ -266,11 +273,31 @@ class App:
             yt_downloader_module.clear = lambda: None
             yt_downloader_module.wait_and_clear_prompt = lambda: None
             
-            url = overrides['url']
-            if overrides['type'] == 'video':
-                yt_downloader_module.download_video_youtube(url)
-            else:
-                yt_downloader_module.download_audio_youtube(url)
+            try:
+                url = overrides['url']
+                if overrides['type'] == 'video':
+                    result = yt_downloader_module.download_video_youtube(url)
+                else:
+                    result = yt_downloader_module.download_audio_youtube(url)
+                
+                if overrides.get('share_after_download'):
+                    if result and isinstance(result, dict) and result.get('success'):
+                        file_path = result.get('file_path')
+                        
+                        if file_path and os.path.exists(file_path):
+                            start_share_server(file_path)
+                        else:
+                            print_error("Cannot share file: File path not found or file missing.")
+                    else:
+                        pass
+            except KeyboardInterrupt:
+                print_info("Operation cancelled by user.")
+            
+            finally:
+                if is_temp_session:
+                    print_info("Cleaning up temporary files...")
+                    TempManager.cleanup()
+                    print_success("Cleanup complete.")
             return
         
         while True:

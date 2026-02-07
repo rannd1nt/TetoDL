@@ -12,11 +12,17 @@ IS_WINDOWS = os.name == "nt"
 IS_VENV = (sys.prefix != sys.base_prefix)
 
 IS_WSL = False
-if not IS_WINDOWS and hasattr(os, "uname"):
+if not IS_WINDOWS and not IS_TERMUX:
     try:
-        if "microsoft" in os.uname().release.lower():
+        # Check 1: uname release (Standard method)
+        if hasattr(os, "uname") and "microsoft" in os.uname().release.lower():
             IS_WSL = True
-    except (AttributeError, ValueError):
+        # Check 2: /proc/version (Fallback method, more robust)
+        elif os.path.exists("/proc/version"):
+            with open("/proc/version", "r") as f:
+                if "microsoft" in f.read().lower():
+                    IS_WSL = True
+    except (AttributeError, ValueError, OSError):
         pass
 
 APP_NAME = "TetoDL"
@@ -60,6 +66,9 @@ else:
     # Cache
     xdg_cache = os.environ.get("XDG_CACHE_HOME")
     CACHE_DIR = (Path(xdg_cache) if xdg_cache else home / ".cache") / APP_NAME
+
+    # Temp
+    TEMP_DIR = CACHE_DIR / "temp"
 
     if IS_WSL:
         # Coba ambil path Windows User Profile secara dinamis
@@ -188,6 +197,7 @@ try:
             CONFIG_DIR.mkdir(parents=True, exist_ok=True)
             DATA_DIR.mkdir(parents=True, exist_ok=True)
             CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            TEMP_DIR.mkdir(parents=True, exist_ok=True)
         
         try:
             os.makedirs(DEFAULT_MUSIC_ROOT, exist_ok=True)

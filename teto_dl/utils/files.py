@@ -3,10 +3,36 @@ File operation utilities
 """
 import os
 import glob
+import atexit
 import shutil
+from ..constants import TEMP_DIR
 from ..utils.styles import print_error, print_process
 from ..utils.i18n import get_text as _
 
+class TempManager:
+    """Singleton helper untuk mengelola file sementara."""
+    
+    @staticmethod
+    def get_temp_dir():
+        """Memastikan folder temp ada dan mengembalikan path-nya."""
+        if not TEMP_DIR.exists():
+            TEMP_DIR.mkdir(parents=True, exist_ok=True)
+        return TEMP_DIR
+
+    @staticmethod
+    def cleanup():
+        """Menghapus seluruh isi folder temp TetoDL."""
+        if TEMP_DIR.exists():
+            try:
+                for item in TEMP_DIR.iterdir():
+                    if item.is_dir():
+                        shutil.rmtree(item)
+                    else:
+                        item.unlink()
+            except Exception as e:
+                pass
+
+atexit.register(TempManager.cleanup)
 
 def remove_nomedia_file(folder_path):
     """

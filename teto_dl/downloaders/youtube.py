@@ -420,14 +420,14 @@ def download_audio_youtube(url):
     if not is_valid_youtube_url(url):
         print_error(_('download.youtube.invalid_url'))
         wait_and_clear_prompt()
-        return
+        return {'success': False, 'reason': 'invalid_url'}
 
     if RuntimeConfig.SIMPLE_MODE:
         target_dir = RuntimeConfig.MUSIC_ROOT
     else:
         target_dir = select_download_folder(RuntimeConfig.MUSIC_ROOT, "music")
         if not target_dir:
-            return
+            return {'success': False, 'reason': 'cancel'}
     
     clear()
     header()
@@ -446,18 +446,19 @@ def download_audio_youtube(url):
             print_info(_('download.youtube.exists_title', title=metadata.get('title')))
             print_info(_('download.youtube.exists_path', path=metadata.get('file_path')))
             wait_and_clear_prompt()
-            return True
+            return {'success': True, 'file_path': metadata.get('file_path'), 'skipped': True}
         
         return False
     
     if RuntimeConfig.SKIP_EXISTING_FILES:
-        if is_exists():
-            return
+        existing_result = is_exists()
+        if existing_result:
+            return existing_result
     
     if not check_internet():
         print_error(_('download.youtube.no_internet'))
         wait_and_clear_prompt()
-        return
+        return {'success': False, 'reason': 'no_internet'}
     
     # Start Downloading
     url_classification = classify_youtube_url(url)
@@ -485,6 +486,7 @@ def download_audio_youtube(url):
         success, skipped, failed = download_playlist_sequential(
             urls, target_dir, download_single_audio, "audio", is_youtube_music, content_title
         )
+        return {'success': success > 0, 'is_playlist': True}
     else:
         if RuntimeConfig.SIMPLE_MODE:
             print_process(_('download.youtube.simple_mode_start', type='audio', path=target_dir))
@@ -495,6 +497,12 @@ def download_audio_youtube(url):
 
         success, title, skipped = download_single_audio(urls[0], target_dir, is_youtube_music=is_youtube_music, download_type=download_type)
         if success:
+            from ..core.history import load_history
+
+            load_history()
+            if RuntimeConfig.DOWNLOAD_HISTORY:
+                last_entry = RuntimeConfig.DOWNLOAD_HISTORY[-1]
+                file_path_result = last_entry.get('file_path')
             if skipped:
                 print_info(_('download.youtube.file_exists', title=title))
             else:
@@ -505,6 +513,12 @@ def download_audio_youtube(url):
         else:
             print_error(_('download.youtube.failed', title=title))
     wait_and_clear_prompt()
+    return {
+        'success': success,
+        'file_path': file_path_result,
+        'title': title if 'title' in locals() else None,
+        'skipped': skipped if 'skipped' in locals() else False
+    }
 
 
 def download_video_youtube(url):
@@ -514,7 +528,7 @@ def download_video_youtube(url):
     if not is_valid_youtube_url(url):
         print_error(_('download.youtube.invalid_url'))
         wait_and_clear_prompt()
-        return
+        return {'success': False, 'reason': 'invalid_url'}
     
 
     if RuntimeConfig.SIMPLE_MODE:
@@ -522,7 +536,7 @@ def download_video_youtube(url):
     else:
         target_dir = select_download_folder(RuntimeConfig.VIDEO_ROOT, "video")
         if not target_dir:
-            return
+            return {'success': False, 'reason': 'cancel'}
         
     clear()
     header()
@@ -539,20 +553,20 @@ def download_video_youtube(url):
             print_success(_('download.youtube.file_exists'))
             print_info(_('download.youtube.exists_title', title=metadata.get('title')))
             print_info(_('download.youtube.exists_path', path=metadata.get('file_path')))
-            wait_and_clear_prompt()
-            return True
+            return {'success': True, 'file_path': metadata.get('file_path'), 'skipped': True}
         
         return False
     
 
     if RuntimeConfig.SKIP_EXISTING_FILES:
-        if is_exists():
-            return
+        existing_result = is_exists()
+        if existing_result:
+            return existing_result
     
     if not check_internet():
         print_error(_('download.youtube.no_internet'))
         wait_and_clear_prompt()
-        return
+        return {'success': False, 'reason': 'no_internet'}
 
     # Start Downloading
     if IS_TERMUX:
@@ -570,6 +584,7 @@ def download_video_youtube(url):
         success, skipped, failed = download_playlist_sequential(
             urls, target_dir, download_single_video, "video"
         )
+        return {'success': success > 0, 'is_playlist': True}
     else:
         if RuntimeConfig.SIMPLE_MODE:
             print_process(_('download.youtube.simple_mode_start', type=f'video ({RuntimeConfig.MAX_VIDEO_RESOLUTION})', path=target_dir))
@@ -582,6 +597,13 @@ def download_video_youtube(url):
 
         success, title, skipped = download_single_video(urls[0], target_dir, download_type=download_type)
         if success:
+            from ..core.history import load_history
+            load_history()
+            
+            if RuntimeConfig.DOWNLOAD_HISTORY:
+                last_entry = RuntimeConfig.DOWNLOAD_HISTORY[-1]
+                file_path_result = last_entry.get('file_path')
+            
             if skipped:
                 print_info(_('download.youtube.file_exists', title=title))
             else:
@@ -590,3 +612,9 @@ def download_video_youtube(url):
             print_error(_('download.youtube.failed', title=title))
 
     wait_and_clear_prompt()
+    return {
+        'success': success,
+        'file_path': file_path_result,
+        'title': title if 'title' in locals() else None,
+        'skipped': skipped if 'skipped' in locals() else False
+    }

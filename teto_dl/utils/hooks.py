@@ -1,14 +1,23 @@
-# utils/hooks.py
+"""
+Hooks Utility
+Provides logging handlers and progress hooks for different UI styles.
+"""
 import sys
+from typing import Any, Dict, Optional, Union, Callable
 from ..utils.spinner import Spinner
 
-# --- LOGGER ---
-_ACTIVE_RICH = None
+_ACTIVE_RICH: Optional['RichProgressManager'] = None
 
 class QuietLogger:
-    def debug(self, msg): pass
-    def warning(self, msg): pass
-    def error(self, msg):
+    """Handles logging with minimal output and interruption management."""
+    
+    def debug(self, msg: str) -> None:
+        pass
+
+    def warning(self, msg: str) -> None:
+        pass
+
+    def error(self, msg: str) -> None:
         sys.stdout.write('\r\033[K')
         sys.stdout.flush()
         
@@ -16,17 +25,15 @@ class QuietLogger:
         if _ACTIVE_RICH is not None:
             try:
                 _ACTIVE_RICH.stop()
-            except:
+            except Exception:
                 pass
 
         if "403" in msg or "Forbidden" in msg:
             return 
         print(msg)
 
-# --- HOOK IMPLEMENTATIONS ---
-
-def _hook_minimal(d):
-    """Output teks simple"""
+def _hook_minimal(d: Dict[str, Any]) -> None:
+    """Provides a simple text-based progress output."""
     if d['status'] == 'downloading':
         p = d.get('_percent_str', '0%').strip()
         speed = d.get('_speed_str', 'N/A').strip()
@@ -39,8 +46,8 @@ def _hook_minimal(d):
         sys.stdout.write('\r\033[K')
         sys.stdout.flush()
 
-def _hook_classic(d):
-    """Output bar pendek"""
+def _hook_classic(d: Dict[str, Any]) -> None:
+    """Provides a classic progress bar output."""
     if d['status'] == 'downloading':
         try:
             total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
@@ -59,34 +66,34 @@ def _hook_classic(d):
             speed = d.get('_speed_str', 'N/A')
             eta = d.get('_eta_str', 'N/A')
             
-            # Output: [=========>          ] 50.0% | 2MB/s | ETA 00:10
             msg = f"\r\033[K[{bar}] {percent_str} | {speed} | ETA {eta}"
             sys.stdout.write(msg)
             sys.stdout.flush()
-        except:
+        except Exception:
             pass
     elif d['status'] == 'finished':
         sys.stdout.write('\r\033[K')
         sys.stdout.flush()
 
-# --- RICH HOOK (MODERN) ---
 try:
     from rich.progress import Progress, BarColumn, TextColumn, TransferSpeedColumn, TimeRemainingColumn
     
     class RichProgressManager:
-        def __init__(self):
-            self.progress = None
-            self.task_id = None
+        """Manages modern progress bars using the Rich library."""
+        
+        def __init__(self) -> None:
+            self.progress: Optional[Progress] = None
+            self.task_id: Any = None
             global _ACTIVE_RICH
             _ACTIVE_RICH = self
         
-        def stop(self):
-            """Method manual buat matikan bar dari luar"""
+        def stop(self) -> None:
+            """Manually stops the progress display."""
             if self.progress:
                 self.progress.stop()
                 self.progress = None
 
-        def __call__(self, d):
+        def __call__(self, d: Dict[str, Any]) -> None:
             if d['status'] == 'downloading':
                 total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
                 downloaded = d.get('downloaded_bytes', 0)
@@ -118,21 +125,16 @@ except ImportError:
 
 class EncodingSpinnerHook:
     """
-    Hook khusus untuk menangani loading state saat FFmpeg/Post-processor berjalan.
+    Hook to manage loading states during FFmpeg or post-processing operations.
     """
-    def __init__(self, text):
+    def __init__(self, text: str) -> None:
         self.text = text
-        self.spinner = None
-        self.is_running = False 
+        self.spinner: Optional[Spinner] = None
+        self.is_running: bool = False 
 
-    def __call__(self, d):
-        """
-        d['status'] -> 'started' | 'finished'
-        d['postprocessor'] -> 'FFmpegFixupM4a', 'Merger', etc.
-        """
+    def __call__(self, d: Dict[str, Any]) -> None:
         if d['status'] == 'started':
             if not self.is_running:
-                # Instansiasi Spinner baru tiap kali start
                 self.spinner = Spinner(self.text)
                 self.spinner.start()
                 self.is_running = True
@@ -143,17 +145,15 @@ class EncodingSpinnerHook:
                 self.spinner = None
                 self.is_running = False
 
-
-# --- FACTORY / SELECTOR ---
-def get_progress_hook(style_name='minimal'):
-    """Factory function untuk memilih style hook"""
+def get_progress_hook(style_name: str = 'minimal') -> Union[Callable[[Dict[str, Any]], None], 'RichProgressManager']:
+    """Factory function to select the progress hook style."""
     if style_name == 'modern' and _HAS_RICH:
         return RichProgressManager()
     elif style_name == 'minimal':
         return _hook_minimal
     else:
-        return _hook_classic # Default
+        return _hook_classic
     
-def get_postprocessor_hook(text_message):
-    """Factory untuk post-processor hook"""
+def get_postprocessor_hook(text_message: str) -> EncodingSpinnerHook:
+    """Factory function to create a post-processor hook."""
     return EncodingSpinnerHook(text_message)

@@ -1,8 +1,7 @@
 <div align="center">
 
-  <img src="docs/TETOTETOTETO.gif" alt="TetoDL Banner" width="100%">
+  <img src="docs/hmm-teto.gif" alt="TetoDL Banner" width="100%">
 
-  <br>
   <h1>TetoDL - TUI & CLI Media Downloader</h1>
 
   <p>
