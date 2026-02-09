@@ -26,7 +26,7 @@ if not IS_WINDOWS and not IS_TERMUX:
         pass
 
 APP_NAME = "TetoDL"
-APP_VERSION = "1.1.1"
+APP_VERSION = "1.2.0"
 
 # ==== PATH SETUP ====
 if IS_TERMUX:

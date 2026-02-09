@@ -14,7 +14,7 @@
     <a href="https://github.com/rannd1nt/TetoDL/issues">
       <img src="https://img.shields.io/badge/Maintained%3F-Yes-238636?style=flat-square" alt="Maintenance">
     </a>
-    <img src="https://img.shields.io/badge/Version-1.1.1-orange?style=flat-square" alt="Version">
+    <img src="https://img.shields.io/badge/Version-1.2.0-orange?style=flat-square" alt="Version">
   </p>
 
 </div>
@@ -23,6 +23,7 @@
 
 Focusing on **Smart Metadata**, TetoDL ensures your music library is always tidy with correct cover arts, artist names, and albums even from YouTube sources.
 
+> **⚠️ NOTICE REGARDING SPOTIFY SUPPORT:** > Due to ongoing restrictions with the **Spotify Developer Portal** (API access) and stability issues with upstream dependencies (`spotdl`), **TetoDL is currently focusing development on YouTube & YouTube Music**. Spotify features might be unstable or unavailable. We recommend using the `--lite` installation mode if you do not require Spotify functionality.
 ---
 
 ## Features
@@ -57,7 +58,7 @@ bash tetodl.sh
 ```
 OR
 ```bash
-# Without Spotdl Installation
+# Without Spotdl Installation (Recommended)
 bash tetodl.sh --lite
 ```
 
@@ -105,13 +106,35 @@ Experience the interactive menu by simply running `tetodl` without arguments.
 * **Audio Only (Music Mode):**
     Download audio extraction specifically. The `-a` flag enables audio mode, while `-f m4a` forces the output to **M4A (AAC)** format, which is ideal for maintaining metadata in music libraries.
     ```bash
+    # Download audio with m4a format
     tetodl "https://youtu.be/url" -a -f m4a
     ```
 
 * **Video Only (Video Mode):**
     Uses `-v` for video mode, forces the **.mp4** container for maximum compatibility, and caps the resolution at **720p**.
     ```bash
+    # Download video with mp4 format and 720p resolution
     tetodl "https://youtu.be/url" -v -f mp4 -r 720p
+    ```
+
+* **Trimming Media (Cut Mode):** 
+    Download only a specific part of the audio/video. Saves bandwidth and storage.
+    ```bash
+    # Download audio from minute 1:20 to 1:50
+    tetodl "https://youtu.be/url" -a --cut 01:20-01:50
+    ```
+
+* **Cover Art / Thumbnail Only:** 
+    Download high-resolution cover art (from iTunes/YouTube) without the media file.
+    ```bash
+    # Get cover art in PNG format
+    tetodl "https://youtu.be/url" --thumbnail-only -f png
+    ```
+
+* **SFX Download / Raw Audio (No Metadata):**
+    Useful for video editors who need raw sound effects without embedded images/tags.
+    ```bash
+    tetodl "https://youtu.be/url" -a --no-cover
     ```
 
 * **Power User Mode**
@@ -120,6 +143,34 @@ Experience the interactive menu by simply running `tetodl` without arguments.
     tetodl "https://youtu.be/url" -v -f mkv -r 1080p -c h264 -o "/home/user/Videos/Collection"
     ```
 
+* **Interactive Search Mode:**
+    Don't have a URL? Search YouTube directly from the terminal and select from a list. You can combine this with any download, processing even sharing flags (`-a`, `-v`, `-o`, etc).
+    ```bash
+    # Search for a video (Default limit: 5 results)
+    tetodl --search "Never Gonna Give You Up"
+
+    # Search for music with custom limit (e.g., 10 results)
+    tetodl --search "Lo-fi Hip Hop" -a -l 10
+    ```
+
+* **Network Sharing & Mobile Transfer (Linux Native Only):**
+    > **⚠️ WSL Warning:** This feature requires direct LAN access. It **will not work on WSL** (Windows Subsystem for Linux) due to network isolation logic, unless you configure "Mirrored Networking" manually.
+
+    Generate a **QR Code** in your terminal to wirelessly transfer files to your phone over the local network.
+
+    ```bash
+    # 1. Download, Save to Disk, AND Share (Persistent)
+    # Downloads to your configured root (or -o path), saves it, then hosts it.
+    tetodl "https://youtu.be/url" -a --share
+
+    # 2. Download, Share, then Auto-Delete (Temporary)
+    # perfect for quick transfers without cluttering your storage.
+    tetodl --search "Song Name" -a --share-temp
+
+    # 3. Share an existing local file
+    tetodl --share "/home/user/Downloads/Music/Song.mp3"
+    ```
+    
 ---
 
 ## Command Reference
@@ -130,25 +181,38 @@ Experience the interactive menu by simply running `tetodl` without arguments.
 |:-----|:-----|:-----|
 | `-a`, `--audio` | - | Download as Audio. |
 | `-v`, `--video` | - | Download as Video (Default). |
-| `-f`, `--format`| FORMAT | Force format: `mp3`, `m4a`, `opus` (audio) or `mp4`, `mkv` (video). |
+| `--thumbnail-only` | - | Download Cover Art/Thumbnail only (No media). |
+|`--search`| QUERY | Search YouTube interactively. |
+|`-l`, `--limit`| NUM | (Requires `--search`) Number of search results (Default: 5). |
+| `-f`, `--format`| FORMAT | Force format: <br> **• Audio:** `mp3`, `m4a`, `opus` <br> **• Video:** `mp4`, `mkv` <br> **• Thumb**: `jpg`, `png`, `webp` |
 |`-r`, `--resolution`| RES | Max video resolution limit: `480p`, `720p`, `1080p`, `2k`, `4k`, `8k`. |
 | `-c`, `--codec` | CODEC | Set video codec: `default` (speed), `h264` (compat), `h265` (size).|
 |`-o`, `--output`| PATH | Save to a custom output directory (Overrides TUI Base Path). |
 
-**2. Utility, Maintance & History:** Manage data, view statistics, and perform system maintenance.
+**2. Metadata & Processing**.
+| Flag | Argument | Description |
+|:-----|:-----|:-----|
+| `--cut` | TIME | Trim media. Formats:<br>• `Start-End`: Specific range (e.g. `1:30-2:00`).<br>• `Start-`: From timestamp to end (e.g. `1:30-`).<br>• `-End`: From beginning to timestamp (e.g. `-2:00`). |
+|`--smart-cover`| - | **Force ON** Smart Cover (iTunes Search & Metadata) for this session. |
+|`--no-cover`| - | **Force OFF** (Kill Switch). Disable all cover art, thumbnails, and metadata embedding. |
+| `--force-crop` | - | Force crop YouTube thumbnail to 1:1 square if iTunes fetch fails. |
+
+**3. Utility, Maintance & History:** Manage data, view statistics, and perform system maintenance.
 | Flag | Argument | Description |
 |:-----|:-----|:-----|
 |`--info`| - | Show current configuration, system paths, and storage usage. |
 |`--wrap`| - | Show TetoDL Analytics (Top Artists, Albums, & Total Duration). |
 |`--history`| LIMIT | Show download history (default last 20). Ex: tetodl --history 50. |
 |`--reverse`| - | **(Requires `--history`)** Show oldest downloads first. |
-| `--search` | QUERY | **(Requires `--history`)** Filter history by title (case-insensitive). |
+| `--find` |	QUERY |	**(Requires `--history`)** Filter history by title. (case-insensitive). |
+| `--share` | PATH | Host a file/folder via HTTP/QR Code. Use `LATEST` to share last download. |
+| `--share-temp` | - | Download to temp folder, share via QR, then auto-delete. |
 |`--recheck`| - | Force dependency integrity check (ffmpeg, spotdl, etc). |
 |`--reset`| TARGET | Reset data. Targets: `history`, `cache`, `config`, `registry`, `all`. |
 |`--update`| - | Update TetoDL to latest version (Git Pull). |
 |`--uninstall`| - | Remove TetoDL symlink, launcher, and cleanup user data. |
 
-**3. Configuration:** Advanced settings that are often hidden from the TUI.
+**4. Configuration:** Advanced settings that are often hidden from the TUI.
 | Flag | Argument | Description |
 |:-----|:-----|:-----|
 |`--header`| NAME |Set TUI app header (`default`, `classic` or `filename` in `assets/`). |
