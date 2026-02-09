@@ -6,6 +6,7 @@ import time
 
 try:
     import yt_dlp as yt
+    from yt_dlp.utils import sanitize_filename
 except Exception:
     yt = None
 
@@ -13,7 +14,7 @@ from ..constants import (
     FFMPEG_CMD, RuntimeConfig, IS_TERMUX
 )
 from ..utils.i18n import get_text as _
-from ..utils.styles import print_process, print_info, print_success, print_error, clear
+from ..utils.styles import print_process, print_info, print_success, print_error, clear, color
 from ..utils.spinner import Spinner
 from ..utils.network import (
     is_valid_youtube_url, classify_youtube_url, check_internet,
@@ -32,10 +33,10 @@ from ..core.registry import registry
 from ..utils.display import wait_and_clear_prompt
 from ..ui.components import header
 from ..media.scanner import scan_media_files
-from ..media.thumbnail import download_and_process_thumbnail, embed_thumbnail_to_audio
+from ..media.thumbnail import download_and_process_thumbnail, embed_thumbnail_to_audio, convert_thumbnail_format
 from ..ui.navigation import select_download_folder
 
-def download_single_video(url, target_dir, use_cache=True, download_type="Single Video"):
+def download_single_video(url, target_dir, use_cache=True, download_type="Single Video", cut_range=None):
     """Download single video file"""
 
     current_style = getattr(RuntimeConfig, 'PROGRESS_STYLE', 'minimal')
@@ -78,6 +79,13 @@ def download_single_video(url, target_dir, use_cache=True, download_type="Single
                 'postprocessor_args': pp_args if pp_args else None
             }
 
+            if cut_range:
+                start, end = cut_range
+                print_info(f"Trimming video: {start}s to {end}s (This may take longer)")
+
+                ydl_opts['download_ranges'] = lambda info, ydl: [{'start_time': start, 'end_time': end}]
+                ydl_opts['force_keyframes_at_cuts'] = True
+
             with yt.YoutubeDL(ydl_opts) as ydl:
                 # Extract info
                 info = ydl.extract_info(url, download=False)
@@ -91,10 +99,16 @@ def download_single_video(url, target_dir, use_cache=True, download_type="Single
                     if cached:
                         print_info(_('download.youtube.using_cache', title=cached['metadata'].get('title', 'Unknown')))
 
-                print_process(_('download.youtube.downloading_item', title=title))
-                
-                # Action Download
-                ydl.download([url])
+                if cut_range:
+                    cut_spinner = Spinner(_('download.youtube.downloading_item', title=title) + ", Cutting...")
+                    cut_spinner.start()
+                    try:
+                        ydl.download([url])
+                    finally:
+                        cut_spinner.stop()
+                else:
+                    print_process(_('download.youtube.downloading_item', title=title))
+                    ydl.download([url])
 
                 # --- Post Processing  ---
                 temp_filename = ydl.prepare_filename(info)
@@ -148,7 +162,7 @@ def download_single_video(url, target_dir, use_cache=True, download_type="Single
                 return False, str(e), False
 
 
-def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=False, download_type="Single Track"):
+def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=False, download_type="Single Track", cut_range=None):
     """Download single audio file with cache support, metadata, and 403 retry logic"""
 
     audio_format = get_audio_extension()
@@ -191,27 +205,46 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
                 'progress_hooks': [hook],
             }
 
+            if RuntimeConfig.NO_COVER_MODE:
+                ydl_opts['postprocessors'] = [
+                    pp for pp in ydl_opts['postprocessors'] 
+                    if pp.get('key') != 'FFmpegMetadata'
+                ]
+                ydl_opts['add_metadata'] = False
+
+            if cut_range:
+                start, end = cut_range
+                print_info(f"Trimming audio: {start}s to {end}s")
+                
+                ydl_opts['download_ranges'] = lambda info, ydl: [{'start_time': start, 'end_time': end}]
+                ydl_opts['force_keyframes_at_cuts'] = True
+
             with yt.YoutubeDL(ydl_opts) as ydl:
                 if use_cache:
                     cached = get_cached_metadata(url)
                     if cached:
                         print_info(_('download.youtube.using_cache', title=cached['metadata'].get('title', 'Unknown')))
 
-                print_process(_('download.youtube.downloading_item', title=title))
-                
-                # Action Download
-                ydl.download([url])
+                if cut_range:
+                    cut_spinner = Spinner(_('download.youtube.downloading_item', title=title) + ", Cutting...")
+                    cut_spinner.start()
+                    try:
+                        ydl.download([url])
+                    finally:
+                        cut_spinner.stop()
+                else:
+                    print_process(_('download.youtube.downloading_item', title=title))
+                    ydl.download([url])
 
                 final_scan_path = None
                 
-                # --- YT AUDIO COVER ART LOGIC IN A NUTSHELL ---
-                # 1. IF it's a YouTube Music link, it will force the cover (whether it's a video or song).
-                # 2. OR Smart Cover Mode is on (Force cover art for regular youtube links)
-                # 3. AND not in OPUS format (Opus is complicated to embed, usually skipped)
-                should_process_cover = (
-                    (is_youtube_music or RuntimeConfig.SMART_COVER_MODE)
-                    and audio_format != "opus"
-                )
+                if RuntimeConfig.NO_COVER_MODE:
+                    should_process_cover = False
+                else:
+                    should_process_cover = (
+                        (is_youtube_music or RuntimeConfig.SMART_COVER_MODE)
+                        and audio_format != "opus"
+                    )
 
                 if should_process_cover:
                     print_process(_('download.youtube.processing_cover'))
@@ -235,7 +268,7 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
                         should_crop = False
                         smart_search = RuntimeConfig.SMART_COVER_MODE
 
-                    thumbnail_path = download_and_process_thumbnail(
+                    thumbnail_path, fetched_metadata = download_and_process_thumbnail(
                         info, 
                         target_dir, 
                         should_crop=should_crop, 
@@ -246,10 +279,20 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
                         temp_filename_raw = ydl.prepare_filename(info)
                         base_name = os.path.splitext(temp_filename_raw)[0]
                         audio_path = f"{base_name}.{audio_format}"
-
+                        
                         if os.path.exists(audio_path):
                             print_process(_('download.youtube.embedding_cover'))
-                            if embed_thumbnail_to_audio(audio_path, thumbnail_path, audio_format):
+                            final_metadata = {}
+                            if fetched_metadata:
+                                final_metadata = fetched_metadata
+                            elif is_art_track or info.get('artist'):
+                                final_metadata = {
+                                    'artist': info.get('artist') or info.get('uploader', '').replace(' - Topic', ''),
+                                    'album': info.get('album') or info.get('title'),
+                                    'title': info.get('track') or info.get('title')
+                                }
+
+                            if embed_thumbnail_to_audio(audio_path, thumbnail_path, audio_format, final_metadata):
                                 print_success(_('download.youtube.cover_success'))
                             else:
                                 print_error(_('download.youtube.cover_failed'))
@@ -412,8 +455,132 @@ def get_content_type_display(url_classification):
 
     return f"{platform_str} {type_str}"
 
+def download_thumbnail_task(url, target_format='jpg'):
+    """
+    Standalone task for --thumbnail-only flag.
+    Downloads cover art (Smart/YouTube) based on config without downloading media.
+    """
+    # 1. Setup Directory
+    if RuntimeConfig.SIMPLE_MODE:
+        target_dir = RuntimeConfig.THUMBNAIL_ROOT
+    else:
+        target_dir = select_download_folder(RuntimeConfig.THUMBNAIL_ROOT, "thumbnails")
+        if not target_dir: return {'success': False, 'reason': 'cancel'}
 
-def download_audio_youtube(url):
+    if not os.path.exists(target_dir):
+        try:
+            os.makedirs(target_dir, exist_ok=True)
+        except OSError as e:
+            print_error(f"Cannot create thumbnail directory: {e}")
+            return {'success': False}
+    
+    clear()
+    header()
+
+    if not check_internet():
+        print_error(_('download.youtube.no_internet'))
+        return {'success': False}
+
+    spinner = Spinner("Extracting information...")
+    spinner.start()
+
+    try:
+        with yt.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+    except Exception as e:
+        spinner.stop()
+        print_error(f"Extraction failed: {e}")
+        return {'success': False}
+
+    spinner.stop()
+
+    # Handle Playlist Recursion
+    if 'entries' in info:
+        print_info(f"Playlist detected: {info.get('title')}")
+        entries = list(info['entries'])
+        total = len(entries)
+        print_process(f"Found {total} items. Processing thumbnails...")
+        
+        success_count = 0
+        for i, entry in enumerate(entries, 1):
+            print_process(f"[{i}/{total}] Processing: {entry.get('title')}")
+            if _process_single_thumbnail(entry, target_dir, target_format=target_format):
+                success_count += 1
+        
+        print_success(f"Processed {success_count}/{total} thumbnails.")
+        wait_and_clear_prompt()
+        return {'success': True}
+    else:
+        success = _process_single_thumbnail(info, target_dir, target_format=target_format)
+        wait_and_clear_prompt()
+        return {'success': success}
+
+def _process_single_thumbnail(info, target_dir, target_format='jpg'):
+    """Internal helper to process logic for a single info dict"""
+    title = info.get('title', 'Unknown')
+    print_process(f"Processing cover for: {title}")
+
+    # Logic Deteksi Art Track (Sama seperti di audio downloader)
+    uploader = info.get('uploader', '')
+    description = info.get('description', '')
+    
+    is_art_track = (
+        info.get('track') is not None or
+        ' - Topic' in uploader or
+        'Auto-generated by YouTube' in description or
+        'Provided to YouTube by' in description
+    )
+    
+    should_crop = is_art_track # Default True kalau Art Track
+    smart_search = RuntimeConfig.SMART_COVER_MODE and not is_art_track
+
+    # Panggil fungsi inti di thumbnail.py
+    thumb_path, metadata = download_and_process_thumbnail(
+        info, target_dir, should_crop=should_crop, smart_mode=smart_search
+    )
+
+    if thumb_path and os.path.exists(thumb_path):
+        # [NEW] Format Conversion
+        # Default download_and_process_thumbnail menghasilkan .jpg (atau .square.jpg)
+        # Jika user minta png/webp, kita convert lagi.
+        
+        final_path = thumb_path
+        if target_format != 'jpg':
+            converted = convert_thumbnail_format(thumb_path, target_format)
+            if converted:
+                final_path = converted
+                # thumb_path asli sudah dihapus oleh fungsi convert
+
+        # Rename Logic
+        try:
+            final_title = metadata.get('title') if metadata else title
+            final_artist = metadata.get('artist') if metadata else info.get('uploader')
+            
+            # Extension sesuai format
+            ext = target_format
+            
+            if final_artist and final_title:
+                new_name = f"{final_artist} - {final_title}.{ext}"
+            else:
+                new_name = f"{final_title}.{ext}"
+            
+            safe_name = sanitize_filename(new_name)
+            new_path = os.path.join(target_dir, safe_name)
+            
+            if os.path.exists(new_path): os.remove(new_path)
+            os.rename(final_path, new_path)
+            
+            print_success(f"Saved: {safe_name}")
+            return True
+        except Exception:
+            # Fallback rename failed
+            print_error(f"Saved as: {os.path.basename(final_path)}")
+            return True
+    else:
+        print_error("Failed to download thumbnail.")
+        return False
+    
+def download_audio_youtube(url, cut_range=None):
     """Main function to download YouTube audio"""
 
     # Download Preparation & Strict Checking
@@ -480,6 +647,10 @@ def download_audio_youtube(url):
     spinner.stop(print_success(_('download.youtube.extracted', count=total_items, type='track'), str_only=True))
 
     if total_items > 1:
+        if cut_range:
+            print_info(color("Warning: '--cut' flag is ignored for playlists to prevent errors.", "y"))
+            cut_range = None
+
         print_process(_('download.youtube.found_playlist', count=total_items, type='track', title=content_title))
         download_type = "Album" if url_classification['type'] == 'album' else "Playlist"
 
@@ -495,7 +666,14 @@ def download_audio_youtube(url):
 
         download_type = "Single Track"
 
-        success, title, skipped = download_single_audio(urls[0], target_dir, is_youtube_music=is_youtube_music, download_type=download_type)
+        success, title, skipped = download_single_audio(
+            urls[0],
+            target_dir,
+            is_youtube_music=is_youtube_music,
+            download_type=download_type, 
+            cut_range=cut_range
+        )
+
         if success:
             from ..core.history import load_history
 
@@ -521,7 +699,7 @@ def download_audio_youtube(url):
     }
 
 
-def download_video_youtube(url):
+def download_video_youtube(url, cut_range=None):
     """Main function to download YouTube video"""
 
     # Download Preparation & Strict Checking
@@ -578,6 +756,10 @@ def download_video_youtube(url):
     spinner.stop(print_success(_('download.youtube.extracted', count=total_items, type='video'), str_only=True))
 
     if total_items > 1:
+        if cut_range:
+            print_info(color("Warning: '--cut' flag is ignored for playlists to prevent errors.", "y"))
+            cut_range = None
+        
         print_process(_('download.youtube.found_playlist', count=total_items, type='video', title=content_title))
         print_process(_('download.youtube.max_resolution', resolution=RuntimeConfig.MAX_VIDEO_RESOLUTION))
         
@@ -595,7 +777,13 @@ def download_video_youtube(url):
 
         download_type = "Single Video"
 
-        success, title, skipped = download_single_video(urls[0], target_dir, download_type=download_type)
+        success, title, skipped = download_single_video(
+            urls[0],
+            target_dir,
+            download_type=download_type,
+            cut_range=cut_range
+        )
+
         if success:
             from ..core.history import load_history
             load_history()

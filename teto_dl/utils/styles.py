@@ -7,6 +7,27 @@ from questionary import Style
 
 console = Console()
 
+from prompt_toolkit.styles import Style
+
+# ... (kode lain) ...
+
+def search_style():
+    """
+    Style khusus untuk Search Menu.
+    Menghilangkan 'bold' pada pointer dan highlight agar tidak sakit mata.
+    """
+    return Style([
+        ('qmark', 'fg:cyan'),
+        ('question', 'fg:white nobold'),
+        ('answer', 'fg:white'),
+        ('pointer', 'fg:cyan'),
+        ('highlighted', 'fg:cyan'),
+        ('selected', 'fg:cyan'),
+        ('separator', 'fg:grey'),
+        ('instruction', 'fg:grey'),
+        ('disabled', 'fg:#666666'),
+    ])
+
 def menu_style():
     return Style([
         ('qmark', 'fg:cyan'),
@@ -21,11 +42,18 @@ def menu_style():
     ])
 
 def truncate_title(title, max_words=None, max_chars=50):
-    if not title: return ""
+    if not title: 
+        return "Unknown Title"
+    
     title = str(title).strip()
+    title = title.replace('\n', ' ').replace('\r', '')
     
     if len(title) <= max_chars:
         return title
+    
+    if max_chars <= 3:
+        return title[:max_chars]
+        
     return title[:max_chars-3] + "..."
 
 def format_duration(seconds):

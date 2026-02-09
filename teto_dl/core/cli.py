@@ -2,7 +2,8 @@ import argparse
 import sys
 import os
 from ..constants import (
-    APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS, IS_TERMUX, RuntimeConfig
+    APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS, IS_TERMUX, RuntimeConfig,
+    VALID_THUMBNAIL_FORMATS
 )
 from ..utils.styles import print_error, print_success, print_info
 from ..core import config as config_mgr
@@ -11,8 +12,6 @@ from ..utils.network import start_share_server
 from ..ui import analytics
 from ..utils.display import show_app_info
 from . import maintenance
-
-from typing import Tuple, Dict, Any
 
 from typing import Tuple, Dict, Any
 
@@ -97,6 +96,33 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
         help='Set video codec priority (default=speed, h264=compatibility, h265=size)'
     )
 
+    dl_group.add_argument('--search', 
+        metavar='QUERY',
+        help="Search YouTube interactively and download"
+    )
+    dl_group.add_argument('-l', '--limit', 
+        type=int,
+        default=5,
+        metavar='NUM',
+        help="Number of search results (requires --search)"
+    )
+    dl_group.add_argument('--cut', 
+        metavar='TIME',
+        help="Trim media (e.g. '01:30-02:00', '01:30', '-02:00')"
+    )
+    dl_group.add_argument('--smart-cover', action='store_true',
+        help="Force Enable Smart Cover & Metadata (iTunes search)"
+    )
+    dl_group.add_argument('--no-cover', action='store_true',
+        help="Disable all cover art & metadata embedding"
+    )
+    dl_group.add_argument('--force-crop', action='store_true',
+        help="Force crop YouTube thumbnail to 1:1 if iTunes fetch fails"
+    )
+    dl_group.add_argument('--thumbnail-only', action='store_true',
+        help="Download thumbnail/cover art only (No audio/video)"
+    )
+
     # Output / Path Flag
     dl_group.add_argument('-o', '--output', metavar='PATH', help='Custom output directory')
 
@@ -114,7 +140,7 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
         help="Show download history (default last 20)"
     )
     util_group.add_argument('--reverse', action='store_true', help="Reverse order (e.g. show oldest history first)")
-    util_group.add_argument('--search',
+    util_group.add_argument('--find',
         metavar='QUERY',
         help="Filter history by title (case-insensitive)"
     )
@@ -175,10 +201,59 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
         show_app_info()
         return True, {}
     
-    history_modifiers = [args.reverse, args.search]
-    if any(history_modifiers) and args.history is None:
-        parser.error("Flags '--reverse' and '--search' can only be used with '--history'")
+    # Flags Flow Validations
+    has_target = (args.url or args.search)
+
+    # Orphan Flags Check
+    processing_flags = [
+        args.audio, args.video, args.thumbnail_only,
+        args.format, args.resolution, args.codec,
+        args.cut, args.limit != 5, 
+        args.smart_cover, args.no_cover, args.force_crop,
+        args.share_temp
+    ]
+
+    if any(processing_flags) and not has_target:
+        parser.error("Processing flags require a URL or --search query.")
+
+
+    # Mode Conflict (Ambiguous Mode)
+    modes_selected = sum([bool(args.audio), bool(args.video), bool(args.thumbnail_only)])
+    if modes_selected > 1:
+        parser.error("Conflicting modes: Choose ONLY ONE of --audio, --video, or --thumbnail-only.")
+
+    # Metadata Flags Conflict
+    if args.smart_cover and args.no_cover:
+        parser.error("Conflict: Cannot use --smart-cover (Force ON) and --no-cover (Force OFF) together.")
+
+    if args.force_crop and args.no_cover:
+        parser.error("Conflict: Cannot use --force-crop with --no-cover.")
+
+    # Feature Constraints
+    if args.thumbnail_only:
+        if args.cut:
+            parser.error("Invalid flag: --cut cannot be used with --thumbnail-only.")
+        if args.resolution or args.codec:
+            parser.error("Invalid flag: Video settings (--resolution/--codec) cannot be used with --thumbnail-only.")
     
+    if args.audio:
+        if args.resolution or args.codec:
+            print_info("Note: --resolution and --codec are ignored in Audio mode.")
+    
+    # Limit Dependency
+    if args.limit:
+        args.limit = abs(args.limit)
+        
+    if args.limit == 0:
+        args.limit = 1
+
+    if args.limit != 5 and not args.search:
+        parser.error("The --limit flag requires --search.")
+
+
+    # --- Utility Flags Handling ---
+
+    # History and Analytics
     if args.history is not None:
         config_mgr.load_config()
         from ..core.history import load_history
@@ -186,7 +261,7 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
         analytics.render_history_view(
             limit=args.history, 
             reverse_order=args.reverse,
-            search_query=args.search
+            search_query=args.find
         )
         return True, {}
 
@@ -195,7 +270,7 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
         analytics.render_analytics_view()
         return True, {}
     
-    # 2. Config Handling
+    # Config Flags
     if (args.header or args.progress_style or args.lang or
         args.delay or args.retries or args.media_scanner):
         config_mgr.load_config() 
@@ -234,14 +309,18 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
         if config_changed:
             return True, {}
     
-    # 3. Reset Handling
+    # Reset Flag
     if args.reset:
         targets = set(args.reset)
         success = False
         
         if 'all' in targets:
-            config_mgr.perform_full_wipe()
-            print_success("Full factory reset successful (All data wiped).")
+            res = input("Are you sure you want reset ALL? (y/N) > ")
+            if res.lower() == 'y':
+                config_mgr.perform_full_wipe()
+                print_success("Full factory reset successful (All data wiped).")
+                return True, {}
+            print_info("Operation Cancelled")
             return True, {}
 
         actions = {
@@ -263,8 +342,8 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
         
         return True, {}
 
-    # 4. Handle Share Standalone, Update & Uninstall
-    if args.share and not args.url:
+    # Handle Share Standalone, Update & Uninstall
+    if args.share and not (args.url or args.search):
         target_path = args.share
         
         if args.audio:
@@ -302,37 +381,41 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
         maintenance.perform_uninstall()
         return True, {}
     
-    # 5. Recheck Context
+    # --- Download, Search & Processing Handling ---
+
+    # Recheck Context
     context = {}
     if args.recheck:
         context['force_recheck'] = True
 
-    # 6. Download Logic & Share Validation
-    if args.share_temp and not args.url:
-        parser.error("--share-temp requires a URL to download.")
-
-    if args.url:
+    # 6. Download Logic
+    if args.url or args.search:
         if args.audio and args.video:
             print_error("Ambiguous mode. Choose -a or -v.")
             return True, {}
 
-        # Siapkan Overrides
         overrides = {
             'simple_mode': True,
-            'url': args.url
         }
 
+        if args.url:
+            overrides['url'] = args.url
+        elif args.search:
+            context['mode'] = 'cli_search'
+            context['query'] = args.search
+            context['limit'] = args.limit
+        
+        if args.smart_cover: overrides['smart_cover'] = True
+        if args.no_cover: overrides['no_cover'] = True
+        if args.force_crop: overrides['force_crop'] = True
+        if args.thumbnail_only: overrides['thumbnail_only'] = True
+
         if args.share_temp:
-            # Aktifkan mode share after download
             overrides['share_after_download'] = True
             
-            # Override Output Path ke Folder Temp
             temp_path = TempManager.get_temp_dir()
             overrides['output_path'] = str(temp_path)
-            
-            # Tandai context kalau ini adalah 'temp_session'
             context['is_temp_session'] = True
-            
         elif args.share:
             overrides['share_after_download'] = True
 
@@ -344,6 +427,8 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
             detected_type = 'audio'
         elif args.video:
             detected_type = 'video'
+        elif args.thumbnail_only:
+            detected_type = 'thumbnail'
 
         # Format Inference (-f mp3 / -f mp4)
         if detected_type is None and args.format:
@@ -351,6 +436,8 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
                 detected_type = 'audio'
             elif args.format in VALID_CONTAINERS:
                 detected_type = 'video'
+            elif args.format in VALID_THUMBNAIL_FORMATS:
+                detected_type = 'thumbnail'
 
         # Implicit Video Flags (-r / -c)
         if detected_type is None:
@@ -358,29 +445,43 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
                 detected_type = 'video'
 
         # URL Pattern Fallback
-        if detected_type is None:
+        if detected_type is None and args.url:
             url_lower = args.url.lower()
             if "music.youtube.com" in url_lower or "spotify.com" in url_lower:
                 detected_type = 'audio'
             else:
                 detected_type = 'video'
 
+        if detected_type is None:
+            detected_type = 'video'
+
         overrides['type'] = detected_type
 
         # --- FORMAT VS TYPE VALIDATION ---
         if args.format:
-            is_audio_fmt = args.format in AUDIO_QUALITY_OPTIONS
-            is_video_fmt = args.format in VALID_CONTAINERS
+            fmt = args.format.lower()
+        
+            if detected_type == 'thumbnail':
+                if fmt not in VALID_THUMBNAIL_FORMATS:
+                    parser.error(f"Invalid format '{fmt}' for thumbnail mode. Valid: {', '.join(VALID_THUMBNAIL_FORMATS)}")
             
-            if detected_type == 'audio' and is_video_fmt:
-                print_error(f"Conflict: Mode is Audio, but format '{args.format}' is a video container.")
-                return True, {}
-            
-            if detected_type == 'video' and is_audio_fmt:
-                print_error(f"Conflict: Mode is Video, but format '{args.format}' is audio-only.")
-                return True, {}
+            elif detected_type == 'audio':
+                if fmt not in AUDIO_QUALITY_OPTIONS:
+                    if fmt in VALID_CONTAINERS:
+                        parser.error(f"Conflict: Mode is Audio, but format '{fmt}' is a video container.")
+                    if fmt in VALID_THUMBNAIL_FORMATS:
+                        parser.error(f"Conflict: Mode is Audio, but format '{fmt}' is an image.")
+                    parser.error(f"Invalid audio format '{fmt}'. Valid: {', '.join(AUDIO_QUALITY_OPTIONS.keys())}")
 
-            overrides['format'] = args.format
+            elif detected_type == 'video':
+                if fmt not in VALID_CONTAINERS:
+                    if fmt in AUDIO_QUALITY_OPTIONS:
+                        parser.error(f"Conflict: Mode is Video, but format '{fmt}' is audio-only.")
+                    if fmt in VALID_THUMBNAIL_FORMATS:
+                        parser.error(f"Conflict: Mode is Video, but format '{fmt}' is an image.")
+                    parser.error(f"Invalid video format '{fmt}'. Valid: {', '.join(VALID_CONTAINERS)}")
+            
+            overrides['format'] = fmt
 
         # --- CODEC & RESOLUTION VALIDATION ---
         if args.codec:
@@ -412,7 +513,20 @@ def init_parser() -> Tuple[bool, Dict[str, Any]]:
             }
             overrides['resolution'] = res_map.get(args.resolution, '720p')
 
-        context['mode'] = 'cli_download'
+        if args.cut:
+            from ..utils.time_parser import get_cut_seconds
+            
+            try:
+                start_sec, end_sec = get_cut_seconds(args.cut)
+                overrides['cut_range'] = (start_sec, end_sec)
+                overrides['cut_raw'] = args.cut
+                
+            except ValueError as e:
+                parser.error(f"Invalid --cut format: {e}")
+
+        if not context.get('mode') == 'cli_search':
+            context['mode'] = 'cli_download'
+        
         context['overrides'] = overrides
         
         return False, context

@@ -9,6 +9,8 @@ import subprocess
 import questionary
 from questionary import Choice
 
+from teto_dl.core.search import perform_youtube_search
+
 from ..constants import RuntimeConfig, IS_TERMUX
 from ..utils.i18n import get_text as _
 from ..utils.styles import (
@@ -204,6 +206,17 @@ class App:
         if 'resolution' in overrides:
             RuntimeConfig.MAX_VIDEO_RESOLUTION = overrides['resolution']
 
+        if overrides.get('smart_cover'):
+            RuntimeConfig.SMART_COVER_MODE = True
+            RuntimeConfig.NO_COVER_MODE = False
+            
+        if overrides.get('no_cover'):
+            RuntimeConfig.SMART_COVER_MODE = False
+            RuntimeConfig.NO_COVER_MODE = True
+            
+        if overrides.get('force_crop'):
+            RuntimeConfig.FORCE_CROP = True
+
     def act(self, choice):
         """Execute logic based on choice."""
         if not choice: return
@@ -263,6 +276,17 @@ class App:
         
         self.setup(force_recheck=context.get('force_recheck', False))
 
+        if context.get('mode') == 'cli_search':
+            query = context.get('query')
+            limit = context.get('limit', 5)
+            url = perform_youtube_search(query, limit)
+            
+            if url:
+                context['overrides']['url'] = url
+                context['mode'] = 'cli_download' 
+            else:
+                return
+            
         if context.get('mode') == 'cli_download':
             overrides = context.get('overrides', {})
             is_temp_session = context.get('is_temp_session', False)
@@ -274,11 +298,26 @@ class App:
             yt_downloader_module.wait_and_clear_prompt = lambda: None
             
             try:
-                url = overrides['url']
-                if overrides['type'] == 'video':
-                    result = yt_downloader_module.download_video_youtube(url)
+                url = overrides.get('url')
+                if not url:
+                    print_error("Error: No URL provided for download.")
+                    return
+                
+                if overrides.get('thumbnail_only'):
+                    if 'smart_cover' not in overrides:
+                        RuntimeConfig.SMART_COVER_MODE = False
+                    
+                    fmt = overrides.get('format', 'jpg')
+                    yt_downloader_module.download_thumbnail_task(url, target_format=fmt)
+                    return
+                
+                dl_type = overrides.get('type', 'video')
+                cut_range = overrides.get('cut_range')
+
+                if dl_type == 'video':
+                    result = yt_downloader_module.download_video_youtube(url, cut_range)
                 else:
-                    result = yt_downloader_module.download_audio_youtube(url)
+                    result = yt_downloader_module.download_audio_youtube(url, cut_range)
                 
                 if overrides.get('share_after_download'):
                     if result and isinstance(result, dict) and result.get('success'):

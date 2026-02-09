@@ -180,7 +180,7 @@ def start_share_server(file_path_str: str, start_port=8989):
     console.print(f"Hosting: [cyan]{path.name}[/cyan]")
     console.print(f"Address: [yellow]{target_url}[/yellow]")
     
-    check_firewall_status(port, wsl_bridged=using_wsl_bridge)
+    check_firewall_status(port)
     
     console.print()
     qr.print_ascii(invert=True) 

@@ -122,6 +122,7 @@ REGISTRY_PATH = str(DATA_DIR / "registry.json")
 # ==== DEFAULT ROOTS ====
 DEFAULT_MUSIC_ROOT = str(BASE_PATH / "music")
 DEFAULT_VIDEO_ROOT = str(BASE_PATH / "videos")
+DEFAULT_THUMBNAIL_ROOT = str(BASE_PATH / "thumbnails")
 
 # ==== DOWNLOAD SETTINGS ====
 DOWNLOAD_DELAY = 2
@@ -131,6 +132,7 @@ RETRY_DELAY = 2
 # ==== OTHER CONFIGURATION ====
 VALID_RESOLUTIONS = ["4320p", "2160p", "1440p", "1080p", "720p", "480p"]
 VALID_CONTAINERS = ["mp4", "mkv"]
+VALID_THUMBNAIL_FORMATS = ["jpg", "png", "webp"]
 VALID_CODECS = ["default", "h264", "h265"]
 HISTORY_DISPLAY_LIMIT = 20
 
@@ -158,12 +160,17 @@ class RuntimeConfig:
     """Runtime configuration that can be modified"""
     MUSIC_ROOT = DEFAULT_MUSIC_ROOT
     VIDEO_ROOT = DEFAULT_VIDEO_ROOT
+    THUMBNAIL_ROOT = DEFAULT_THUMBNAIL_ROOT
+    
 
     DOWNLOAD_HISTORY = []
     USER_SUBFOLDERS = {}
     
     SIMPLE_MODE = False
     SMART_COVER_MODE = True
+    THUMBNAIL_FORMAT = "jpg"
+    NO_COVER_MODE = False
+    FORCE_CROP = False
     SKIP_EXISTING_FILES = True
     MAX_VIDEO_RESOLUTION = "720p"
     AUDIO_QUALITY = "m4a"
