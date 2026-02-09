@@ -6,5 +6,6 @@ yt-dlp >= 2025.12.8
 spotdl >= 4.4.3
 rich == 13.9.4
 questionary == 2.1.1
+qrcode == 8.2
 requests == 2.32.5
 mutagen == 1.47.0
