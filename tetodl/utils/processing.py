@@ -122,3 +122,45 @@ def get_platform_badge(platform: str, download_type: str = None) -> str:
     # 3. Fallback Unknown Platform
     label = platform[:8].upper()
     return f"[blue]{label}[/blue]"
+
+def parse_playlist_items(items: str) -> set:
+    """
+    Parse playlist items string (e.g., '1,2,5-7') into a set of indices.
+    
+    Args:
+        items (str): The input string from CLI.
+        
+    Returns:
+        set: A set of integers representing the selected indices.
+        
+    Raises:
+        ValueError: If the input format is invalid (caught by CLI).
+    """
+    selected_indices = set()
+    
+    parts = items.split(',')
+    
+    for part in parts:
+        part = part.strip()
+        if not part: continue
+        
+        try:
+            if '-' in part:
+                start_str, end_str = part.split('-')
+                start = int(start_str)
+                end = int(end_str)
+                
+                if start > end:
+                    start, end = end, start
+                    
+                selected_indices.update(range(start, end + 1))
+            else:
+                selected_indices.add(int(part))
+                
+        except ValueError:
+            raise ValueError(f"Invalid item format: '{part}'. Use numbers (e.g. 1,2) or ranges (e.g. 1-5).")
+            
+    if not selected_indices:
+        raise ValueError("No valid items selected.")
+        
+    return selected_indices

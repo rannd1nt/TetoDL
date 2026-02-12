@@ -53,7 +53,7 @@ from .i18n import (
 )
 
 from .metadata_fetcher import (
-    fetch_cover
+    MetadataFetcher
 )
 
 from .hooks import (

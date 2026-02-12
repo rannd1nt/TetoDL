@@ -71,16 +71,12 @@ else:
     TEMP_DIR = CACHE_DIR / "temp"
 
     if IS_WSL:
-        # Coba ambil path Windows User Profile secara dinamis
         try:
-            # Command ini mengambil path windows (C:\Users\Name) lalu convert ke wsl path (/mnt/c/Users/Name)
-            # stderr dibuang agar tidak mengotori terminal jika gagal
             win_home_raw = subprocess.check_output(
                 ["wslpath", "$(cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null)"], 
                 shell=True, stderr=subprocess.DEVNULL
             ).decode().strip()
             
-            # Jika berhasil, arahkan ke Downloads Windows
             win_home = Path(win_home_raw)
             BASE_PATH = win_home / "Downloads" / "TetoDL"
             
@@ -171,6 +167,12 @@ class RuntimeConfig:
     THUMBNAIL_FORMAT = "jpg"
     NO_COVER_MODE = False
     FORCE_CROP = False
+    GROUP_MODE = False
+    FORCE_GROUPING_ON_SHARE = False
+    LYRICS_MODE = False
+    ROMAJI_MODE = False
+    ZIP_MODE = False
+    CREATE_M3U = False
     SKIP_EXISTING_FILES = True
     MAX_VIDEO_RESOLUTION = "720p"
     AUDIO_QUALITY = "m4a"
@@ -180,7 +182,6 @@ class RuntimeConfig:
     HEADER_STYLE = "default"
     PROGRESS_STYLE = "minimal"
     
-
     MEDIA_SCANNER_ENABLED = False
     DOWNLOAD_DELAY = 2
     MAX_RETRIES = 3

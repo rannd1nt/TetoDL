@@ -109,4 +109,28 @@ class RegistryManager:
         
         return False, None
     
+    def update_path(self, old_path, new_path):
+        """
+        Update registered path from old location to new location.
+        Used when moving files after sharing (Staging -> Parent).
+        """
+        old_abs = os.path.abspath(old_path)
+        new_abs = os.path.abspath(new_path)
+        
+        updated = False
+        
+        for vid, data in self.data.items():
+            for c_type, entry in data.items():
+                if 'paths' in entry:
+                    if old_abs in entry['paths']:
+                        entry['paths'] = [p for p in entry['paths'] if p != old_abs]
+                        
+                        if new_abs not in entry['paths']:
+                            entry['paths'].append(new_abs)
+                        
+                        updated = True
+                        
+        if updated:
+            self.save()
+
 registry = RegistryManager()

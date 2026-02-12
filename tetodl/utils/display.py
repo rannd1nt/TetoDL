@@ -134,10 +134,13 @@ def visit_github():
         print_error(f"Failed to Load Content. Visit: {url}")
 
 
-def wait_and_clear_prompt():
+def wait_and_clear_prompt(msg: str = None):
     """Wait for user input and clear screen"""
     try:
-        input(f"\n{_('common.press_enter')}")
+        if msg:
+            input(f"\n{msg}")
+        else:
+            input(f"\n{_('common.press_enter')}")
     except (KeyboardInterrupt, EOFError):
         return
     clear()

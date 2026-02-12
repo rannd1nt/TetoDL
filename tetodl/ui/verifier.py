@@ -1,21 +1,63 @@
 import time
 import sys
+import subprocess
 import questionary
 from questionary import Style
 from ..core.dependency import (
-    verify_core_dependencies, verify_spotify_dependency, verify_platform_compatibility
+    verify_core_dependencies, verify_spotify_dependency, verify_platform_compatibility,
+    get_ytdlp_version_info
 )
 from ..core.config import save_config, update_language
 from ..constants import RuntimeConfig, IS_TERMUX
+from ..utils.display import wait_and_clear_prompt
 from ..ui.components import verification_header
 from ..utils.styles import (
     print_info, print_success, print_error, print_process,
-    clear, color
+    clear, color, menu_style
 )
 from ..utils.i18n import (
     set_language, detect_system_language, get_language_display_name,
     get_text as _
 )
+
+def _prompt_and_update_ytdlp(current, latest):
+    """
+    Helper function to handle yt-dlp update logic within Verifier.
+    Avoids circular import with menu.py.
+    """
+    print()
+    print("  " + print_info(f"Dependency Update Available!", True))
+    print(f"      {color('Current:', 'y')} {current}")
+    print(f"      {color('Latest :', 'g')} {latest}")
+    print()
+    
+    should_update = False
+
+    if not IS_TERMUX:
+        should_update = questionary.confirm(
+            "Do you want to update yt-dlp now?",
+            qmark=' ', default=True, style=menu_style()
+        ).ask()
+    else:
+        try:
+            res = input(f"{color('Update yt-dlp now? (Y/n) > ', 'c')}").strip().lower()
+            should_update = res in ['', 'y', 'yes']
+        except KeyboardInterrupt:
+            pass
+
+    if should_update:
+        print()
+        print_info("Updating yt-dlp...")
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"])
+            print_success("Update complete!")
+            time.sleep(1)
+            return True
+        except subprocess.CalledProcessError:
+            print_error("Update failed. Please check your connection.")
+            time.sleep(2)
+            return False
+    return False
 
 def verify_dependencies(header_title=None):
     """Main dependency verification function"""
@@ -56,11 +98,30 @@ def verify_dependencies(header_title=None):
     spotify_ok = verify_spotify_dependency()
     RuntimeConfig.SPOTIFY_AVAILABLE = spotify_ok 
     
+    print()
+
+    print_info("Checking Core Engine (yt-dlp) status...")
+    try:
+        is_outdated, current, latest = get_ytdlp_version_info()
+        
+        if is_outdated:
+            updated = _prompt_and_update_ytdlp(current, latest)
+            if updated:
+                a, new_curr, c = get_ytdlp_version_info()
+                print_success(f"Core Engine updated to: {new_curr}")
+        else:
+            if current != "unknown":
+                print_success(f"Core Engine is up to date: {current}")
+            else:
+                print_info(f"Core Engine installed: {current} (Network check skipped)")
+                
+    except Exception as e:
+        print_error(f"Failed to check engine version: {e}")
 
     RuntimeConfig.VERIFIED_DEPENDENCIES = True 
     save_config()
     
-    print_success(_("dependency.verification_complete"))
+    # print_success(_("dependency.verification_complete"))
     
     if not spotify_ok:
         print_info(_("dependency.spotify_hidden"))
@@ -129,6 +190,7 @@ def verify_dependencies(header_title=None):
         print_success("Verification Completed!")
         time.sleep(1)
     
+    wait_and_clear_prompt(msg="Press enter to continue...")
     save_config()
     clear()
     return True

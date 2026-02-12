@@ -6,8 +6,8 @@ import subprocess
 import requests
 from ..constants import FFMPEG_CMD, RuntimeConfig
 from ..utils.i18n import get_text as _
-from ..utils.styles import print_error, print_success
-from ..utils.metadata_fetcher import fetch_cover
+from ..utils.styles import print_error, print_success, print_process
+from ..utils.metadata_fetcher import fetcher
 
 FAKE_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -83,25 +83,33 @@ def download_and_process_thumbnail(info_dict, download_folder, should_crop=True,
         thumbnail_path = os.path.join(download_folder, thumbnail_filename)
         
         # --- SMART COVER ---
-        if RuntimeConfig.SMART_COVER_MODE and not should_crop:
+        if RuntimeConfig.SMART_COVER_MODE:
             artist = info_dict.get('artist') or info_dict.get('uploader', '').replace(' - Topic', '')
             title = info_dict.get('track') or info_dict.get('title')
             
+            fetched_data = None
+
             try:
-                itunes_data = fetch_cover(artist, title)
-                
-                if itunes_data:
-                    image_url = itunes_data.get('url')
+                fetched_data = fetcher.fetch_metadata(artist, title)
+            except Exception:
+                pass
+            
+            if fetched_data:
+                try:
+                    image_url = fetched_data.get('url')
                     if image_url:
                         response = requests.get(image_url, headers=FAKE_HEADERS, timeout=10)
                         if response.status_code == 200:
-                            print_success(_('download.youtube.fetch_succes'))
+                            source = 'Genius' if fetched_data.get('source') == 'Genius' else 'iTunes'
+                            print_success(_('download.youtube.fetch_success'))
+                            print_success(f"Cover art found via {source}!")
+                            
                             with open(thumbnail_path, 'wb') as f:
                                 f.write(response.content)
                             
-                            return thumbnail_path, itunes_data
-            except Exception:
-                pass
+                            return thumbnail_path, fetched_data
+                except Exception:
+                    pass
 
         # --- YOUTUBE FALLBACK ---
         candidate_urls = []
@@ -142,58 +150,3 @@ def download_and_process_thumbnail(info_dict, download_folder, should_crop=True,
     except Exception as e:
         print_error(_('media.thumbnail_error', error=str(e)))
         return None, None
-
-
-def embed_thumbnail_to_audio(audio_path, thumbnail_path, audio_format="mp3", metadata=None):
-    """
-    Embed thumbnail AND Metadata to audio file using FFmpeg.
-    
-    Args:
-        metadata (dict, optional): {'artist': '...', 'album': '...', 'title': '...', 'date': '...'}
-    """
-    try:
-        temp_output = audio_path + ".temp." + audio_format
-        
-        cmd = [
-            FFMPEG_CMD, '-i', audio_path, '-i', thumbnail_path,
-            '-map', '0:0', '-map', '1:0', '-c', 'copy'
-        ]
-
-        if metadata:
-            meta_artist = metadata.get('artist') or ""
-            meta_album = metadata.get('album') or ""
-            meta_title = metadata.get('title') or ""
-            meta_date = metadata.get('date') or ""
-
-            if meta_artist: cmd.extend(['-metadata', f'artist={meta_artist}'])
-            if meta_album:  cmd.extend(['-metadata', f'album={meta_album}'])
-            if meta_title:  cmd.extend(['-metadata', f'title={meta_title}'])
-            if meta_date:   cmd.extend(['-metadata', f'date={meta_date}'])
-
-        if audio_format == "mp3":
-            cmd.extend([
-                '-id3v2_version', '3',
-                '-metadata:s:v', 'title="Album cover"', 
-                '-metadata:s:v', 'comment="Cover (front)"'
-            ])
-        elif audio_format == "m4a":
-            cmd.extend(['-disposition:v:0', 'attached_pic'])
-        else:
-            return False
-        
-        cmd.extend(['-y', temp_output])
-        
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        
-        if result.returncode == 0 and os.path.exists(temp_output):
-            os.remove(audio_path)
-            os.rename(temp_output, audio_path)
-            return True
-        else:
-            if os.path.exists(temp_output):
-                os.remove(temp_output)
-            return False
-            
-    except Exception as e:
-        print_error(_('media.embed_error', error=str(e)))
-        return False
