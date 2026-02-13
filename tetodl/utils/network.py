@@ -19,8 +19,12 @@ from ..utils.spinner import Spinner
 from ..utils.server_styles import TetoHTTPHandler
 from ..constants import IS_TERMUX, IS_WSL
 
-class SilentTCPServer(socketserver.TCPServer):
+class SilentTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    """
+    Multi-threaded Server & Silent Log.
+    """
     allow_reuse_address = True
+    daemon_threads = True
     
     def server_bind(self):
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

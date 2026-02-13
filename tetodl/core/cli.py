@@ -204,7 +204,9 @@ class CLIHandler:
         
         # 2. Target Path
         target_path = args.share
-
+        if root_path and target_path == 'LATEST':
+            target_path = root_path
+        
         # --- Logic Group Resolution ---
         if args.group:
             if not root_path:
