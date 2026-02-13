@@ -1,5 +1,6 @@
 import time
 import sys
+import os
 import subprocess
 import questionary
 from questionary import Style
@@ -8,17 +9,34 @@ from ..core.dependency import (
     get_ytdlp_version_info
 )
 from ..core.config import save_config, update_language
-from ..constants import RuntimeConfig, IS_TERMUX
+from ..ui.navigation import navigate_folders
+from ..constants import (
+    RuntimeConfig,
+    DEFAULT_MUSIC_ROOT, DEFAULT_VIDEO_ROOT,
+    IS_WSL, IS_TERMUX, 
+    WSL_MUSIC_OVERRIDE, WSL_VIDEO_OVERRIDE
+)
 from ..utils.display import wait_and_clear_prompt
 from ..ui.components import verification_header
 from ..utils.styles import (
     print_info, print_success, print_error, print_process,
-    clear, color, menu_style
+    clear, color, menu_style, search_style
 )
 from ..utils.i18n import (
     set_language, detect_system_language, get_language_display_name,
     get_text as _
 )
+
+def _verif_style():
+    return Style([
+                        ('question', 'fg:white'),
+                        ('answer', 'fg:white'),
+                        ('pointer', 'fg:cyan bold'),
+                        ('highlighted', 'fg:cyan bold'),
+                        ('selected', 'fg:cyan'),
+                        ('separator', 'fg:grey'),
+                        ('instruction', 'fg:grey'),
+                    ])
 
 def _prompt_and_update_ytdlp(current, latest):
     """
@@ -74,13 +92,11 @@ def verify_dependencies(header_title=None):
         input("Press enter to exit...")
         sys.exit(1)
     
-    
     if not header_title:
         print_info(_("dependency.verifying"))
         print_info(_("dependency.once_only"))
 
-    print()
-    time.sleep(1.5)
+    time.sleep(1.2)
     
     core_ok = verify_core_dependencies()
     print()
@@ -144,15 +160,7 @@ def verify_dependencies(header_title=None):
                 f"   Do you want to use {display_name}?",
                 qmark='',
                 default=True,
-                style=Style([
-                        ('question', 'fg:white'),
-                        ('answer', 'fg:white'),
-                        ('pointer', 'fg:cyan bold'),
-                        ('highlighted', 'fg:cyan bold'),
-                        ('selected', 'fg:cyan'),
-                        ('separator', 'fg:grey'),
-                        ('instruction', 'fg:grey'),
-                    ])
+                style=_verif_style()
             ).ask()
         else:
             try:
@@ -186,11 +194,95 @@ def verify_dependencies(header_title=None):
                 update_language(detected_code) 
                 print_info(f"Selection cancelled. Defaulting to use detected system language: {display_name}.")
                 time.sleep(2.3)
+
+            clear()
+        verification_header()
+        
+        # 2. Environment & Path Setup
+        env_display = "LINUX"
+        if IS_TERMUX: env_display = "TERMUX (Android)"
+        elif IS_WSL: env_display = "WSL (Windows)"
+        
+        print_info(f"Environment Detected: {color(env_display, 'c')}")
+        print()
+
+        proposed_music = DEFAULT_MUSIC_ROOT
+        proposed_video = DEFAULT_VIDEO_ROOT
+        
+        # Pesan khusus untuk WSL
+        if IS_WSL:
+            print_info(f"{color('WSL Detected:', 'y')} We recommend saving files to Windows folders")
+            print_info("So you can access them easily via File Explorer.")
+            print()
+
+        print_info("Default Download Locations:")
+        print(f"    Default Music Path : {color(proposed_music, 'g')}")
+        print(f"    Default Video Path : {color(proposed_video, 'g')}")
+        print()
+
+        # Tanya User
+        use_default = False
+        if not IS_TERMUX:
+            use_default = questionary.confirm(
+                "Use these default paths? (You can change this later in Settings)",
+                qmark=' ', default=True, style=_verif_style()
+            ).ask()
+        else:
+            try:
+                res = input(f"{color('Use default paths? (Configurable later) (Y/n) > ', 'c')}").strip().lower()
+                use_default = res in ['', 'y', 'yes']
+            except KeyboardInterrupt: use_default = True
+
+        if use_default:
+            RuntimeConfig.MUSIC_ROOT = proposed_music
+            RuntimeConfig.VIDEO_ROOT = proposed_video
+            clear()
+            verification_header()
+            print_success("Default paths applied.")
+        else:
+            print_info("Select Custom Music Folder:")
+            start_nav_music = os.path.dirname(DEFAULT_MUSIC_ROOT)
+            if not os.path.exists(start_nav_music): start_nav_music = os.path.expanduser("~")
+
+            custom_music = navigate_folders(start_nav_music, "Select Music Folder", False)
+            if custom_music:
+                RuntimeConfig.MUSIC_ROOT = custom_music
+                clear()
+                verification_header()
+                print_success(f"Music Path set to: {custom_music}")
+            else:
+                RuntimeConfig.MUSIC_ROOT = DEFAULT_MUSIC_ROOT
+                clear()
+                verification_header()
+                print_info("Cancelled. Using default music path.")
+                time.sleep(1.4)
+            
+            print_info("Select Custom Video Folder:")
+            start_nav_vid = os.path.dirname(DEFAULT_VIDEO_ROOT)
+            if not os.path.exists(start_nav_vid): start_nav_vid = os.path.expanduser("~")
+            custom_video = navigate_folders(start_nav_vid, "Select Video Folder", False)
+            if custom_video:
+                RuntimeConfig.VIDEO_ROOT = custom_video
+                clear()
+                verification_header()
+                print_success(f"Video Path set to: {custom_video}")
+            else:
+                RuntimeConfig.VIDEO_ROOT = DEFAULT_VIDEO_ROOT
+                clear()
+                verification_header()
+                print_info("Cancelled. Using default video path.")
+                time.sleep(1.4)
+    
     else:
         print_success("Verification Completed!")
-        time.sleep(1)
     
-    wait_and_clear_prompt(msg="Press enter to continue...")
     save_config()
     clear()
+    verification_header()
+
+    if not header_title:
+        wait_and_clear_prompt(msg="Setup Complete! Press enter to start TetoDL...")
+    else:
+        wait_and_clear_prompt(msg="Press enter to continue...")
+    
     return True

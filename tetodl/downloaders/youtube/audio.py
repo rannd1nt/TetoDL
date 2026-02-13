@@ -4,6 +4,7 @@ Core logic for single audio processing
 import os
 import re
 import time
+import glob
 
 try:
     import yt_dlp as yt
@@ -31,63 +32,75 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
     audio_format = get_audio_extension()
     current_style = getattr(RuntimeConfig, 'PROGRESS_STYLE', 'minimal')
 
-    for attempt in range(1, RuntimeConfig.MAX_RETRIES + 1):
-        try:
-            with yt.YoutubeDL({'quiet': True, 'no_warnings': True, 'extract_flat': False}) as ydl:
-                info = ydl.extract_info(url, download=False)
-                id = info.get('id')
-                title = info.get('title', 'Unknown')
-                duration = info.get('duration', 0)
-                artist = info.get('artist') or info.get('uploader') or "Unknown Artist"
-                album = info.get('album')
-                
-                if is_youtube_music:
-                    history_title = f"{artist} - {title}"
-                else:
-                    history_title = title
-
-            if is_youtube_music:
-                outtmpl = os.path.join(target_dir, f"%(artist)s - %(title)s.%(ext)s")
-            else:
-                outtmpl = os.path.join(target_dir, f"%(title)s.%(ext)s")
-
+    try:
+        with yt.YoutubeDL({'quiet': True, 'no_warnings': True, 'extract_flat': False}) as ydl:
+            info = ydl.extract_info(url, download=False)
+            id = info.get('id')
+            title = info.get('title', 'Unknown')
+            duration = info.get('duration', 0)
+            artist = info.get('artist') or info.get('uploader') or "Unknown Artist"
+            album = info.get('album')
             
-            format_string = get_audio_format_string(audio_format)
-            postprocessors = build_audio_postprocessors(audio_format, is_youtube_music)
-            hook = get_progress_hook(current_style)
+            if is_youtube_music:
+                history_title = f"{artist} - {title}"
+            else:
+                history_title = title
 
-            ydl_opts = {
-                'format': format_string,
-                'outtmpl': outtmpl,
-                'postprocessors': postprocessors,
-                'ffmpeg_location': FFMPEG_CMD,
-                'quiet': True,
-                'no_warnings': True,
-                'writethumbnail': False,
-                'logger': QuietLogger(),
-                'progress_hooks': [hook],
-            }
+        if is_youtube_music:
+            outtmpl = os.path.join(target_dir, f"%(artist)s - %(title)s.%(ext)s")
+        else:
+            outtmpl = os.path.join(target_dir, f"%(title)s.%(ext)s")
 
-            if RuntimeConfig.NO_COVER_MODE:
-                ydl_opts['postprocessors'] = [
-                    pp for pp in ydl_opts['postprocessors'] 
-                    if pp.get('key') != 'FFmpegMetadata'
-                ]
-                ydl_opts['add_metadata'] = False
+        
+        format_string = get_audio_format_string(audio_format)
+        postprocessors = build_audio_postprocessors(audio_format, is_youtube_music)
+        hook = get_progress_hook(current_style)
 
-            if cut_range:
-                start, end = cut_range
-                print_info(f"Trimming audio: {start}s to {end}s")
-                
-                ydl_opts['download_ranges'] = lambda info, ydl: [{'start_time': start, 'end_time': end}]
-                ydl_opts['force_keyframes_at_cuts'] = True
+        ydl_opts = {
+            'format': format_string,
+            'outtmpl': outtmpl,
+            'postprocessors': postprocessors,
+            'ffmpeg_location': FFMPEG_CMD,
+            'quiet': True,
+            'no_warnings': True,
+            'writethumbnail': False,
+            'logger': QuietLogger(),
+            'progress_hooks': [hook],
+            'retries': RuntimeConfig.MAX_RETRIES, 
+            'fragment_retries': RuntimeConfig.MAX_RETRIES,
+            'file_access_retries': RuntimeConfig.MAX_RETRIES,
+            'extractor_retries': 3,
+        }
 
-            with yt.YoutubeDL(ydl_opts) as ydl:
-                if use_cache:
-                    cached = get_cached_metadata(url)
-                    if cached:
-                        print_info(_('download.youtube.using_cache', title=cached['metadata'].get('title', 'Unknown')))
+        if RuntimeConfig.NO_COVER_MODE:
+            ydl_opts['postprocessors'] = [
+                pp for pp in ydl_opts['postprocessors'] 
+                if pp.get('key') != 'FFmpegMetadata'
+            ]
+            ydl_opts['add_metadata'] = False
 
+        if cut_range:
+            start, end = cut_range
+            print_info(f"Trimming audio: {start}s to {end}s")
+            
+            ydl_opts['download_ranges'] = lambda info, ydl: [{'start_time': start, 'end_time': end}]
+            ydl_opts['force_keyframes_at_cuts'] = True
+
+        with yt.YoutubeDL(ydl_opts) as ydl:
+            if use_cache:
+                cached = get_cached_metadata(url)
+                if cached:
+                    print_info(_('download.youtube.using_cache', title=cached['metadata'].get('title', 'Unknown')))
+
+            temp_filename_template = ydl.prepare_filename(info)
+            base_name_clean = os.path.splitext(temp_filename_template)[0]
+            possible_part_files = [
+                f"{base_name_clean}.{audio_format}.part",
+                f"{base_name_clean}.part",
+                f"{temp_filename_template}.part"
+            ]
+
+            try:
                 if cut_range:
                     cut_spinner = Spinner(_('download.youtube.downloading_item', title=title) + ", Cutting...")
                     cut_spinner.start()
@@ -98,176 +111,192 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
                 else:
                     print_process(_('download.youtube.downloading_item', title=title))
                     ydl.download([url])
-
-                final_scan_path = None
-                fetched_metadata = None
-                
-                if RuntimeConfig.NO_COVER_MODE:
-                    should_process_cover = False
+            
+            except (KeyboardInterrupt, Exception) as e:
+                print()
+                if isinstance(e, KeyboardInterrupt):
+                    print_error("Download cancelled by user.")
                 else:
-                    should_process_cover = (
-                        (is_youtube_music or RuntimeConfig.SMART_COVER_MODE)
-                        and audio_format != "opus"
-                    )
-
-                if should_process_cover:
-                    print_process(_('download.youtube.processing_cover'))
-                    
-                    uploader = info.get('uploader', '')
-                    description = info.get('description', '')
-                    
-                    is_art_track = (
-                        info.get('track') is not None or
-                        ' - Topic' in uploader or
-                        'Auto-generated by YouTube' in description or
-                        'Provided to YouTube by' in description
-                    )
-                    
-                    if is_art_track:
-                        should_crop = True
-                        smart_search = RuntimeConfig.SMART_COVER_MODE
-                    else:
-                        should_crop = False
-                        smart_search = RuntimeConfig.SMART_COVER_MODE
-
-                    thumbnail_path, fetched_metadata = download_and_process_thumbnail(
-                        info, 
-                        target_dir, 
-                        should_crop=should_crop, 
-                        smart_mode=smart_search
-                    )
-
-                    if thumbnail_path and os.path.exists(thumbnail_path):
-                        temp_filename_raw = ydl.prepare_filename(info)
-                        base_name = os.path.splitext(temp_filename_raw)[0]
-                        audio_path = f"{base_name}.{audio_format}"
-                        
-                        if os.path.exists(audio_path):
-                            print_process(_('download.youtube.embedding_cover'))
-                            final_metadata = {}
-                            if fetched_metadata:
-                                final_metadata = fetched_metadata
-                            elif is_art_track or info.get('artist'):
-                                final_metadata = {
-                                    'artist': info.get('artist') or info.get('uploader', '').replace(' - Topic', ''),
-                                    'album': info.get('album') or info.get('title'),
-                                    'title': info.get('track') or info.get('title')
-                                }
-
-                            if embed_metadata(audio_path, thumbnail_path, audio_format, final_metadata):
-                                print_success(_('download.youtube.cover_success'))
-                            else:
-                                print_error(_('download.youtube.cover_failed'))
-                                final_scan_path = audio_path
-                        else:
-                            print_error(_('download.youtube.file_not_found', filename=os.path.basename(audio_path)))
-                        clean_temp_files(target_dir, info.get('id', ''))
-                    else:
-                        print_error(_('download.youtube.cover_process_failed'))
-
-                elif audio_format == "opus":
-                    print_info(_('download.youtube.skip_cover_opus'))
-                else:
-                    print_info(_('download.youtube.skip_cover'))
-
-                # --- FINISHING ---
-                if final_scan_path is None:
-                    temp_filename = ydl.prepare_filename(info)
-                    base_name = os.path.splitext(temp_filename)[0]
-                    guessed_path = f"{base_name}.{audio_format}"
-                    if os.path.exists(guessed_path):
-                        final_scan_path = guessed_path
-
-                if RuntimeConfig.LYRICS_MODE and final_scan_path and os.path.exists(final_scan_path):
-                    search_artist = ""
-                    search_title = ""
-                    
-                    if fetched_metadata: 
-                        search_artist = fetched_metadata.get('artist')
-                        search_title = fetched_metadata.get('title')
-                    else:
-                        raw_video_title = info.get('title', '')
-                        match = re.match(r'^(.*?)\s+-\s+(.*)$', raw_video_title)
-                        
-                        if match:
-                            search_artist = match.group(1).strip()
-                            raw_extracted_title = match.group(2).strip()
-                            search_title = re.sub(r'\s*[\(\[].*?[\)\]]', '', raw_extracted_title).strip()
-                        else:
-                            search_artist = info.get('artist') or info.get('uploader', '').replace(' - Topic', '')
-                            search_title = info.get('track') or info.get('title')
-
-                    print_process(f"Searching lyrics for: {search_artist} - {search_title}")
-                    
-                    lyrics = fetcher.fetch_lyrics_genius(
-                        search_artist,
-                        search_title,
-                        romaji=RuntimeConfig.ROMAJI_MODE
-                    )
-                    
-                    if lyrics:
-                        if embed_lyrics(final_scan_path, lyrics):
-                            print_success("Lyrics embedded successfully (Genius)")
-                        else:
-                            print_error("Failed to embed lyrics")
-                    else:
-                        print_info("Lyrics not found on Genius.")
+                    print_error(_('download.youtube.error_downloading', type='audio', error=str(e)))
                 
-                if use_cache:
-                    cache_metadata(url, {
-                        'title': title,
-                        'duration': duration,
-                        'uploader': info.get('uploader', ''),
-                        'artist': info.get('artist', ''),
-                        'album': info.get('album', ''),
-                        'track': info.get('track', ''),
-                        'thumbnails': info.get('thumbnails', [])
-                    })
-
-                platform = "YouTube Music" if is_youtube_music else "YouTube Audio"
-                artist = info.get('artist') or info.get('uploader') or "Unknown Artist"
-                if is_youtube_music:
-                    history_title = f"{artist} - {title}"
-                else:
-                    history_title = title
+                print_process("Cleaning up partial files...\r")
                 
-                final_saved_path = os.path.abspath(final_scan_path if final_scan_path else guessed_path)
+                for p_file in possible_part_files:
+                    if os.path.exists(p_file):
+                        try: os.remove(p_file)
+                        except OSError: pass
+                
+                try:
+                    for f in glob.glob(f"{base_name_clean}*"):
+                        if f.endswith('.part') or f.endswith('.ytdl'):
+                            try: os.remove(f)
+                            except OSError: pass
+                except Exception: pass
+                
+                if isinstance(e, KeyboardInterrupt):
+                    raise e
+                
+                return False, str(e), False
 
-                metadata = {
-                    'artist': artist,
-                    'album': album,
-                    'title': title
-                }
-
-                add_to_history(
-                    id=id,
-                    file_path=final_saved_path,
-                    success=True,
-                    title=history_title,
-                    content_type='audio',
-                    platform=platform,
-                    download_type=download_type,
-                    duration=duration,
-                    metadata=metadata
+            final_scan_path = None
+            fetched_metadata = None
+            
+            if RuntimeConfig.NO_COVER_MODE:
+                should_process_cover = False
+            else:
+                should_process_cover = (
+                    (is_youtube_music or RuntimeConfig.SMART_COVER_MODE)
+                    and audio_format != "opus"
                 )
 
-                if RuntimeConfig.MEDIA_SCANNER_ENABLED:
-                    if final_scan_path:
-                        abs_path = os.path.abspath(final_scan_path)
-                        scan_media_files(abs_path)
-
-            return True, title, False
-
-        except Exception as e:
-            if is_forbidden_error(e):
-                print_error(f"Forbidden 403 Error detected.")
-                if attempt < RuntimeConfig.MAX_RETRIES:
-                    print_process(f"Retrying, attempt {attempt}/{RuntimeConfig.MAX_RETRIES}...")
-                    time.sleep(RuntimeConfig.RETRY_DELAY)
-                    continue
+            if should_process_cover:
+                print_process(_('download.youtube.processing_cover'))
+                
+                uploader = info.get('uploader', '')
+                description = info.get('description', '')
+                
+                is_art_track = (
+                    info.get('track') is not None or
+                    ' - Topic' in uploader or
+                    'Auto-generated by YouTube' in description or
+                    'Provided to YouTube by' in description
+                )
+                
+                if is_art_track:
+                    should_crop = True
+                    smart_search = RuntimeConfig.SMART_COVER_MODE
                 else:
-                    print_error(f"Failed after {RuntimeConfig.MAX_RETRIES} attempts due to 403 Forbidden.")
-                    return False, str(e), False
+                    should_crop = False
+                    smart_search = RuntimeConfig.SMART_COVER_MODE
+
+                thumbnail_path, fetched_metadata = download_and_process_thumbnail(
+                    info, 
+                    target_dir, 
+                    should_crop=should_crop, 
+                    smart_mode=smart_search
+                )
+
+                if thumbnail_path and os.path.exists(thumbnail_path):
+                    # temp_filename_raw = ydl.prepare_filename(info)
+                    # base_name = os.path.splitext(temp_filename_raw)[0]
+                    audio_path = f"{base_name_clean}.{audio_format}"
+                    
+                    if os.path.exists(audio_path):
+                        print_process(_('download.youtube.embedding_cover'))
+                        final_metadata = {}
+                        if fetched_metadata:
+                            final_metadata = fetched_metadata
+                        elif is_art_track or info.get('artist'):
+                            final_metadata = {
+                                'artist': info.get('artist') or info.get('uploader', '').replace(' - Topic', ''),
+                                'album': info.get('album') or info.get('title'),
+                                'title': info.get('track') or info.get('title')
+                            }
+
+                        if embed_metadata(audio_path, thumbnail_path, audio_format, final_metadata):
+                            print_success(_('download.youtube.cover_success'))
+                        else:
+                            print_error(_('download.youtube.cover_failed'))
+                            final_scan_path = audio_path
+                    else:
+                        print_error(_('download.youtube.file_not_found', filename=os.path.basename(audio_path)))
+                    clean_temp_files(target_dir, info.get('id', ''))
+                else:
+                    print_error(_('download.youtube.cover_process_failed'))
+
+            elif audio_format == "opus":
+                print_info(_('download.youtube.skip_cover_opus'))
             else:
-                print_error(_('download.youtube.error_downloading', type='audio', error=str(e)))
-                return False, str(e), False
+                print_info(_('download.youtube.skip_cover'))
+
+            # --- FINISHING ---
+            if final_scan_path is None:
+                # temp_filename = ydl.prepare_filename(info)
+                # base_name = os.path.splitext(temp_filename)[0]
+                guessed_path = f"{base_name_clean}.{audio_format}"
+                if os.path.exists(guessed_path):
+                    final_scan_path = guessed_path
+
+            if RuntimeConfig.LYRICS_MODE and final_scan_path and os.path.exists(final_scan_path):
+                search_artist = ""
+                search_title = ""
+                
+                if fetched_metadata: 
+                    search_artist = fetched_metadata.get('artist')
+                    search_title = fetched_metadata.get('title')
+                else:
+                    raw_video_title = info.get('title', '')
+                    match = re.match(r'^(.*?)\s+-\s+(.*)$', raw_video_title)
+                    
+                    if match:
+                        search_artist = match.group(1).strip()
+                        raw_extracted_title = match.group(2).strip()
+                        search_title = re.sub(r'\s*[\(\[].*?[\)\]]', '', raw_extracted_title).strip()
+                    else:
+                        search_artist = info.get('artist') or info.get('uploader', '').replace(' - Topic', '')
+                        search_title = info.get('track') or info.get('title')
+
+                print_process(f"Searching lyrics for: {search_artist} - {search_title}")
+                
+                lyrics = fetcher.fetch_lyrics_genius(
+                    search_artist,
+                    search_title,
+                    romaji=RuntimeConfig.ROMAJI_MODE
+                )
+                
+                if lyrics:
+                    if embed_lyrics(final_scan_path, lyrics):
+                        print_success("Lyrics embedded successfully (Genius)")
+                    else:
+                        print_error("Failed to embed lyrics")
+                else:
+                    print_info("Lyrics not found on Genius.")
+            
+            if use_cache:
+                cache_metadata(url, {
+                    'title': title,
+                    'duration': duration,
+                    'uploader': info.get('uploader', ''),
+                    'artist': info.get('artist', ''),
+                    'album': info.get('album', ''),
+                    'track': info.get('track', ''),
+                    'thumbnails': info.get('thumbnails', [])
+                })
+
+            platform = "YouTube Music" if is_youtube_music else "YouTube Audio"
+            artist = info.get('artist') or info.get('uploader') or "Unknown Artist"
+            if is_youtube_music:
+                history_title = f"{artist} - {title}"
+            else:
+                history_title = title
+            
+            final_saved_path = os.path.abspath(final_scan_path if final_scan_path else guessed_path)
+
+            metadata = {
+                'artist': artist,
+                'album': album,
+                'title': title
+            }
+
+            add_to_history(
+                id=id,
+                file_path=final_saved_path,
+                success=True,
+                title=history_title,
+                content_type='audio',
+                platform=platform,
+                download_type=download_type,
+                duration=duration,
+                metadata=metadata
+            )
+
+            if RuntimeConfig.MEDIA_SCANNER_ENABLED:
+                if final_scan_path:
+                    abs_path = os.path.abspath(final_scan_path)
+                    scan_media_files(abs_path)
+
+        return True, title, False
+
+    except Exception as e:
+        print_error(_('download.youtube.error_downloading', type='audio', error=str(e)))
+        return False, str(e), False

@@ -149,6 +149,11 @@ class CLIHandler:
 
         return False
 
+    def _handle_reset(self, args):
+        """Handle data reset operations."""
+        targets = args.reset
+        maintenance.reset_data(targets)
+
     def _handle_config_changes(self, args) -> bool:
         """Handle configuration flags."""
         if not (args.header or args.progress_style or args.lang or

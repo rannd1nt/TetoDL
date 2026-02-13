@@ -72,17 +72,28 @@ else:
 
     if IS_WSL:
         try:
-            win_home_raw = subprocess.check_output(
-                ["wslpath", "$(cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null)"], 
-                shell=True, stderr=subprocess.DEVNULL
-            ).decode().strip()
+            proc_win = subprocess.run(
+                ["cmd.exe", "/c", "echo %USERPROFILE%"], 
+                capture_output=True, 
+                text=True, 
+                check=True
+            )
+            win_path_raw = proc_win.stdout.strip()
             
-            win_home = Path(win_home_raw)
-            BASE_PATH = win_home / "Downloads" / "TetoDL"
+            proc_wsl = subprocess.run(
+                ["wslpath", win_path_raw],
+                capture_output=True,
+                text=True, 
+                check=True
+            )
+            wsl_home_path = Path(proc_wsl.stdout.strip())
             
-            WSL_MUSIC_OVERRIDE = win_home / "Music"
-            WSL_VIDEO_OVERRIDE = win_home / "Videos"
-        except Exception:
+            BASE_PATH = wsl_home_path / "Downloads" / "TetoDL"
+            
+            WSL_MUSIC_OVERRIDE = wsl_home_path / "Music"
+            WSL_VIDEO_OVERRIDE = wsl_home_path / "Videos"
+        except Exception as e:
+            print(f"WSL Path Error: {e}")
             BASE_PATH = home / "Downloads" / APP_NAME
             WSL_MUSIC_OVERRIDE = None
             WSL_VIDEO_OVERRIDE = None

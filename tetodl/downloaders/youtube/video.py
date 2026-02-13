@@ -2,6 +2,7 @@
 Core logic for single video processing
 """
 import os
+import glob
 import time
 
 try:
@@ -43,46 +44,62 @@ def download_single_video(url, target_dir, use_cache=True, download_type="Single
             '-c:a', 'aac'
         ]
 
-    for attempt in range(1, RuntimeConfig.MAX_RETRIES + 1):
-        try:
-            outtmpl = os.path.join(target_dir, "%(title)s.%(ext)s")
-            video_format = get_video_format_string()
-            dl_hook = get_progress_hook(current_style)
-            pp_hook = get_postprocessor_hook(_('media.encoding', codec=target_codec.upper()))
+    try:
+        outtmpl = os.path.join(target_dir, "%(title)s.%(ext)s")
+        video_format = get_video_format_string()
+        dl_hook = get_progress_hook(current_style)
+        pp_hook = get_postprocessor_hook(_('media.encoding', codec=target_codec.upper()))
 
-            ydl_opts = {
-                'format': video_format,
-                'merge_output_format': target_container,
-                'outtmpl': outtmpl,
-                'ffmpeg_location': FFMPEG_CMD,
-                'quiet': True,
-                'no_warnings': True,
-                'logger': QuietLogger(),
-                'progress_hooks': [dl_hook],
-                'postprocessor_hooks': [pp_hook],
-                'postprocessor_args': pp_args if pp_args else None
-            }
+        ydl_opts = {
+            'format': video_format,
+            'merge_output_format': target_container,
+            'outtmpl': outtmpl,
+            'ffmpeg_location': FFMPEG_CMD,
+            'quiet': True,
+            'no_warnings': True,
+            'logger': QuietLogger(),
+            'progress_hooks': [dl_hook],
+            'postprocessor_hooks': [pp_hook],
+            'postprocessor_args': pp_args if pp_args else None,
+            'retries': RuntimeConfig.MAX_RETRIES,
+            'fragment_retries': RuntimeConfig.MAX_RETRIES,
+            'file_access_retries': RuntimeConfig.MAX_RETRIES,
+            'extractor_retries': 3,
+        }
 
-            if cut_range:
-                start, end = cut_range
-                print_info(f"Trimming video: {start}s to {end}s (This may take longer)")
 
-                ydl_opts['download_ranges'] = lambda info, ydl: [{'start_time': start, 'end_time': end}]
-                ydl_opts['force_keyframes_at_cuts'] = True
+        if cut_range:
+            start, end = cut_range
+            print_info(f"Trimming video: {start}s to {end}s (This may take longer)")
 
-            with yt.YoutubeDL(ydl_opts) as ydl:
-                # Extract info
-                info = ydl.extract_info(url, download=False)
-                video_id = info.get('id')
-                title = info.get('title', 'Unknown')
-                duration = info.get('duration', 0)
-                uploader = info.get('uploader') or info.get('channel') or "Unknown Channel"
+            ydl_opts['download_ranges'] = lambda info, ydl: [{'start_time': start, 'end_time': end}]
+            ydl_opts['force_keyframes_at_cuts'] = True
 
-                if use_cache:
-                    cached = get_cached_metadata(url)
-                    if cached:
-                        print_info(_('download.youtube.using_cache', title=cached['metadata'].get('title', 'Unknown')))
+        with yt.YoutubeDL(ydl_opts) as ydl:
+            # Extract info
+            info = ydl.extract_info(url, download=False)
+            video_id = info.get('id')
+            title = info.get('title', 'Unknown')
+            duration = info.get('duration', 0)
+            uploader = info.get('uploader') or info.get('channel') or "Unknown Channel"
 
+            if use_cache:
+                cached = get_cached_metadata(url)
+                if cached:
+                    print_info(_('download.youtube.using_cache', title=cached['metadata'].get('title', 'Unknown')))
+
+            temp_filename_template = ydl.prepare_filename(info)
+            base_name_clean = os.path.splitext(temp_filename_template)[0]
+            # Pattern video bisa beda ekstensi sebelum merge
+            possible_part_files = [
+                f"{base_name_clean}.{target_container}.part",
+                f"{base_name_clean}.mp4.part",
+                f"{base_name_clean}.webm.part",
+                f"{base_name_clean}.part"
+            ]
+
+            # Download Phase
+            try:
                 if cut_range:
                     cut_spinner = Spinner(_('download.youtube.downloading_item', title=title) + ", Cutting...")
                     cut_spinner.start()
@@ -93,54 +110,68 @@ def download_single_video(url, target_dir, use_cache=True, download_type="Single
                 else:
                     print_process(_('download.youtube.downloading_item', title=title))
                     ydl.download([url])
-
-                # --- Post Processing  ---
-                temp_filename = ydl.prepare_filename(info)
-                base_name = os.path.splitext(temp_filename)[0]
-                video_path = f"{base_name}.mp4"
-                final_video_path = os.path.abspath(video_path)
-
-                if use_cache:
-                    cache_metadata(url, {
-                        'title': title,
-                        'duration': duration,
-                        'uploader': info.get('uploader', '')
-                    })
-
-                metadata = {
-                    'artist': uploader,
-                    'album': "YouTube Video", 
-                    'title': title
-                }
-
-                add_to_history(
-                    id=video_id,
-                    file_path=final_video_path,
-                    success=True, 
-                    title=title, 
-                    content_type='video', 
-                    platform="YouTube Video", 
-                    download_type=download_type, 
-                    duration=duration,
-                    metadata=metadata
-                )
-
-                if RuntimeConfig.MEDIA_SCANNER_ENABLED:
-                    if os.path.exists(final_video_path):
-                        scan_media_files(final_video_path)
-
-            return True, title, False
-
-        except Exception as e:
-            if is_forbidden_error(e):
-                print_error(f"Forbidden 403 Error detected.")
-                if attempt < RuntimeConfig.MAX_RETRIES:
-                    print_process(f"Retrying, attempt {attempt}/{RuntimeConfig.MAX_RETRIES}...")
-                    time.sleep(RuntimeConfig.RETRY_DELAY)
-                    continue
+            
+            except (KeyboardInterrupt, Exception) as e:
+                print() 
+                if isinstance(e, KeyboardInterrupt):
+                    print_error("Download cancelled by user.")
                 else:
-                    print_error(f"Failed after {RuntimeConfig.MAX_RETRIES} attempts due to 403 Forbidden.")
-                    return False, str(e), False
-            else:
-                print_error(_('download.youtube.error_downloading', type='video', error=str(e)))
+                    print_error(_('download.youtube.error_downloading', type='video', error=str(e)))
+                
+                print_process("Cleaning up partial files...\r")
+                
+                for p_file in possible_part_files:
+                    if os.path.exists(p_file):
+                        try: os.remove(p_file)
+                        except OSError: pass
+
+                try:
+                    for f in glob.glob(f"{base_name_clean}*"):
+                        if f.endswith('.part') or f.endswith('.ytdl'):
+                            try: os.remove(f)
+                            except OSError: pass
+                except Exception: pass
+
+                if isinstance(e, KeyboardInterrupt):
+                    raise e
+                
                 return False, str(e), False
+
+            # --- Post Processing  ---
+            video_path = f"{base_name_clean}.{target_container}"
+            final_video_path = os.path.abspath(video_path)
+
+            if use_cache:
+                cache_metadata(url, {
+                    'title': title,
+                    'duration': duration,
+                    'uploader': info.get('uploader', '')
+                })
+
+            metadata = {
+                'artist': uploader,
+                'album': "YouTube Video", 
+                'title': title
+            }
+
+            add_to_history(
+                id=video_id,
+                file_path=final_video_path,
+                success=True, 
+                title=title, 
+                content_type='video', 
+                platform="YouTube Video", 
+                download_type=download_type, 
+                duration=duration,
+                metadata=metadata
+            )
+
+            if RuntimeConfig.MEDIA_SCANNER_ENABLED:
+                if os.path.exists(final_video_path):
+                    scan_media_files(final_video_path)
+
+        return True, title, False
+
+    except Exception as e:
+        print_error(_('download.youtube.error_downloading', type='video', error=str(e)))
+        return False, str(e), False

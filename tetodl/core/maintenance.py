@@ -1,9 +1,15 @@
+import time
 import sys
-import subprocess
 import os
 import shutil
+import subprocess
 from pathlib import Path
-from ..constants import DATA_DIR, CACHE_DIR, CONFIG_DIR
+from ..constants import DATA_DIR, CACHE_DIR, CONFIG_DIR, HISTORY_PATH, CONFIG_PATH, REGISTRY_PATH, CACHE_PATH, TEMP_DIR
+from ..core.registry import registry
+from ..core.history import reset_history
+from ..core.config import reset_config
+from ..core.cache import reset_cache
+from ..utils.files import TempManager
 from ..utils.styles import print_error, print_success, print_info, print_neutral, color
 
 def get_project_root() -> Path:
@@ -147,3 +153,149 @@ def perform_uninstall():
         
     except Exception as e:
         print_error(f"Error executing uninstaller: {e}")
+
+def reset_data(targets: list[str]):
+    """
+    Reset application data based on targets list with smart feedback.
+    """
+    # 1. Expand 'all' shortcut
+    if 'all' in targets:
+        targets = ['history', 'cache', 'config', 'registry']
+
+    # 2. Handle CACHE first
+    if 'cache' in targets:
+        has_garbage = False
+        
+        if os.path.exists(CACHE_PATH):
+            has_garbage = True
+            
+        if not has_garbage and os.path.exists(TEMP_DIR):
+            try:
+                if len(os.listdir(TEMP_DIR)) > 0:
+                    has_garbage = True
+            except OSError: pass
+
+        if not has_garbage and os.path.exists(CACHE_DIR):
+            try:
+                for item in os.listdir(CACHE_DIR):
+                    item_path = os.path.join(CACHE_DIR, item)
+
+                    if item == "temp": continue
+                    if item == "cache.json": continue
+
+                    has_garbage = True
+                    break
+            except OSError: pass
+
+        if not has_garbage:
+            print_info("Cache: Nothing to clean")
+        else:
+            TempManager.cleanup()
+            
+            if os.path.exists(CACHE_PATH):
+                try: os.remove(CACHE_PATH)
+                except OSError: pass
+            
+            if os.path.exists(CACHE_DIR):
+                try: shutil.rmtree(CACHE_DIR)
+                except OSError: pass
+                
+            print_success("Cache cleared.")
+
+        if len(targets) == 1:
+            return
+
+    # 3. Identify Dangerous Targets
+    danger_targets = [t for t in targets if t in ['history', 'config', 'registry']]
+    if not danger_targets:
+        return
+
+    files_to_check = {
+        'history': HISTORY_PATH,
+        'config': CONFIG_PATH,
+        'registry': REGISTRY_PATH
+    }
+    
+    valid_targets = []
+    nothing_to_clean = []
+    
+    for t in danger_targets:
+        path = files_to_check.get(t)
+        if path and os.path.exists(path):
+            valid_targets.append(t)
+        else:
+            nothing_to_clean.append(t)
+
+    for t in nothing_to_clean:
+        print_info(f"{t.capitalize()}: Nothing to clean")
+
+    if not valid_targets:
+        return
+
+    if 'registry' in valid_targets:
+        print()
+        print_info(f"{color('Warning:', 'y')} You are about to wipe the DOWNLOAD REGISTRY.")
+        print_info("TetoDL will lose track of ALL downloaded files.")
+        
+        other_valid = [t for t in valid_targets if t != 'registry']
+        if other_valid:
+            print_info(f"This will also reset: {', '.join([t.upper() for t in other_valid])}")
+        
+        print()
+        
+        try:
+            confirm = input(f"{color('Are you sure? This cannot be undone. (y/N) > ', 'y')}").strip().lower()
+        except KeyboardInterrupt:
+            print("\nOperation cancelled.")
+            return
+
+        if confirm not in ['y', 'yes']:
+            print_info("Reset cancelled.")
+            return
+
+        try:
+            for i in range(5, 0, -1):
+                msg = f"[!] Nuking Data In {color(str(i), 'r')}... (Press Ctrl+C to CANCEL)"
+                sys.stdout.write(f"\r{color(msg, 'y')}")
+                sys.stdout.flush()
+                time.sleep(1)
+            
+            sys.stdout.write("\r" + " " * 60 + "\r")
+            
+            if 'history' in valid_targets:
+                reset_history()
+                print_success("Download history cleared.")
+
+            if 'config' in valid_targets:
+                reset_config()
+                print_success("Configuration reset to defaults.")
+
+            if 'registry' in valid_targets:
+                registry.reset()
+                print_success("Registry database has been nuked.")
+            
+        except KeyboardInterrupt:
+            sys.stdout.write("\r" + " " * 60 + "\r")
+            print(color("\n[!] Reset ABORTED by user.", "g", True))
+            return
+
+    else:
+        print_info(f"You are about to reset: {', '.join([t.upper() for t in valid_targets])}")
+        
+        try:
+            confirm = input(f"{color('Are you sure? (y/N) > ', 'y')}").strip().lower()
+        except KeyboardInterrupt:
+            print("\nOperation cancelled.")
+            return
+
+        if confirm not in ['y', 'yes']:
+            print_info("Reset cancelled.")
+            return
+
+        if 'history' in valid_targets:
+            reset_history()
+            print_success("Download history cleared.")
+
+        if 'config' in valid_targets:
+            reset_config()
+            print_success("Configuration reset to defaults.")

@@ -133,4 +133,13 @@ class RegistryManager:
         if updated:
             self.save()
 
+    def reset(self):
+        """Hard reset the registry database."""
+        self.data = {}
+        if os.path.exists(REGISTRY_PATH):
+            try:
+                os.remove(REGISTRY_PATH)
+            except OSError:
+                pass
+
 registry = RegistryManager()

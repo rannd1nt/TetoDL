@@ -86,7 +86,6 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
         choices.append(Separator("-" * 30))
         choices.append(Choice(title=f"- {_('common.cancel')}", value="__CANCEL__"))
 
-        from .entry import menu_style
         selection = questionary.select(
             message="",
             choices=choices,
