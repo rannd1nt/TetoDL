@@ -16,11 +16,8 @@ import requests
 from ..utils.i18n import get_text as _
 from ..utils.styles import print_info, print_error, print_success, console
 from ..utils.spinner import Spinner
+from ..utils.server_styles import TetoHTTPHandler
 from ..constants import IS_TERMUX, IS_WSL
-
-class QuietHandler(http.server.SimpleHTTPRequestHandler):
-    def log_message(self, format, *args):
-        pass 
 
 class SilentTCPServer(socketserver.TCPServer):
     allow_reuse_address = True
@@ -111,6 +108,7 @@ def find_free_port(start_port=8989, max_tries=10):
     """
     for port in range(start_port, start_port + max_tries):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.1)
             if s.connect_ex(('localhost', port)) != 0:
                 return port
     return None
@@ -145,13 +143,17 @@ def start_share_server(file_path_str: str, start_port=8989):
         print_error(f"All ports from {start_port} to {start_port+10} are busy.")
         return
 
-    ip_address = get_best_ip()
+    if IS_WSL:
+        ip_address = '127.0.0.1'
+    else:
+        ip_address = get_best_ip()
     using_wsl_bridge = False
 
     if IS_WSL:
         console.print(f"\n[bold yellow][!] WSL Environment Detected[/bold yellow]")
         print_info("WSL uses a separate network (NAT). Devices on your local Wi-Fi likely CANNOT connect to this IP.")
         print_info("Tip: Move the file to Windows (/mnt/c/...) and share from there.")
+        # return
 
     if ip_address.startswith("127.") and not IS_WSL:
         print_error("Cannot detect valid LAN IP. Are you connected to Wi-Fi/Hotspot?")
@@ -190,7 +192,7 @@ def start_share_server(file_path_str: str, start_port=8989):
     console.print("[bold red]Press Ctrl+C to stop server.[/bold red]")
 
     try:
-        with SilentTCPServer(("", port), QuietHandler) as httpd:
+        with SilentTCPServer(("", port), TetoHTTPHandler) as httpd:
             httpd.serve_forever()
     except OSError as e:
         print_error(f"Network error: {str(e)}")
