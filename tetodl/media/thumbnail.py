@@ -68,7 +68,7 @@ def convert_thumbnail_format(thumbnail_path, target_format="jpg"):
     except Exception:
         return None
     
-def download_and_process_thumbnail(info_dict, download_folder, should_crop=True, smart_mode=True):
+def download_and_process_thumbnail(info_dict, download_folder, should_crop=True, smart_mode=True, quiet=False):
     """
     Downloads thumbnail with robust fallback strategy.
     
@@ -101,8 +101,9 @@ def download_and_process_thumbnail(info_dict, download_folder, should_crop=True,
                         response = requests.get(image_url, headers=FAKE_HEADERS, timeout=10)
                         if response.status_code == 200:
                             source = 'Genius' if fetched_data.get('source') == 'Genius' else 'iTunes'
-                            print_success(_('download.youtube.fetch_success'))
-                            print_success(f"Cover art found via {source}!")
+                            if not quiet:
+                                print_success(_('download.youtube.fetch_success'))
+                                print_success(f"Cover art found via {source}!")
                             
                             with open(thumbnail_path, 'wb') as f:
                                 f.write(response.content)
@@ -148,5 +149,6 @@ def download_and_process_thumbnail(info_dict, download_folder, should_crop=True,
         return None, None
 
     except Exception as e:
-        print_error(_('media.thumbnail_error', error=str(e)))
+        if not quiet:
+            print_error(_('media.thumbnail_error', error=str(e)))
         return None, None

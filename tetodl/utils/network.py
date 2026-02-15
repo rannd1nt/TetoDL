@@ -33,16 +33,20 @@ class SilentTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     def handle_error(self, request, client_address):
         pass
 
-def check_internet() -> bool:
+def check_internet(quiet=False) -> bool:
     """Check if internet connection is available"""
-    spinner = Spinner(_('download.youtube.checking_internet'))
+    if not quiet:
+        spinner = Spinner(_('download.youtube.checking_internet'))
     try:
-        spinner.start()
+        if not quiet:
+            spinner.start()
         r = requests.get("https://www.google.com", timeout=5)
-        spinner.stop()
+        if not quiet:
+            spinner.stop()
         return r.status_code == 200
     except Exception:
-        spinner.stop()
+        if not quiet:
+            spinner.stop()
         return False
 
 def open_url(url: str) -> bool:
@@ -207,7 +211,6 @@ def start_share_server(file_path_str: str, start_port=8989):
 def perform_update():
     if not os.path.isdir(".git"):
         print_error("Not a git repository. Cannot auto-update.")
-        # print_info("If you installed via AUR, please use 'yay -Syu'.")
         return
 
     try:

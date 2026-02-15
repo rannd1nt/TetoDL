@@ -16,7 +16,7 @@ from tetodl.downloaders.youtube import handlers, tasks
 def _apply_runtime_overrides(overrides):
     """Inject CLI overrides into RuntimeConfig."""
     if overrides.get('simple_mode'): RuntimeConfig.SIMPLE_MODE = True
-    
+
     if 'output_path' in overrides:
         path = overrides['output_path']
         RuntimeConfig.MUSIC_ROOT = path
@@ -34,6 +34,10 @@ def _apply_runtime_overrides(overrides):
     if overrides.get('smart_cover'):
         RuntimeConfig.SMART_COVER_MODE = True
         RuntimeConfig.NO_COVER_MODE = False
+    if overrides.get('async'):
+        RuntimeConfig.ASYNC_MODE = True
+        # RuntimeConfig.QUIET = True
+    
     if overrides.get('no_cover'):
         RuntimeConfig.SMART_COVER_MODE = False
         RuntimeConfig.NO_COVER_MODE = True
@@ -48,6 +52,7 @@ def _apply_runtime_overrides(overrides):
         if not RuntimeConfig.GROUP_MODE:
             RuntimeConfig.GROUP_MODE = True
             print_info("Notice: '--m3u' automatically enabled '--group' mode.")
+    if overrides.get('quiet'): RuntimeConfig.QUIET = True
 
 def execute_cli_context(context):
     """

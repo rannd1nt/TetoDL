@@ -3,6 +3,7 @@ Main entry points (handlers) for YouTube download operations
 """
 import os
 import shutil
+from typing import Optional, Union, List, Dict, Any, Tuple
 from yt_dlp.utils import sanitize_filename
 
 from ...constants import RuntimeConfig, IS_TERMUX
@@ -13,6 +14,7 @@ from ...utils.network import is_valid_youtube_url, classify_youtube_url, check_i
 from ...utils.files import remove_nomedia_file, create_zip_archive
 from ...utils.processing import extract_all_urls_from_content, extract_video_id
 from ...core.registry import registry
+from ...core.history import load_history
 from ...core.config import save_config
 from ...ui.components import header
 from ...ui.navigation import select_download_folder
@@ -21,23 +23,31 @@ from ...utils.display import wait_and_clear_prompt
 from .audio import download_single_audio
 from .video import download_single_video
 from .playlist import download_playlist_sequential
+from .concurrent import download_playlist_concurrent
 
-def get_content_type_display(url_classification):
-    """Get display string for content type"""
-    platform = url_classification['platform']
-    content_type = url_classification['type']
-    platform_names = {'youtube': 'YouTube', 'youtube_music': 'YouTube Music'}
-    type_names = {'video': 'Video', 'playlist': 'Playlist', 'album': 'Album'}
-    platform_str = platform_names.get(platform, platform)
-    type_str = type_names.get(content_type, content_type)
-    return f"{platform_str} {type_str}"
+def download_audio_youtube(
+    url: str, 
+    cut_range: Optional[Tuple[float, float]] = None, 
+    playlist_items: Optional[List[int]] = None, 
+    group_folder: Union[bool, str] = False, 
+    share_mode: bool = False
+) -> Dict[str, Any]:
+    """
+    Main entry point for YouTube audio downloading.
+    
+    Handles the entire flow:
+    1. Validates URL and internet connection.
+    2. Determines download directory (interactive or simple mode).
+    3. Checks for existing files (registry check).
+    4. Extracts content info (Single Track vs Playlist).
+    5. Dispatches to concurrent or sequential downloaders.
+    6. Manages post-download actions like Zipping or Staging cleanup.
+    """
+    quiet = RuntimeConfig.QUIET
 
-def download_audio_youtube(url, cut_range=None, playlist_items=None, group_folder=False, share_mode=False):
-    """Main function to download YouTube audio"""
-
-    # 1. Validasi Awal
+    # 1. Initial Validation
     if not is_valid_youtube_url(url):
-        print_error(_('download.youtube.invalid_url'))
+        if not quiet: print_error(_('download.youtube.invalid_url'))
         wait_and_clear_prompt()
         return {'success': False, 'reason': 'invalid_url'}
 
@@ -49,19 +59,18 @@ def download_audio_youtube(url, cut_range=None, playlist_items=None, group_folde
     
     clear(); header()
     
-    # 2. Cek Existing (Single File Only, Playlist di-skip disini)
+    # 2. Check Existing (Single File Only, Playlist skipped here)
     def is_exists():
         is_playlist = "list=" in url
         if is_playlist: return False
         
         video_id = extract_video_id(url)
-        # Registry Check disini pakai target_dir root, aman untuk single
         exists, metadata = registry.check_existing(video_id, 'audio', target_dir)
         
         if exists:
-            print_success(_('download.youtube.file_exists'))
-            print_info(_('download.youtube.exists_title', title=metadata.get('title')))
-            print_info(_('download.youtube.exists_path', path=metadata.get('file_path')))
+            if not quiet: print_success(_('download.youtube.file_exists'))
+            if not quiet: print_info(_('download.youtube.exists_title', title=metadata.get('title')))
+            if not quiet: print_info(_('download.youtube.exists_path', path=metadata.get('file_path')))
             wait_and_clear_prompt()
             return {'success': True, 'file_path': metadata.get('file_path'), 'skipped': True}
         return False
@@ -70,49 +79,50 @@ def download_audio_youtube(url, cut_range=None, playlist_items=None, group_folde
         existing_result = is_exists()
         if existing_result: return existing_result
     
-    if not check_internet():
-        print_error(_('download.youtube.no_internet'))
+    if not check_internet(quiet):
+        if not quiet: print_error(_('download.youtube.no_internet'))
         wait_and_clear_prompt()
         return {'success': False, 'reason': 'no_internet'}
     
-    # 3. Klasifikasi & Info
+    # 3. Classification & Info
     url_classification = classify_youtube_url(url)
     is_youtube_music = url_classification['platform'] == 'youtube_music'
 
-    if is_youtube_music: print_info(_('download.youtube.yt_music_detected'))
+    if is_youtube_music: 
+        if not quiet: print_info(_('download.youtube.yt_music_detected'))
     else:
-        print_info(_('download.youtube.yt_audio_plain'))
-        if RuntimeConfig.SMART_COVER_MODE: print_info(_('download.youtube.smart_cover_info'))
+        if not quiet: print_info(_('download.youtube.yt_audio_plain'))
+        if RuntimeConfig.SMART_COVER_MODE: 
+            if not quiet: print_info(_('download.youtube.smart_cover_info'))
 
     if IS_TERMUX: remove_nomedia_file(target_dir)
 
-    # 4. Extract Info Playlist
-    spinner = Spinner(_('download.youtube.extracting'))
-    spinner.start()
+    # 4. Extract Playlist Info
+    if not quiet:
+        spinner = Spinner(_('download.youtube.extracting'))
+        spinner.start()
     urls, content_title, total_items = extract_all_urls_from_content(url)
-    spinner.stop(print_success(_('download.youtube.extracted', count=total_items, type='track'), str_only=True))
+    if not quiet: spinner.stop(print_success(_('download.youtube.extracted', count=total_items, type='track'), str_only=True) if not quiet else None)
 
     if total_items > 1:
         # --- PLAYLIST LOGIC ---
         if cut_range:
-            print_info(color("Warning: '--cut' flag is ignored for playlists.", "y"))
+            if not quiet: print_info(color("Warning: '--cut' flag is ignored for playlists.", "y"))
             cut_range = None
 
-        print_process(_('download.youtube.found_playlist', count=total_items, type='track', title=content_title))
+        if not quiet: print_process(_('download.youtube.found_playlist', count=total_items, type='track', title=content_title))
 
-        # [FIX CRITICAL] Penentuan Folder & Nama M3U
         safe_original_title = sanitize_filename(content_title)
         
         custom_group_name = None
-        m3u_playlist_name = content_title # Default: Fresh Ambience
+        m3u_playlist_name = content_title
         
-        # Cek apakah group_folder berupa String ("Test") atau Bool (True)
         if isinstance(group_folder, str):
             custom_group_name = sanitize_filename(group_folder)
-            m3u_playlist_name = group_folder # M3U Name jadi "Test"
+            m3u_playlist_name = group_folder
         elif group_folder: 
             custom_group_name = safe_original_title
-            m3u_playlist_name = content_title # M3U Name tetap "Fresh Ambience"
+            m3u_playlist_name = content_title
 
         final_download_dir = target_dir
         parent_dir_if_staging = None
@@ -136,7 +146,7 @@ def download_audio_youtube(url, cut_range=None, playlist_items=None, group_folde
                     save_config()
             except Exception: pass 
             
-        # B. Share Mode (Tanpa Grouping) -> Staging
+        # B. Share Mode (Without Grouping) -> Staging
         elif share_mode:
             is_staging = True
             parent_dir_if_staging = target_dir
@@ -158,20 +168,36 @@ def download_audio_youtube(url, cut_range=None, playlist_items=None, group_folde
         if final_download_dir != target_dir and not os.path.exists(final_download_dir):
             os.makedirs(final_download_dir, exist_ok=True)
         
-        success, skipped, failed = download_playlist_sequential(
-            urls,
-            final_download_dir, 
-            download_single_audio,
-            "audio",
-            is_youtube_music,
-            m3u_playlist_name,
-            playlist_items,
-            alt_check_dirs
-        )
+        use_async = getattr(RuntimeConfig, 'ASYNC_MODE', False)
+
+        if use_async:
+            success, skipped, failed = download_playlist_concurrent(
+                urls,
+                final_download_dir,
+                download_single_audio,
+                "audio",
+                is_youtube_music,
+                m3u_playlist_name,
+                playlist_items,
+                alt_check_dirs,
+                quiet
+            )
+        else:
+            success, skipped, failed = download_playlist_sequential(
+                urls,
+                final_download_dir, 
+                download_single_audio,
+                "audio",
+                is_youtube_music,
+                m3u_playlist_name,
+                playlist_items,
+                alt_check_dirs,
+                quiet
+            )
 
         if is_staging and success == 0:
             if os.path.exists(final_download_dir) and not os.listdir(final_download_dir):
-                print_info("All items exist in library. Staging folder is empty. Nothing to share.")
+                if not quiet: print_info("All items exist in library. Staging folder is empty. Nothing to share.")
                 try:
                     shutil.rmtree(final_download_dir)
                 except Exception: pass
@@ -210,29 +236,31 @@ def download_audio_youtube(url, cut_range=None, playlist_items=None, group_folde
     else:
         # --- SINGLE TRACK LOGIC ---
         if RuntimeConfig.SIMPLE_MODE:
-            print_process(_('download.youtube.simple_mode_start', type='audio', path=target_dir))
+            if not quiet: print_process(_('download.youtube.simple_mode_start', type='audio', path=target_dir))
         else:
-            print_process(_('download.youtube.start_download', type='audio', path=target_dir))
+            if not quiet: print_process(_('download.youtube.start_download', type='audio', path=target_dir))
 
         download_type = "Single Track"
         success, title, skipped = download_single_audio(
             urls[0], target_dir, is_youtube_music=is_youtube_music,
-            download_type=download_type, cut_range=cut_range
+            download_type=download_type, cut_range=cut_range, quiet=quiet
         )
 
         file_path_result = None
         if success:
-            from ...core.history import load_history
             load_history()
             if RuntimeConfig.DOWNLOAD_HISTORY:
                 file_path_result = RuntimeConfig.DOWNLOAD_HISTORY[-1].get('file_path')
             
-            if skipped: print_info(_('download.youtube.file_exists', title=title))
+            if skipped: 
+                if not quiet: print_info(_('download.youtube.file_exists', title=title))
             else:
-                if is_youtube_music: print_success(_('download.youtube.complete_metadata', title=title))
-                else: print_success(_('download.youtube.complete', title=title))
+                if is_youtube_music: 
+                    if not quiet: print_success(_('download.youtube.complete_metadata', title=title))
+                else:
+                    if not quiet: print_success(_('download.youtube.complete', title=title))
         else:
-            print_error(_('download.youtube.failed', title=title))
+            if not quiet: print_error(_('download.youtube.failed', title=title))
             
     wait_and_clear_prompt()
     return {
@@ -242,12 +270,24 @@ def download_audio_youtube(url, cut_range=None, playlist_items=None, group_folde
         'skipped': skipped if 'skipped' in locals() else False
     }
 
-def download_video_youtube(url, cut_range=None, playlist_items=None, group_folder=False, share_mode=False):
-    """Main function to download YouTube video"""
+def download_video_youtube(
+    url: str, 
+    cut_range: Optional[Tuple[float, float]] = None, 
+    playlist_items: Optional[List[int]] = None, 
+    group_folder: Union[bool, str] = False, 
+    share_mode: bool = False
+) -> Dict[str, Any]:
+    """
+    Main entry point for YouTube video downloading.
+    
+    Similar to audio handler but tailored for video content (mp4/mkv/etc).
+    Handles resolution settings, codec preferences, and playlist structures.
+    """
+    quiet = RuntimeConfig.QUIET
 
-    # 1. Validasi Awal
+    # 1. Initial Validation
     if not is_valid_youtube_url(url):
-        print_error(_('download.youtube.invalid_url'))
+        if not quiet: print_error(_('download.youtube.invalid_url'))
         wait_and_clear_prompt()
         return {'success': False, 'reason': 'invalid_url'}
 
@@ -258,7 +298,7 @@ def download_video_youtube(url, cut_range=None, playlist_items=None, group_folde
         
     clear(); header()
     
-    # 2. Cek Existing (Single)
+    # 2. Check Existing (Single)
     def is_exists():
         is_playlist = "list=" in url
         if is_playlist: return False
@@ -267,9 +307,9 @@ def download_video_youtube(url, cut_range=None, playlist_items=None, group_folde
         exists, metadata = registry.check_existing(video_id, 'video', target_dir)
         
         if exists:
-            print_success(_('download.youtube.file_exists'))
-            print_info(_('download.youtube.exists_title', title=metadata.get('title')))
-            print_info(_('download.youtube.exists_path', path=metadata.get('file_path')))
+            if not quiet: print_success(_('download.youtube.file_exists'))
+            if not quiet: print_info(_('download.youtube.exists_title', title=metadata.get('title')))
+            if not quiet: print_info(_('download.youtube.exists_path', path=metadata.get('file_path')))
             return {'success': True, 'file_path': metadata.get('file_path'), 'skipped': True}
         return False
 
@@ -277,27 +317,28 @@ def download_video_youtube(url, cut_range=None, playlist_items=None, group_folde
         existing_result = is_exists()
         if existing_result: return existing_result
     
-    if not check_internet():
-        print_error(_('download.youtube.no_internet'))
+    if not check_internet(quiet):
+        if not quiet: print_error(_('download.youtube.no_internet'))
         wait_and_clear_prompt()
         return {'success': False, 'reason': 'no_internet'}
 
-    # 3. Klasifikasi
+    # 3. Classification
     if IS_TERMUX: remove_nomedia_file(target_dir)
 
-    spinner = Spinner(_('download.youtube.extracting'))
-    spinner.start()
+    if not quiet:
+        spinner = Spinner(_('download.youtube.extracting'))
+        spinner.start()
     urls, content_title, total_items = extract_all_urls_from_content(url)
-    spinner.stop(print_success(_('download.youtube.extracted', count=total_items, type='video'), str_only=True))
+    if not quiet: spinner.stop(print_success(_('download.youtube.extracted', count=total_items, type='video'), str_only=True))
 
     if total_items > 1:
         # --- PLAYLIST VIDEO ---
         if cut_range:
-            print_info(color("Warning: '--cut' flag is ignored for playlists.", "y"))
+            if not quiet: print_info(color("Warning: '--cut' flag is ignored for playlists.", "y"))
             cut_range = None
         
-        print_process(_('download.youtube.found_playlist', count=total_items, type='video', title=content_title))
-        print_process(_('download.youtube.max_resolution', resolution=RuntimeConfig.MAX_VIDEO_RESOLUTION))
+        if not quiet: print_process(_('download.youtube.found_playlist', count=total_items, type='video', title=content_title))
+        if not quiet: print_process(_('download.youtube.max_resolution', resolution=RuntimeConfig.MAX_VIDEO_RESOLUTION))
         
         safe_original_title = sanitize_filename(content_title)
         custom_group_name = None
@@ -359,12 +400,13 @@ def download_video_youtube(url, cut_range=None, playlist_items=None, group_folde
             False,
             m3u_playlist_name,
             playlist_items,
-            alt_check_dirs
+            alt_check_dirs,
+            quiet
         )
 
         if is_staging and success == 0:
             if os.path.exists(final_download_dir) and not os.listdir(final_download_dir):
-                print_info("All items exist in library. Staging folder is empty. Nothing to share.")
+                if not quiet: print_info("All items exist in library. Staging folder is empty. Nothing to share.")
                 try:
                     shutil.rmtree(final_download_dir)
                 except Exception: pass
@@ -403,27 +445,28 @@ def download_video_youtube(url, cut_range=None, playlist_items=None, group_folde
     else:
         # --- SINGLE VIDEO ---
         if RuntimeConfig.SIMPLE_MODE:
-            print_process(_('download.youtube.simple_mode_start', type=f'video ({RuntimeConfig.MAX_VIDEO_RESOLUTION})', path=target_dir))
+            if not quiet: print_process(_('download.youtube.simple_mode_start', type=f'video ({RuntimeConfig.MAX_VIDEO_RESOLUTION})', path=target_dir))
         else:
-            print_process(_('download.youtube.start_download',
+            if not quiet: print_process(_('download.youtube.start_download',
                             type=f'video ({RuntimeConfig.MAX_VIDEO_RESOLUTION})', path=target_dir))
 
         download_type = "Single Video"
         success, title, skipped = download_single_video(
-            urls[0], target_dir, download_type=download_type, cut_range=cut_range
+            urls[0], target_dir, download_type=download_type, cut_range=cut_range, quiet=quiet
         )
 
         file_path_result = None
         if success:
-            from ...core.history import load_history
             load_history()
             if RuntimeConfig.DOWNLOAD_HISTORY:
                 file_path_result = RuntimeConfig.DOWNLOAD_HISTORY[-1].get('file_path')
             
-            if skipped: print_info(_('download.youtube.file_exists', title=title))
-            else: print_success(_('download.youtube.complete', title=title))
+            if skipped: 
+                if not quiet: print_info(_('download.youtube.file_exists', title=title))
+            else:
+                if not quiet: print_success(_('download.youtube.complete', title=title))
         else:
-            print_error(_('download.youtube.failed', title=title))
+            if not quiet: print_error(_('download.youtube.failed', title=title))
 
     wait_and_clear_prompt()
     return {

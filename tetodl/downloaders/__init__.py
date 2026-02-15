@@ -5,7 +5,6 @@ download streams (e.g., YouTube, Spotify).
 from .youtube import (
     download_audio_youtube, 
     download_video_youtube, 
-    get_content_type_display,
     download_thumbnail_task
 )
 
@@ -16,5 +15,4 @@ __all__ = [
     'download_audio_youtube',
     'download_video_youtube',
     'download_spotify',
-    'get_content_type_display'
 ]

@@ -124,7 +124,7 @@ def create_zip_archive(source_dir_path):
         print_error(f"Failed to create zip: {e}")
         return None
 
-def create_m3u8_playlist(target_dir, playlist_name, file_list):
+def create_m3u8_playlist(target_dir, playlist_name, file_list, quiet=False):
     """
     Create an .m3u8 playlist file containing a list of file_lists.
     """
@@ -143,10 +143,10 @@ def create_m3u8_playlist(target_dir, playlist_name, file_list):
             for filename in file_list:
                 f.write(f"{os.path.basename(filename)}\n")
                 
-        print_success(f"Playlist generated: {os.path.basename(m3u_path)}")
+        if not quiet: print_success(f"Playlist generated: {os.path.basename(m3u_path)}")
         return m3u_path
     except Exception as e:
-        print_error(f"Failed to create playlist: {e}")
+        if not quiet: print_error(f"Failed to create playlist: {e}")
         return None
 
 def remove_nomedia_file(folder_path):
@@ -161,7 +161,7 @@ def remove_nomedia_file(folder_path):
             print_error(f"Gagal menghapus .nomedia: {e}")
 
 
-def clean_temp_files(download_folder, video_id):
+def clean_temp_files(download_folder, video_id, quiet=False):
     """
     Clean temporary files after processing (thumbnails, temp files, etc.)
 
@@ -187,13 +187,13 @@ def clean_temp_files(download_folder, video_id):
                         os.remove(file_path)
                         deleted_files.append(os.path.basename(file_path))
                     except Exception as e:
-                        print_error(_('media.temp_clean_error', error=str(e)))
+                        if not quiet: print_error(_('media.temp_clean_error', error=str(e)))
 
-        if deleted_files:
+        if deleted_files and not quiet:
             print_process(f"Cleaned {len(deleted_files)} temporary files")
 
     except Exception as e:
-        print_error(_('media.temp_clean_error', error=str(e)))
+        if not quiet: print_error(_('media.temp_clean_error', error=str(e)))
 
 def get_free_space(path):
     """Helper to get free space in a human-readable GB format"""

@@ -2,11 +2,17 @@ import requests
 import re
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
-from .styles import print_info, print_error
+from typing import Optional, Dict, Any, Generator
+
+from .styles import print_info
 
 class MetadataFetcher:
     """
     Centralized fetcher for Cover Art (iTunes) and Lyrics (Genius).
+    
+    This class provides a unified interface to retrieve music metadata, 
+    utilizing iTunes as the primary source for high-quality cover art and tags, 
+    and Genius as a fallback or enrichment source for lyrics and additional details.
     """
     
     HEADERS = {
@@ -14,12 +20,16 @@ class MetadataFetcher:
     }
 
     @staticmethod
-    def _clean_title(title, artist=""):
+    def _clean_title(title: str, artist: str = "") -> str:
         """
-        Membersihkan judul dengan berbagai strategi untuk mendapatkan 'Core Title'.
+        Sanitizes the song title by removing noise to extract the 'Core Title'.
+        
+        Removes brackets, official video tags, feature credits, and other 
+        common YouTube title clutter to improve search accuracy.
         """
         if not title: return ""
         
+        # Remove brackets and enclosed content
         title = re.sub(r'【.*?】', '', title)
         title = re.sub(r'\[.*?\]', '', title)
         title = re.sub(r'\(.*?\)', '', title)
@@ -46,9 +56,9 @@ class MetadataFetcher:
         clean_base = re.sub(r'\s+', ' ', clean_base).strip()
         return clean_base
 
-    def _get_search_queries(self, artist, title, force_romaji=False):
+    def _get_search_queries(self, artist: str, title: str, force_romaji: bool = False) -> Generator[str, None, None]:
         """
-        Generate multiple search query variations (Generator).
+        Generates a sequence of search query variations to maximize hit rate.
         """
         clean_artist = artist.replace(' - Topic', '').strip()
         clean_title = self._clean_title(title, artist=clean_artist)
@@ -70,9 +80,17 @@ class MetadataFetcher:
 
         yield clean_title
 
-    def _is_valid_match(self, search_title, result_title, search_artist=None, result_artist=None, threshold=0.4):
+    def _is_valid_match(
+        self, 
+        search_title: str, 
+        result_title: str, 
+        search_artist: Optional[str] = None, 
+        result_artist: Optional[str] = None, 
+        threshold: float = 0.4
+    ) -> bool:
         """
-        Cek apakah judul DAN artis (opsional) hasil pencarian mirip dengan target.
+        Validates if the search result matches the target using fuzzy logic.
+        Checks Title similarity AND Artist similarity (if provided).
         """
         def normalize(s):
             return re.sub(r'[\W_]+', '', s.lower()) if s else ""
@@ -110,7 +128,11 @@ class MetadataFetcher:
 
         return True
 
-    def _clean_genius_lyrics(self, lyrics_text):
+    def _clean_genius_lyrics(self, lyrics_text: str) -> str:
+        """
+        Cleans raw lyrics text scraped from Genius HTML.
+        Removes headers, contributors, embeddings, and ad text.
+        """
         if not lyrics_text: return ""
         
         match = re.search(r'\[', lyrics_text)
@@ -128,9 +150,10 @@ class MetadataFetcher:
         return lyrics_text
 
     
-    def fetch_cover_itunes(self, artist, title):
+    def fetch_cover_itunes(self, artist: str, title: str) -> Optional[Dict[str, Any]]:
         """
-        Search iTunes and return Metadata Dict + High Res Cover + Detailed Tags.
+        Queries iTunes API for High-Res Cover Art and detailed metadata.
+        Returns a dictionary containing artwork URL and tags if found.
         """
         try:
             clean_artist = artist.replace(' - Topic', '').strip()
@@ -176,9 +199,10 @@ class MetadataFetcher:
         except Exception:
             return None
 
-    def fetch_cover_genius(self, artist, title):
+    def fetch_cover_genius(self, artist: str, title: str) -> Optional[Dict[str, Any]]:
         """
-        Fallback: Cari cover art + Metadata Lengkap (Album/Year/Composer) dari Genius.
+        Fallback/Enrichment: Searches Genius API for metadata.
+        Useful when iTunes fails or to gather extra fields like Composers.
         """
         target_compare_title = self._clean_title(title, artist)
         clean_artist = artist.replace(' - Topic', '').strip()
@@ -270,12 +294,13 @@ class MetadataFetcher:
                 continue
         return None
 
-    def fetch_metadata(self, artist, title):
+    def fetch_metadata(self, artist: str, title: str) -> Optional[Dict[str, Any]]:
         """
-        Smart Fetcher:
-        1. Try iTunes.
-        2. If iTunes OK -> Try Genius to Enrich (Merge).
-        3. If iTunes Fail -> Try Genius Full Fallback.
+        Orchestrates the metadata fetching strategy.
+        
+        1. Attempts to fetch from iTunes first (preferred for standardized tags).
+        2. If iTunes succeeds, attempts to enrich data (composers, dates) via Genius.
+        3. If iTunes fails, falls back completely to Genius.
         """
         
         itunes_data = self.fetch_cover_itunes(artist, title)
@@ -306,9 +331,18 @@ class MetadataFetcher:
         else:
             return self.fetch_cover_genius(artist, title)
 
-    def fetch_lyrics_genius(self, artist: str, title: str, romaji=False):
+    def fetch_lyrics_genius(
+        self, 
+        artist: str, 
+        title: str, 
+        romaji: bool = False, 
+        quiet: bool = False
+    ) -> Optional[str]:
         """
-        Scrape lyrics from Genius.com with Strict Title AND Artist validation.
+        Scrapes lyrics from Genius.com.
+        
+        Features strict validation to ensure the lyrics match the requested 
+        artist/title, and supports Romanized lyrics search for non-English tracks.
         """
         target_compare_title = self._clean_title(title, artist)
         clean_artist = artist.replace(' - Topic', '').strip()
@@ -357,12 +391,12 @@ class MetadataFetcher:
                     for hit in valid_hits:
                         if "Romanized" in hit['result']['title_with_featured']:
                             target_url = hit['result']['url']
-                            print_info(f"Found Romanized lyrics: {hit['result']['title']}")
+                            if not quiet: print_info(f"Found Romanized lyrics: {hit['result']['title']}")
                             break
                 
                 if not target_url:
                     target_url = valid_hits[0]['result']['url']
-                    print_info(f"Fetching lyrics from: {valid_hits[0]['result']['title']}")
+                    if not quiet: print_info(f"Fetching lyrics from: {valid_hits[0]['result']['title']}")
 
                 page_resp = requests.get(target_url, headers=self.HEADERS, timeout=10)
                 soup = BeautifulSoup(page_resp.text, 'html.parser')

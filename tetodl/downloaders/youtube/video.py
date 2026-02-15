@@ -3,7 +3,7 @@ Core logic for single video processing
 """
 import os
 import glob
-import time
+from typing import Optional, Tuple, Union, List
 
 try:
     import yt_dlp as yt
@@ -21,14 +21,28 @@ from ...core.config import get_video_format_string
 from ...core.history import add_to_history
 from ...media.scanner import scan_media_files
 
-def download_single_video(url, target_dir, use_cache=True, download_type="Single Video", cut_range=None):
-    """Download single video file"""
+def download_single_video(
+    url: str, 
+    target_dir: str, 
+    use_cache: bool = True, 
+    download_type: str = "Single Video", 
+    cut_range: Optional[Tuple[float, float]] = None, 
+    quiet: bool = False
+) -> Tuple[bool, str, bool]:
+    """
+    Manages the download and post-processing of a single video file.
+
+    This function configures `yt-dlp` based on runtime preferences (codec/container).
+    It supports advanced trimming via `cut_range`, allowing users to download specific 
+    segments (e.g., '-1:02:12' for beginning-to-timestamp or '1:2:12-' for timestamp-to-end)
+    without downloading the entire file first.
+    """
 
     current_style = getattr(RuntimeConfig, 'PROGRESS_STYLE', 'minimal')
     target_container = getattr(RuntimeConfig, 'VIDEO_CONTAINER', 'mp4')
     target_codec = getattr(RuntimeConfig, 'VIDEO_CODEC', 'default')
 
-    pp_args = []
+    pp_args: List[str] = []
 
     if target_codec == 'h264':
         pp_args = [
@@ -47,8 +61,8 @@ def download_single_video(url, target_dir, use_cache=True, download_type="Single
     try:
         outtmpl = os.path.join(target_dir, "%(title)s.%(ext)s")
         video_format = get_video_format_string()
-        dl_hook = get_progress_hook(current_style)
-        pp_hook = get_postprocessor_hook(_('media.encoding', codec=target_codec.upper()))
+        dl_hook = [] if quiet else [get_progress_hook(current_style)]
+        pp_hook = [] if quiet else [get_postprocessor_hook(_('media.encoding', codec=target_codec.upper()))]
 
         ydl_opts = {
             'format': video_format,
@@ -58,8 +72,8 @@ def download_single_video(url, target_dir, use_cache=True, download_type="Single
             'quiet': True,
             'no_warnings': True,
             'logger': QuietLogger(),
-            'progress_hooks': [dl_hook],
-            'postprocessor_hooks': [pp_hook],
+            'progress_hooks': dl_hook,
+            'postprocessor_hooks': pp_hook,
             'postprocessor_args': pp_args if pp_args else None,
             'retries': RuntimeConfig.MAX_RETRIES,
             'fragment_retries': RuntimeConfig.MAX_RETRIES,
@@ -70,7 +84,7 @@ def download_single_video(url, target_dir, use_cache=True, download_type="Single
 
         if cut_range:
             start, end = cut_range
-            print_info(f"Trimming video: {start}s to {end}s (This may take longer)")
+            if not quiet: print_info(f"Trimming video: {start}s to {end}s (This may take longer)")
 
             ydl_opts['download_ranges'] = lambda info, ydl: [{'start_time': start, 'end_time': end}]
             ydl_opts['force_keyframes_at_cuts'] = True
@@ -86,7 +100,7 @@ def download_single_video(url, target_dir, use_cache=True, download_type="Single
             if use_cache:
                 cached = get_cached_metadata(url)
                 if cached:
-                    print_info(_('download.youtube.using_cache', title=cached['metadata'].get('title', 'Unknown')))
+                    if not quiet: print_info(_('download.youtube.using_cache', title=cached['metadata'].get('title', 'Unknown')))
 
             temp_filename_template = ydl.prepare_filename(info)
             base_name_clean = os.path.splitext(temp_filename_template)[0]
@@ -101,24 +115,26 @@ def download_single_video(url, target_dir, use_cache=True, download_type="Single
             # Download Phase
             try:
                 if cut_range:
-                    cut_spinner = Spinner(_('download.youtube.downloading_item', title=title) + ", Cutting...")
-                    cut_spinner.start()
+                    if not quiet:
+                        cut_spinner = Spinner(_('download.youtube.downloading_item', title=title) + ", Cutting...")
+                        cut_spinner.start()
                     try:
                         ydl.download([url])
                     finally:
-                        cut_spinner.stop()
+                        if not quiet:
+                            cut_spinner.stop()
                 else:
-                    print_process(_('download.youtube.downloading_item', title=title))
+                    if not quiet: print_process(_('download.youtube.downloading_item', title=title))
                     ydl.download([url])
             
             except (KeyboardInterrupt, Exception) as e:
-                print() 
+                if not quiet: print() 
                 if isinstance(e, KeyboardInterrupt):
-                    print_error("Download cancelled by user.")
+                    if not quiet: print_error("Download cancelled by user.")
                 else:
-                    print_error(_('download.youtube.error_downloading', type='video', error=str(e)))
+                    if not quiet: print_error(_('download.youtube.error_downloading', type='video', error=str(e)))
                 
-                print_process("Cleaning up partial files...\r")
+                if not quiet: print_process("Cleaning up partial files...\r")
                 
                 for p_file in possible_part_files:
                     if os.path.exists(p_file):
@@ -173,5 +189,5 @@ def download_single_video(url, target_dir, use_cache=True, download_type="Single
         return True, title, False
 
     except Exception as e:
-        print_error(_('download.youtube.error_downloading', type='video', error=str(e)))
+        if not quiet: print_error(_('download.youtube.error_downloading', type='video', error=str(e)))
         return False, str(e), False

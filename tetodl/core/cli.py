@@ -47,8 +47,10 @@ class CLIHandler:
             help='Set video codec priority'
         )
 
+        dl_group.add_argument('--async', dest='async_mode', action='store_true', help="Enable concurrent downloads (YouTube playlists/albums)")
         dl_group.add_argument('--search', metavar='QUERY', help="Search YouTube interactively")
         dl_group.add_argument('-l', '--limit', type=int, default=5, metavar='NUM', help="Search limit")
+        dl_group.add_argument('--quiet', action='store_true', help="Suppress download log and progress output")
         
         # Processing Flags
         dl_group.add_argument('--cut', metavar='TIME', help="Trim media (e.g. '01:30-02:00')")
@@ -365,6 +367,7 @@ class CLIHandler:
             context['limit'] = args.limit
 
         # Flags
+        if args.async_mode: overrides['async'] = True
         if args.smart_cover: overrides['smart_cover'] = True
         if args.no_cover: overrides['no_cover'] = True
         if args.force_crop: overrides['force_crop'] = True
@@ -374,6 +377,7 @@ class CLIHandler:
         if args.romaji: overrides['romaji'] = True
         if args.zip: overrides['zip'] = True
         if args.m3u: overrides['m3u'] = True
+        if args.quiet: overrides['quiet'] = True
 
         if args.items:
             from ..utils.processing import parse_playlist_items

@@ -1,5 +1,11 @@
+"""
+Audio metadata tagging utilities using Mutagen.
+Handles embedding of Lyrics, Cover Art, and ID3/MP4 tags.
+"""
 import os
-from ..utils.styles import print_error, print_success, print_info
+from typing import Optional, Dict, Any, Union
+
+from ..utils.styles import print_error
 
 try:
     # Import MP3 & ID3 Handlers
@@ -18,15 +24,21 @@ try:
 except ImportError:
     HAS_MUTAGEN = False
 
-def embed_lyrics(file_path, lyrics_text):
+def embed_lyrics(file_path: str, lyrics_text: str, quiet: bool = False) -> bool:
     """
-    Embed lyrics into audio file (MP3/M4A/FLAC).
+    Embeds lyrics into the audio file based on its format.
+    
+    Supported Formats:
+    - MP3: Uses ID3 USLT frame (Unsynchronized Lyric Text).
+    - M4A: Uses iTunes '©lyr' atom.
+    - FLAC: Uses Vorbis 'LYRICS' comment.
     """
     if not HAS_MUTAGEN:
-        print_error("Mutagen library not found. Cannot embed lyrics.")
+        if not quiet: print_error("Mutagen library not found. Cannot embed lyrics.")
         return False
 
     if not os.path.exists(file_path):
+        if not quiet: print_error(f"File does not exist: {file_path}")
         return False
         
     ext = os.path.splitext(file_path)[1].lower()
@@ -39,8 +51,7 @@ def embed_lyrics(file_path, lyrics_text):
             except ID3NoHeaderError:
                 audio = ID3()
             
-            # USLT: Unsynchronized Lyric Text
-            # encoding=3 (UTF-8), lang='eng', desc='Lyrics'
+            # USLT parameters: encoding=3 (UTF-8), lang='eng', desc='Lyrics'
             audio.add(USLT(encoding=3, lang='eng', desc='Lyrics', text=lyrics_text))
             audio.save(file_path)
             return True
@@ -61,17 +72,27 @@ def embed_lyrics(file_path, lyrics_text):
             return True
             
     except Exception as e:
-        print_error(f"Failed to embed lyrics: {e}")
+        if not quiet: print_error(f"Failed to embed lyrics: {e}")
         return False
         
     return False
 
-def embed_metadata(audio_path, thumbnail_path, audio_format, metadata=None):
+def embed_metadata(
+    audio_path: str, 
+    thumbnail_path: str, 
+    audio_format: str, 
+    metadata: Optional[Dict[str, Any]] = None, 
+    quiet: bool = False
+) -> bool:
     """
-    Embed Cover Art AND Rich Metadata (Composer, Album Artist, Year, etc.).
-    Replaces the old simple embedding function.
+    Embeds Cover Art and Extended Metadata (Composer, Album Artist, Year, etc.).
+    
+    This function handles the specific tagging standards for different formats:
+    - MP3: ID3v2.4 frames (APIC, TPE2, TDRC, etc.)
+    - M4A: MP4/iTunes atoms (covr, aART, ©day, etc.)
     """
     if not HAS_MUTAGEN:
+        if not quiet: print_error("Mutagen library not found. Cannot embed metadata.")
         return False
 
     if not os.path.exists(audio_path):
@@ -99,9 +120,9 @@ def embed_metadata(audio_path, thumbnail_path, audio_format, metadata=None):
                 with open(thumbnail_path, 'rb') as albumart:
                     audio.tags.add(
                         APIC(
-                            encoding=3, # 3 is UTF-8
+                            encoding=3,        # 3 is UTF-8
                             mime='image/jpeg', # Default yt-dlp thumb is jpg
-                            type=3, # 3 is Cover (front)
+                            type=3,            # 3 is Cover (front)
                             desc=u'Cover',
                             data=albumart.read()
                         )
@@ -114,7 +135,7 @@ def embed_metadata(audio_path, thumbnail_path, audio_format, metadata=None):
                 if metadata.get('artist'): audio.tags.add(TPE1(encoding=3, text=metadata['artist']))
                 if metadata.get('album'): audio.tags.add(TALB(encoding=3, text=metadata['album']))
                 
-                # Advanced Tags ("Sultan" Metadata)
+                # Extended Tags
                 if metadata.get('album_artist'): 
                     audio.tags.add(TPE2(encoding=3, text=metadata['album_artist'])) # Album Artist
                 if metadata.get('composer'): 
@@ -140,7 +161,7 @@ def embed_metadata(audio_path, thumbnail_path, audio_format, metadata=None):
             # 1. Embed Cover Art (covr)
             if has_cover:
                 with open(thumbnail_path, 'rb') as f:
-                    # M4A butuh wrapper MP4Cover
+                    # M4A requires MP4Cover wrapper for images
                     audio['covr'] = [MP4Cover(f.read(), imageformat=MP4Cover.FORMAT_JPEG)]
 
             # 2. Embed Rich Metadata
@@ -160,7 +181,7 @@ def embed_metadata(audio_path, thumbnail_path, audio_format, metadata=None):
                 if metadata.get('date'): 
                     audio['\xa9day'] = metadata['date']      # Release Date
                 
-                # Track & Disc parsing (String '1/12' -> Tuple (1, 12))
+                # Track & Disc parsing (Converts String '1/12' -> Tuple (1, 12))
                 if metadata.get('track_num'):
                     try:
                         tn = str(metadata['track_num']).split('/')
@@ -181,7 +202,7 @@ def embed_metadata(audio_path, thumbnail_path, audio_format, metadata=None):
             return True
 
     except Exception as e:
-        print_error(f"Metadata embedding error: {e}")
+        if not quiet: print_error(f"Metadata embedding error: {e}")
         return False
     
     return False

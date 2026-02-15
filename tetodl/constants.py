@@ -26,7 +26,7 @@ if not IS_WINDOWS and not IS_TERMUX:
         pass
 
 APP_NAME = "TetoDL"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.3.0"
 
 # ==== PATH SETUP ====
 if IS_TERMUX:
@@ -174,6 +174,8 @@ class RuntimeConfig:
     USER_SUBFOLDERS = {}
     
     SIMPLE_MODE = False
+    ASYNC_MODE = False
+    QUIET = False
     SMART_COVER_MODE = True
     THUMBNAIL_FORMAT = "jpg"
     NO_COVER_MODE = False
@@ -197,6 +199,7 @@ class RuntimeConfig:
     DOWNLOAD_DELAY = 2
     MAX_RETRIES = 3
     RETRY_DELAY = 2
+    ASYNC_WORKERS = 3
 
     # Dependency verification
     VERIFIED_DEPENDENCIES = False

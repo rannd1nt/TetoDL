@@ -3,8 +3,8 @@ Core logic for single audio processing
 """
 import os
 import re
-import time
 import glob
+from typing import Optional, Tuple, Union
 
 try:
     import yt_dlp as yt
@@ -26,8 +26,25 @@ from ...media.scanner import scan_media_files
 from ...media.tagger import embed_lyrics, embed_metadata
 from ...media.thumbnail import download_and_process_thumbnail
 
-def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=False, download_type="Single Track", cut_range=None):
-    """Download single audio file with cache support, metadata, and 403 retry logic"""
+def download_single_audio(
+    url: str, 
+    target_dir: str, 
+    use_cache: bool = True, 
+    is_youtube_music: bool = False,
+    download_type: str = "Single Track", 
+    cut_range: Optional[Tuple[float, float]] = None, 
+    quiet: bool = False
+) -> Tuple[bool, str, bool]:
+    """
+    Orchestrates the complete download lifecycle for a single audio track.
+
+    This function handles the entire process: fetching metadata via yt-dlp, itunes & genius, 
+    configuring FFmpeg for audio conversion.
+    
+    The `cut_range` parameter supports precise trimming (e.g., from '58:09' to '1:02:12')
+    or open-ended ranges (e.g., '58:09-' for start-to-end), automatically handled 
+    via the internal time parser.
+    """
 
     audio_format = get_audio_extension()
     current_style = getattr(RuntimeConfig, 'PROGRESS_STYLE', 'minimal')
@@ -54,7 +71,7 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
         
         format_string = get_audio_format_string(audio_format)
         postprocessors = build_audio_postprocessors(audio_format, is_youtube_music)
-        hook = get_progress_hook(current_style)
+        hook = [] if quiet else [get_progress_hook(current_style)]
 
         ydl_opts = {
             'format': format_string,
@@ -65,7 +82,8 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
             'no_warnings': True,
             'writethumbnail': False,
             'logger': QuietLogger(),
-            'progress_hooks': [hook],
+            'progress_hooks': hook,
+            'noprogress': True if quiet else False,
             'retries': RuntimeConfig.MAX_RETRIES, 
             'fragment_retries': RuntimeConfig.MAX_RETRIES,
             'file_access_retries': RuntimeConfig.MAX_RETRIES,
@@ -81,7 +99,7 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
 
         if cut_range:
             start, end = cut_range
-            print_info(f"Trimming audio: {start}s to {end}s")
+            if not quiet: print_info(f"Trimming audio: {start}s to {end}s")
             
             ydl_opts['download_ranges'] = lambda info, ydl: [{'start_time': start, 'end_time': end}]
             ydl_opts['force_keyframes_at_cuts'] = True
@@ -90,7 +108,7 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
             if use_cache:
                 cached = get_cached_metadata(url)
                 if cached:
-                    print_info(_('download.youtube.using_cache', title=cached['metadata'].get('title', 'Unknown')))
+                    if not quiet: print_info(_('download.youtube.using_cache', title=cached['metadata'].get('title', 'Unknown')))
 
             temp_filename_template = ydl.prepare_filename(info)
             base_name_clean = os.path.splitext(temp_filename_template)[0]
@@ -102,24 +120,26 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
 
             try:
                 if cut_range:
-                    cut_spinner = Spinner(_('download.youtube.downloading_item', title=title) + ", Cutting...")
-                    cut_spinner.start()
+                    if not quiet:
+                        cut_spinner = Spinner(_('download.youtube.downloading_item', title=title) + ", Cutting...")
+                        cut_spinner.start()
                     try:
                         ydl.download([url])
                     finally:
-                        cut_spinner.stop()
+                        if not quiet:
+                            cut_spinner.stop()
                 else:
-                    print_process(_('download.youtube.downloading_item', title=title))
+                    if not quiet: print_process(_('download.youtube.downloading_item', title=title))
                     ydl.download([url])
             
             except (KeyboardInterrupt, Exception) as e:
-                print()
+                if not quiet: print()
                 if isinstance(e, KeyboardInterrupt):
-                    print_error("Download cancelled by user.")
+                    if not quiet: print_error("Download cancelled by user.")
                 else:
-                    print_error(_('download.youtube.error_downloading', type='audio', error=str(e)))
+                    if not quiet: print_error(_('download.youtube.error_downloading', type='audio', error=str(e)))
                 
-                print_process("Cleaning up partial files...\r")
+                if not quiet: print_process("Cleaning up partial files...\r")
                 
                 for p_file in possible_part_files:
                     if os.path.exists(p_file):
@@ -150,7 +170,7 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
                 )
 
             if should_process_cover:
-                print_process(_('download.youtube.processing_cover'))
+                if not quiet: print_process(_('download.youtube.processing_cover'))
                 
                 uploader = info.get('uploader', '')
                 description = info.get('description', '')
@@ -173,16 +193,15 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
                     info, 
                     target_dir, 
                     should_crop=should_crop, 
-                    smart_mode=smart_search
+                    smart_mode=smart_search,
+                    quiet=quiet
                 )
 
                 if thumbnail_path and os.path.exists(thumbnail_path):
-                    # temp_filename_raw = ydl.prepare_filename(info)
-                    # base_name = os.path.splitext(temp_filename_raw)[0]
                     audio_path = f"{base_name_clean}.{audio_format}"
                     
                     if os.path.exists(audio_path):
-                        print_process(_('download.youtube.embedding_cover'))
+                        if not quiet: print_process(_('download.youtube.embedding_cover'))
                         final_metadata = {}
                         if fetched_metadata:
                             final_metadata = fetched_metadata
@@ -193,26 +212,24 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
                                 'title': info.get('track') or info.get('title')
                             }
 
-                        if embed_metadata(audio_path, thumbnail_path, audio_format, final_metadata):
-                            print_success(_('download.youtube.cover_success'))
+                        if embed_metadata(audio_path, thumbnail_path, audio_format, final_metadata, quiet):
+                            if not quiet: print_success(_('download.youtube.cover_success'))
                         else:
-                            print_error(_('download.youtube.cover_failed'))
+                            if not quiet: print_error(_('download.youtube.cover_failed'))
                             final_scan_path = audio_path
                     else:
-                        print_error(_('download.youtube.file_not_found', filename=os.path.basename(audio_path)))
-                    clean_temp_files(target_dir, info.get('id', ''))
+                        if not quiet: print_error(_('download.youtube.file_not_found', filename=os.path.basename(audio_path)))
+                    clean_temp_files(target_dir, info.get('id', ''), quiet)
                 else:
-                    print_error(_('download.youtube.cover_process_failed'))
+                    if not quiet: print_error(_('download.youtube.cover_process_failed'))
 
             elif audio_format == "opus":
-                print_info(_('download.youtube.skip_cover_opus'))
+                if not quiet: print_info(_('download.youtube.skip_cover_opus'))
             else:
-                print_info(_('download.youtube.skip_cover'))
+                if not quiet: print_info(_('download.youtube.skip_cover'))
 
             # --- FINISHING ---
             if final_scan_path is None:
-                # temp_filename = ydl.prepare_filename(info)
-                # base_name = os.path.splitext(temp_filename)[0]
                 guessed_path = f"{base_name_clean}.{audio_format}"
                 if os.path.exists(guessed_path):
                     final_scan_path = guessed_path
@@ -236,21 +253,22 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
                         search_artist = info.get('artist') or info.get('uploader', '').replace(' - Topic', '')
                         search_title = info.get('track') or info.get('title')
 
-                print_process(f"Searching lyrics for: {search_artist} - {search_title}")
+                if not quiet: print_process(f"Searching lyrics for: {search_artist} - {search_title}")
                 
                 lyrics = fetcher.fetch_lyrics_genius(
                     search_artist,
                     search_title,
-                    romaji=RuntimeConfig.ROMAJI_MODE
+                    romaji=RuntimeConfig.ROMAJI_MODE,
+                    quiet=quiet
                 )
                 
                 if lyrics:
-                    if embed_lyrics(final_scan_path, lyrics):
-                        print_success("Lyrics embedded successfully (Genius)")
+                    if embed_lyrics(final_scan_path, lyrics, quiet):
+                        if not quiet: print_success("Lyrics embedded successfully (Genius)")
                     else:
-                        print_error("Failed to embed lyrics")
+                        if not quiet: print_error("Failed to embed lyrics")
                 else:
-                    print_info("Lyrics not found on Genius.")
+                    if not quiet: print_info("Lyrics not found on Genius.")
             
             if use_cache:
                 cache_metadata(url, {
@@ -298,5 +316,5 @@ def download_single_audio(url, target_dir, use_cache=True, is_youtube_music=Fals
         return True, title, False
 
     except Exception as e:
-        print_error(_('download.youtube.error_downloading', type='audio', error=str(e)))
+        if not quiet: print_error(_('download.youtube.error_downloading', type='audio', error=str(e)))
         return False, str(e), False
