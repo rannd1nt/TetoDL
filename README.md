@@ -110,7 +110,6 @@ Manage folders, file selection, and archives.
 |`--m3u` | - | Generate `.m3u8` playlist file (Requires `--group`). |
 | `--zip` | - | Archive the output into a `.zip` file. (Requires `--group` OR `--share-temp`). |
 | `--items` |	LIST | Download specific indices (e.g., `--items 1,3,5-10`). |
----
 
 **4. Network Sharing (Web Suite)**<br>
 Host files via HTTP Server & QR Code.
@@ -126,7 +125,7 @@ View statistics, logs, and manage the app.
 |:-----|:-----|:-----|
 |`--info`| - | Show current configuration, system paths, and storage usage. |
 |`--wrap`| - | Show TetoDL Analytics (Top Artists, Albums, & Total Duration). |
-|`--history`| LIMIT | Show download history (default last 20). Ex: tetodl --history 50. |
+|`--history`| [LIMIT] | Show download history (default last 20). Ex: tetodl --history 50. |
 |`--reverse`| - | **(Requires `--history`)** Show oldest downloads first. |
 | `--find` |	QUERY |	**(Requires `--history`)** Filter history by title. (case-insensitive). |
 |`--recheck`| - | Force dependency integrity check (ffmpeg, spotdl, etc). |
