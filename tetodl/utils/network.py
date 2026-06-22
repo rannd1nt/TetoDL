@@ -1,37 +1,25 @@
 """
-Network utilities: internet check, URL validation
+Network utilities: internet check, URL validation, FastAPI file sharing
 """
 import re
 import os
 import socket
-import http.server
-import socketserver
 import shutil
 import qrcode
+import threading
+import uvicorn
 from urllib.parse import quote
 from pathlib import Path
 import subprocess
 import webbrowser
 import requests
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from ..utils.i18n import get_text as _
 from ..utils.styles import print_info, print_error, print_success, console
 from ..utils.spinner import Spinner
-from ..utils.server_styles import TetoHTTPHandler
+from ..utils.share import create_share_router
 from ..constants import IS_TERMUX, IS_WSL
-
-class SilentTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
-    """
-    Multi-threaded Server & Silent Log.
-    """
-    allow_reuse_address = True
-    daemon_threads = True
-    
-    def server_bind(self):
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind(self.server_address)
-
-    def handle_error(self, request, client_address):
-        pass
 
 def check_internet(quiet=False) -> bool:
     """Check if internet connection is available"""
@@ -92,23 +80,31 @@ def open_url(url: str) -> bool:
 
 
 def get_best_ip():
-    """
-    Mencoba mendapatkan IP LAN yang paling valid.
-    """
-    ip = '127.0.0.1'
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.settimeout(0.1)
     try:
-        s.connect(('8.8.8.8', 1))
-        ip = s.getsockname()[0]
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(('8.8.8.8', 1))
+            return s.getsockname()[0]
     except Exception:
+        pass
+
+    local_ranges = ['192.168.255.255', '10.255.255.255', '172.31.255.255']
+    for test_ip in local_ranges:
         try:
-            ip = socket.gethostbyname(socket.gethostname())
-        except:
-            pass
-    finally:
-        s.close()
-    return ip
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+                s.connect((test_ip, 1))
+                ip = s.getsockname()[0]
+                if not ip.startswith("127."):
+                    return ip
+        except Exception:
+            continue
+
+    try:
+        ip = socket.gethostbyname(socket.gethostname())
+        return ip
+    except Exception:
+        pass
+
+    return '127.0.0.1'
 
 def find_free_port(start_port=8989, max_tries=10):
     """
@@ -137,7 +133,7 @@ def check_firewall_status(port):
         console.print(f"[dim cyan]  sudo firewall-cmd --add-port={port}/tcp --temporary[/dim cyan]")
 
 
-# --- MAIN SHARING FUNCTION ---
+# --- MAIN SHARING FUNCTION (FastAPI) ---
 
 def start_share_server(file_path_str: str, start_port=8989):
     path = Path(file_path_str).resolve()
@@ -155,13 +151,11 @@ def start_share_server(file_path_str: str, start_port=8989):
         ip_address = '127.0.0.1'
     else:
         ip_address = get_best_ip()
-    using_wsl_bridge = False
 
     if IS_WSL:
         console.print(f"\n[bold yellow][!] WSL Environment Detected[/bold yellow]")
         print_info("WSL uses a separate network (NAT). Devices on your local Wi-Fi likely CANNOT connect to this IP.")
         print_info("Tip: Move the file to Windows (/mnt/c/...) and share from there.")
-        # return
 
     if ip_address.startswith("127.") and not IS_WSL:
         print_error("Cannot detect valid LAN IP. Are you connected to Wi-Fi/Hotspot?")
@@ -175,7 +169,10 @@ def start_share_server(file_path_str: str, start_port=8989):
         serve_dir = path
         target_url = f"http://{ip_address}:{port}/"
 
-    os.chdir(serve_dir)
+    # Build FastAPI app with share router
+    app = FastAPI()
+    router = create_share_router(str(serve_dir))
+    app.include_router(router)
 
     qr = qrcode.QRCode(version=1, box_size=1, border=1)
     qr.add_data(target_url)
@@ -183,9 +180,6 @@ def start_share_server(file_path_str: str, start_port=8989):
 
     print_success("TetoDL Sharing started!")
     console.print()
-
-    if using_wsl_bridge:
-        console.print("[bold cyan][WINDOWS BRIDGE ACTIVE][/bold cyan]", justify="center")
 
     console.print(f"Hosting: [cyan]{path.name}[/cyan]")
     console.print(f"Address: [yellow]{target_url}[/yellow]")
@@ -200,10 +194,7 @@ def start_share_server(file_path_str: str, start_port=8989):
     console.print("[bold red]Press Ctrl+C to stop server.[/bold red]")
 
     try:
-        with SilentTCPServer(("", port), TetoHTTPHandler) as httpd:
-            httpd.serve_forever()
-    except OSError as e:
-        print_error(f"Network error: {str(e)}")
+        uvicorn.run(app, host="0.0.0.0", port=port, log_level="error")
     except KeyboardInterrupt:
         console.print("\n[yellow]Sharing stopped.[/yellow]")
         raise KeyboardInterrupt

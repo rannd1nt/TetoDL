@@ -36,6 +36,7 @@ if IS_TERMUX:
     CONFIG_DIR = BASE_PATH
     DATA_DIR = BASE_PATH
     CACHE_DIR = BASE_PATH
+    TEMP_DIR = CACHE_DIR / "temp"
 
     # Binary Paths
     FFMPEG_CMD = "/data/data/com.termux/files/usr/bin/ffmpeg"
@@ -48,9 +49,10 @@ elif IS_WINDOWS:
     CONFIG_DIR = home / ".config" / APP_NAME
     DATA_DIR = home / ".local" / "share" / APP_NAME
     CACHE_DIR = home / ".cache" / APP_NAME
+    TEMP_DIR = CACHE_DIR / "temp"
     FFMPEG_CMD = "ffmpeg"
     SPOTDL_CMD = "spotdl"
-
+    
 else:
     # --- LINUX ---
     home = Path.home()
@@ -137,7 +139,7 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2
 
 # ==== OTHER CONFIGURATION ====
-VALID_RESOLUTIONS = ["4320p", "2160p", "1440p", "1080p", "720p", "480p"]
+VALID_RESOLUTIONS = ["4320p", "2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"]
 VALID_CONTAINERS = ["mp4", "mkv"]
 VALID_THUMBNAIL_FORMATS = ["jpg", "png", "webp"]
 VALID_CODECS = ["default", "h264", "h265"]
@@ -200,6 +202,8 @@ class RuntimeConfig:
     MAX_RETRIES = 3
     RETRY_DELAY = 2
     ASYNC_WORKERS = 3
+    DAEMON_DEFAULT_TEMP = True
+    DAEMON_CLEANUP_INTERVAL = 3600
 
     # Dependency verification
     VERIFIED_DEPENDENCIES = False

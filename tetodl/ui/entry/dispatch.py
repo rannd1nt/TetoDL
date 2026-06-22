@@ -36,7 +36,6 @@ def _apply_runtime_overrides(overrides):
         RuntimeConfig.NO_COVER_MODE = False
     if overrides.get('async'):
         RuntimeConfig.ASYNC_MODE = True
-        # RuntimeConfig.QUIET = True
     
     if overrides.get('no_cover'):
         RuntimeConfig.SMART_COVER_MODE = False
@@ -76,14 +75,14 @@ def execute_cli_context(context):
         url = overrides.get('url')
         if not url:
             print_error("Error: No URL provided for download.")
-            return
+            return {'success': False, 'file_path': None}
         
         # Thumbnail Only
         if overrides.get('thumbnail_only'):
-            if 'smart_cover' not in overrides: RuntimeConfig.SMART_COVER_MODE = False
+            if not overrides.get('smart_cover'): RuntimeConfig.SMART_COVER_MODE = False
             fmt = overrides.get('format', 'jpg')
-            download_thumbnail_task(url, target_format=fmt)
-            return
+            result = download_thumbnail_task(url, target_format=fmt)
+            return result
         
         # Audio / Video Download
         dl_type = overrides.get('type', 'video')
@@ -141,9 +140,12 @@ def execute_cli_context(context):
                 if not result.get('suppress_error'):
                     if not is_success and not is_existing:
                         print_error("Nothing to share (Download failed and no existing files found).")
+        
+        return result
     
     except KeyboardInterrupt:
         print_info("Operation cancelled by user.")
+        return {'success': False, 'file_path': None, 'cancelled': True}
     
     finally:
         if is_temp_session:

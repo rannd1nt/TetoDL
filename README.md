@@ -11,7 +11,7 @@
   </p>
   
   <p>
-    <a href="https://github.com/rannd1nt/TetoDL/issues">
+    <a href="https://github.com/vleaxorzz/TetoDL/issues">
       <img src="https://img.shields.io/badge/Maintained%3F-Yes-238636?style=flat-square" alt="Maintenance">
     </a>
     <img src="https://img.shields.io/badge/Version-1.3.0-orange?style=flat-square" alt="Version">
@@ -52,7 +52,7 @@ Clone the repository and run the universal installer:
 
 ```bash
 # 1. Clone Repository
-git clone https://github.com/rannd1nt/TetoDL.git
+git clone https://github.com/vleaxorzz/TetoDL.git
 cd TetoDL
 ```
 ```bash
@@ -67,7 +67,7 @@ bash tetodl.sh --lite
 
 **Note for Termux Users:** The current `main` branch is optimized for Linux/WSL. <br>If you want the old stable version specifically designed for Android/Termux mobile interface, please use the legacy tag:
 ```bash
-git clone --branch legacy-termux-v1 https://github.com/rannd1nt/TetoDL.git
+git clone --branch legacy-termux-v1 https://github.com/vleaxorzz/TetoDL.git
 ```
 ---
 ## Command Reference

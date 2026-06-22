@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>TetoDL Orchestrator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700&display=swap');
+
+:root {
+    --glass-surface: rgba(20, 20, 35, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --item-bg: rgba(0, 0, 0, 0.3);
+    --item-border: rgba(255, 255, 255, 0.06);
+    --text-main: #ffffff;
+    --text-muted: #94a3b8;
+    --accent: #00d2ff;
+    --c-folder: #fbbf24;
+    --c-audio: #00d2ff;
+    --c-video: #a855f7;
+    --c-image: #f43f5e;
+    --c-archive: #f97316;
+    --c-code: #10b981;
+    --c-doc: #94a3b8;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+body {
+    font-family: 'Outfit', -apple-system, sans-serif;
+    background: #0f172a;
+    background-image:
+        radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%),
+        radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%),
+        radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+    background-size: 200% 200%;
+    animation: liquidMove 15s ease infinite;
+    color: var(--text-main);
+    height: 100dvh;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    padding: 20px; padding-top: 30px;
+}
+
+@keyframes liquidMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.branding {
+    text-align: center; margin-bottom: 20px; flex-shrink: 0; z-index: 10;
+}
+.branding h1 {
+    font-size: 1.8rem; font-weight: 800; letter-spacing: -1px;
+    background: linear-gradient(135deg, #fff 0%, #00d2ff 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-shadow: 0 10px 30px rgba(0, 210, 255, 0.3); margin: 0;
+}
+.branding p {
+    font-size: 0.7rem; color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase; letter-spacing: 2px; font-weight: 500; margin-top: 5px;
+}
+.branding p span { color: var(--accent); }
+
+.status-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: #ef4444; vertical-align: middle; margin-right: 4px;
+    transition: background 0.3s;
+}
+.status-dot.online { background: #22c55e; box-shadow: 0 0 8px rgba(34, 197, 94, 0.4); }
+
+.glass-container {
+    width: 100%; max-width: 600px; margin: 0 auto;
+    flex: 1; min-height: 0;
+    display: flex; flex-direction: column;
+    background: var(--glass-surface);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px; padding: 15px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.header-section { flex-shrink: 0; z-index: 2; margin-bottom: 10px; }
+
+.path-header {
+    font-size: 0.85rem; color: var(--accent);
+    background: rgba(0, 210, 255, 0.1); border: 1px solid rgba(0, 210, 255, 0.2);
+    padding: 10px 14px; border-radius: 12px; margin-bottom: 10px;
+    word-break: break-all; font-family: monospace;
+    display: flex; align-items: center; gap: 8px;
+}
+.path-header svg { width: 18px; height: 18px; min-width: 18px; }
+
+.scroll-area {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    position: relative; z-index: 1; padding-bottom: 10px;
+    scrollbar-width: none; -ms-overflow-style: none;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+
+.tab-bar {
+    display: flex; gap: 8px;
+    background: rgba(0,0,0,0.2);
+    padding: 4px; border-radius: 12px;
+}
+.tab-btn {
+    flex: 1; padding: 10px 16px; border: none;
+    background: transparent; color: var(--text-muted);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem; font-weight: 600;
+    border-radius: 10px; cursor: pointer;
+    transition: all 0.2s;
+}
+.tab-btn.active {
+    background: var(--accent); color: #0f172a;
+}
+.tab-btn:hover:not(.active) {
+    color: var(--text-main); background: rgba(255,255,255,0.05);
+}
+
+.tab-content { display: none; flex: 1; min-height: 0; flex-direction: column; overflow: hidden; }
+.tab-content.active { display: flex; }
+
+/* --- Form elements --- */
+.form-label {
+    display: block; font-size: 0.75rem; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 1px; margin-top: 12px; margin-bottom: 4px;
+}
+
+input[type="text"], input[type="url"], select {
+    width: 100%; padding: 12px 16px; border-radius: 12px;
+    border: 1px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--text-main); font-size: 0.9rem; outline: none;
+    transition: border-color 0.2s; font-family: 'Outfit', sans-serif;
+}
+input:focus, select:focus { border-color: var(--accent); }
+::placeholder { color: var(--text-muted); opacity: 0.5; }
+
+select option { background: #1e293b; color: var(--text-main); }
+
+.checkbox-group {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; background: var(--item-bg);
+    border: 1px solid var(--item-border); border-radius: 10px;
+    cursor: pointer; margin-top: 8px;
+    font-size: 0.85rem; color: var(--text-main);
+}
+.checkbox-group input[type="checkbox"] {
+    width: 18px; height: 18px; accent-color: var(--accent);
+}
+
+/* --- Buttons --- */
+.btn {
+    padding: 12px 20px; border: none; border-radius: 12px;
+    font-family: 'Outfit', sans-serif; font-size: 0.9rem;
+    font-weight: 600; cursor: pointer; transition: all 0.2s;
+    width: 100%;
+}
+.btn:active { transform: scale(0.98); }
+.btn-primary { background: var(--accent); color: #0f172a; }
+.btn-secondary { background: rgba(255,255,255,0.1); color: var(--text-main); border: 1px solid var(--glass-border); }
+.btn-success { background: #10b981; color: white; }
+.btn:hover:not(:disabled) { filter: brightness(1.15); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-sm { padding: 8px 16px; width: auto; font-size: 0.8rem; }
+
+/* --- Grid --- */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* --- Preview card --- */
+.preview-card {
+    background: var(--item-bg); border: 1px solid var(--item-border);
+    border-radius: 14px; padding: 14px; margin-top: 12px;
+    display: flex; flex-direction: column; align-items: center;
+}
+.preview-thumb {
+    width: 100%; border-radius: 12px; display: block;
+    margin-bottom: 12px; max-height: 300px;
+    object-fit: contain; background: rgba(0,0,0,0.5);
+}
+.preview-card.square .preview-thumb {
+    max-width: 200px; margin-left: auto; margin-right: auto; border-radius: 12px;
+}
+.preview-info { width: 100%; }
+.preview-info h3 {
+    font-size: 1rem; font-weight: 700; margin: 0 0 4px;
+    color: var(--text-main); word-break: break-word;
+}
+.preview-info p { font-size: 0.8rem; color: var(--text-muted); margin: 2px 0; }
+.preview-desc {
+    font-size: 0.75rem; color: var(--text-muted);
+    max-height: 60px; overflow-y: auto; word-break: break-word;
+    margin-top: 4px; opacity: 0.7; scrollbar-width: none;
+}
+
+/* --- Task items --- */
+.task-item {
+    background: var(--item-bg); border: 1px solid var(--item-border);
+    border-radius: 14px; padding: 14px; margin-bottom: 8px;
+    transition: background 0.1s;
+}
+.task-title {
+    font-size: 0.9rem; font-weight: 600; color: var(--text-main);
+    margin-bottom: 4px;
+}
+.task-details {
+    font-size: 0.78rem; color: var(--text-muted);
+    word-break: break-all; margin-bottom: 8px;
+}
+.task-id {
+    font-size: 0.65rem; color: var(--text-muted); opacity: 0.5;
+    font-family: monospace;
+}
+
+/* --- Badges --- */
+.badge {
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+    display: inline-block; letter-spacing: 0.5px;
+}
+.badge.processing { background: #f59e0b; color: #0f172a; }
+.badge.completed { background: #10b981; color: #0f172a; }
+.badge.error { background: #ef4444; color: white; }
+
+/* --- Log box --- */
+.log-box {
+    background: rgba(0,0,0,0.4); border: 1px solid var(--glass-border);
+    border-radius: 10px; padding: 10px; margin-top: 8px;
+    max-height: 150px; overflow-y: auto;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.7rem; line-height: 1.5;
+    color: var(--text-muted); white-space: pre-wrap; word-break: break-all;
+    scrollbar-width: none;
+}
+.log-box::-webkit-scrollbar { display: none; }
+
+/* --- Task action buttons --- */
+.task-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.task-actions .btn { width: auto; padding: 6px 14px; font-size: 0.75rem; }
+
+/* --- Toast --- */
+.toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--glass-surface);
+    backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    color: var(--text-main); padding: 12px 24px; border-radius: 14px;
+    font-size: 0.85rem; z-index: 999; opacity: 0;
+    transition: opacity 0.3s;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    pointer-events: none;
+}
+.toast.show { opacity: 1; }
+
+/* --- Footer --- */
+.footer {
+    text-align: center; margin-top: auto; padding: 5px;
+    font-size: 0.7rem; opacity: 0.4; flex-shrink: 0;
+}
+
+/* --- Settings button in branding --- */
+.settings-btn {
+    background: none; border: none; color: var(--text-muted);
+    cursor: pointer; padding: 4px; border-radius: 6px;
+    display: inline-flex; align-items: center;
+    vertical-align: middle; margin-left: 6px;
+    transition: color 0.2s;
+}
+.settings-btn:hover { color: var(--text-main); }
+.settings-btn svg { width: 14px; height: 14px; display: block; }
+
+/* --- Audio options row --- */
+.audio-opt-row { display: flex; gap: 10px; margin-top: 8px; }
+.audio-opt-row .checkbox-group { flex: 1; margin-top: 0; }
+
+/* --- Permanent save row --- */
+.permanent-row {
+    margin-top: 12px;
+}
+.permanent-row .checkbox-group {
+    border-color: rgba(0,210,255,0.3);
+    background: rgba(0,210,255,0.05);
+}
+</style>
+</head>
+<body>
+
+<div class="branding">
+  <h1>TetoDL Orchestrator</h1>
+  <p>
+    <span id="status-dot" class="status-dot"></span>
+    <span id="storage-info">Checking...</span>
+    <button class="settings-btn" onclick="toggleSettings()" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </p>
+</div>
+
+<div id="settings-dialog" class="glass-container" style="display:none;flex-shrink:0;max-height:50vh">
+  <div class="header-section">
+    <div class="path-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      Daemon Settings
+    </div>
+  </div>
+  <div class="scroll-area">
+    <form id="settingsForm">
+      <label class="checkbox-group"><input type="checkbox" id="cfg_default_temp"> Save as Temporary Files (Default)</label>
+      <div class="form-label">Auto-Cleanup Interval</div>
+      <select id="cfg_cleanup">
+        <option value="1800">30 Minutes</option>
+        <option value="3600">1 Hour</option>
+        <option value="7200">2 Hours</option>
+        <option value="86400">24 Hours</option>
+      </select>
+      <button type="submit" class="btn btn-secondary" style="margin-top:12px">Save Settings</button>
+    </form>
+  </div>
+</div>
+
+<div class="glass-container">
+  <div class="header-section">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="download">Download</button>
+      <button class="tab-btn" data-tab="share">Share Browser</button>
+      <button class="tab-btn" data-tab="tasks">Tasks (<span id="task-count">0</span>)</button>
+    </div>
+  </div>
+
+  <div id="tab-download" class="tab-content active">
+    <div class="scroll-area">
+      <div class="form-label">Preview</div>
+      <form id="previewForm">
+        <input type="url" id="p_url" placeholder="https://youtu.be/... / https://music.youtube.com/..." required>
+        <button type="submit" class="btn btn-primary" style="margin-top:8px">Preview</button>
+      </form>
+      <div id="preview-result" style="display:none">
+        <div class="preview-card">
+          <img id="pv-thumb" class="preview-thumb" src="" alt="">
+          <div class="preview-info">
+            <h3 id="pv-title">-</h3>
+            <p id="pv-uploader">-</p>
+            <p id="pv-duration">-</p>
+            <div class="preview-desc" id="pv-desc">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="download-form-card" style="display:none;margin-top:16px">
+        <div class="form-label">Options & Download</div>
+        <form id="downloadForm">
+          <div class="grid-2">
+            <div>
+              <div class="form-label">Type</div>
+              <select id="d_type">
+                <option value="audio">Audio</option>
+                <option value="video">Video</option>
+                <option value="thumbnail">Thumbnail</option>
+              </select>
+            </div>
+            <div>
+              <div class="form-label">Format</div>
+              <select id="d_format"></select>
+            </div>
+          </div>
+
+          <div id="d_video_opts" class="grid-2" style="display:none;margin-top:8px">
+            <div>
+              <div class="form-label">Resolution</div>
+              <select id="d_res"></select>
+            </div>
+            <div>
+              <div class="form-label">Codec</div>
+              <select id="d_codec">
+                <option value="default">Default</option>
+                <option value="h264">H264</option>
+                <option value="h265">H265</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="d_audio_opts" style="display:none;margin-top:8px">
+            <div class="audio-opt-row">
+              <label class="checkbox-group"><input type="checkbox" id="d_lyrics"> Fetch Lyrics</label>
+              <label class="checkbox-group"><input type="checkbox" id="d_cover" checked> Smart Cover</label>
+            </div>
+          </div>
+
+          <div id="d_playlist_opts" style="display:none;margin-top:8px">
+            <label class="checkbox-group"><input type="checkbox" id="d_async"> Async Mode (Playlist)</label>
+            <label class="checkbox-group"><input type="checkbox" id="d_m3u"> Create .m3u8 Playlist</label>
+            <label class="checkbox-group"><input type="checkbox" id="d_zip"> Create ZIP Archive</label>
+            <div class="form-label">Specific Items (1,3,5-10)</div>
+            <input type="text" id="d_items" placeholder="Leave empty for all">
+          </div>
+
+          <div id="d_thumb_opts" style="display:none;margin-top:8px">
+            <label class="checkbox-group"><input type="checkbox" id="d_external_cover"> External Cover Fetch</label>
+          </div>
+
+          <div id="d_permanent_row" class="permanent-row">
+            <label class="checkbox-group">
+              <input type="checkbox" id="d_permanent">
+              <span style="color:var(--accent)">Save to Permanent Library</span>
+            </label>
+          </div>
+
+          <div id="d_cut_row" style="margin-top:8px">
+            <div class="form-label">Cut Duration (e.g. 01:30-02:00)</div>
+            <input type="text" id="d_cut" placeholder="Leave empty for full">
+          </div>
+
+          <div class="form-label">Group / Subfolder Name</div>
+          <input type="text" id="d_group" placeholder="Optional">
+
+          <button type="submit" class="btn btn-success" id="d_submit" style="margin-top:12px">Process Download</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-share" class="tab-content">
+    <div class="scroll-area">
+      <div class="form-label">Share Browser</div>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 12px">Open a library folder in the TetoDL Share interface on a separate port.</p>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-secondary btn-sm" onclick="launchShare('MUSIC')" style="flex:1">Music Library</button>
+        <button class="btn btn-secondary btn-sm" onclick="launchShare('VIDEO')" style="flex:1">Video Library</button>
+      </div>
+      <div id="share-error" style="color:#ef4444;font-size:0.8rem;margin-top:8px;display:none"></div>
+    </div>
+  </div>
+
+  <div id="tab-tasks" class="tab-content">
+    <div class="scroll-area">
+      <div id="active-tasks"><span style="color:var(--text-muted);font-size:0.85rem">No active tasks.</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">TetoDL Orchestrator</div>
+<div id="toast" class="toast"></div>
+
+<script>
+const API='/api/v1';
+
+function toast(msg,dur=3000){
+const el=document.getElementById('toast');
+el.textContent=msg;el.classList.add('show');
+setTimeout(()=>el.classList.remove('show'),dur);
+}
+
+document.querySelector('.tab-bar').addEventListener('click', function(e){
+const btn=e.target.closest('.tab-btn');
+if(btn)switchTab(btn.dataset.tab);
+});
+
+function switchTab(tab){
+document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+document.getElementById('tab-'+tab).classList.add('active');
+pollTasks();
+}
+
+function toggleSettings(){
+const d=document.getElementById('settings-dialog');
+d.style.display=d.style.display==='none'?'flex':'none';
+}
+
+function downloadFile(encPath){
+const a=document.createElement('a');
+a.href=`${API}/share/stream?path=${encPath}`;
+a.download=decodeURIComponent(encPath).split('/').pop();
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+}
+
+function formatTime(s){
+if(!s)return'0:00';
+const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60);
+return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`;
+}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function sanitizeLog(s){
+return esc(s).replace(/\n/g,'<br>').replace(/\r/g,'');
+}
+
+// --- INIT ---
+async function initApp(){
+try{
+const r=await fetch(`${API}/system/status`);
+const d=await r.json();
+if(d.status==='online'){
+document.getElementById('status-dot').classList.add('online');
+document.getElementById('storage-info').textContent='Storage: '+d.storage.music_free_space;
+}
+const rc=await fetch(`${API}/config`);
+const dc=await rc.json();
+document.getElementById('cfg_default_temp').checked=dc.daemon_default_temp;
+document.getElementById('cfg_cleanup').value=dc.daemon_cleanup_interval;
+_config.audio_quality=dc.audio_quality||'m4a';
+_config.video_container=dc.video_container||'mp4';
+populateFormats('audio');
+}catch(e){
+document.getElementById('storage-info').textContent='Connection failed.';
+}
+}
+
+document.getElementById('settingsForm').addEventListener('submit',async e=>{
+e.preventDefault();
+try{
+await fetch(`${API}/config`,{
+method:'PATCH',headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+daemon_default_temp:document.getElementById('cfg_default_temp').checked,
+daemon_cleanup_interval:parseInt(document.getElementById('cfg_cleanup').value)
+})
+});
+toast('Settings saved.');
+}catch(_){toast('Failed to save.');}
+});
+
+// --- TAB 1: PREVIEW + DOWNLOAD ---
+
+let _lastPreviewUrl=null;
+let _lastPreviewData=null;
+let _config={audio_quality:'m4a',video_container:'mp4'};
+
+function populateFormats(type){
+const sel=document.getElementById('d_format');
+sel.innerHTML='';
+const audioFmts=['m4a','mp3','opus'];
+const videoFmts=['mp4','mkv','webm'];
+const thumbFmts=['jpg','png'];
+const fmts=type==='audio'?audioFmts:type==='video'?videoFmts:thumbFmts;
+const def=type==='audio'?_config.audio_quality:type==='video'?_config.video_container:'jpg';
+fmts.forEach(f=>{
+const o=document.createElement('option');
+o.value=f;o.textContent=f.toUpperCase();
+if(f===def)o.selected=true;
+sel.appendChild(o);
+});
+}
+
+function populateResolutions(data){
+const sel=document.getElementById('d_res');
+sel.innerHTML='';
+const res=data?.available_resolutions||[];
+if(res.length===0){
+const fb=['2160p','1440p','1080p','720p','480p','360p'];
+fb.forEach(r=>{
+const o=document.createElement('option');
+o.value=r;o.textContent=r;
+if(r==='1080p')o.selected=true;
+sel.appendChild(o);
+});
+return;
+}
+res.forEach(h=>{
+const label=`${h}p`;
+const o=document.createElement('option');
+o.value=label;o.textContent=label;
+sel.appendChild(o);
+});
+}
+
+document.getElementById('previewForm').addEventListener('submit',async e=>{
+e.preventDefault();
+const btn=e.target.querySelector('button');
+const url=document.getElementById('p_url').value.trim();
+if(!url)return;
+btn.textContent='Fetching info...';btn.disabled=true;
+document.getElementById('download-form-card').style.display='none';
+document.getElementById('preview-result').style.display='none';
+try{
+const r=await fetch(`${API}/preview`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+if(!r.ok){const err=await r.json();throw new Error(err.detail);}
+const data=await r.json();
+_lastPreviewUrl=url;
+_lastPreviewData=data;
+showPreview(data);
+document.getElementById('download-form-card').style.display='block';
+}catch(err){toast('Preview error: '+err.message);}
+finally{btn.textContent='Preview';btn.disabled=false;}
+});
+
+function showPreview(data){
+document.getElementById('pv-title').textContent=data.title||'Unknown';
+document.getElementById('pv-uploader').textContent=data.uploader||'Unknown';
+document.getElementById('pv-duration').textContent=formatTime(data.duration);
+document.getElementById('pv-desc').textContent=(data.description||'').slice(0,500);
+const img=document.getElementById('pv-thumb');
+img.onload=function(){
+const card=this.closest('.preview-card');
+card.classList.toggle('square',this.naturalWidth/this.naturalHeight<=1.3);
+};
+img.src=data.thumbnail||'';
+document.getElementById('preview-result').style.display='block';
+document.getElementById('p_url').value=data.webpage_url||document.getElementById('p_url').value;
+
+const typeSel=document.getElementById('d_type');
+typeSel.value='audio';
+populateFormats('audio');
+populateResolutions(data);
+document.getElementById('d_video_opts').style.display='none';
+document.getElementById('d_audio_opts').style.display='block';
+document.getElementById('d_playlist_opts').style.display=data.is_playlist?'block':'none';
+document.getElementById('d_thumb_opts').style.display='none';
+document.getElementById('d_permanent_row').style.display='block';
+document.getElementById('d_cut_row').style.display='block';
+document.getElementById('d_cover').checked=true;
+document.getElementById('d_external_cover').checked=false;
+}
+
+document.getElementById('d_type').addEventListener('change',function(){
+const type=this.value;
+populateFormats(type);
+document.getElementById('d_video_opts').style.display=type==='video'?'grid':'none';
+document.getElementById('d_audio_opts').style.display=type==='audio'?'block':'none';
+document.getElementById('d_thumb_opts').style.display=type==='thumbnail'?'block':'none';
+document.getElementById('d_permanent_row').style.display=type==='thumbnail'?'none':'block';
+document.getElementById('d_cut_row').style.display=type==='thumbnail'?'none':'block';
+if(type==='video')populateResolutions(_lastPreviewData);
+});
+
+document.getElementById('downloadForm').addEventListener('submit',async e=>{
+e.preventDefault();
+if(!_lastPreviewUrl){toast('Preview first!');return;}
+const btn=document.getElementById('d_submit');
+btn.textContent='Downloading...';btn.disabled=true;
+
+const type=document.getElementById('d_type').value;
+const permanent=document.getElementById('d_permanent').checked;
+const payload={
+url:_lastPreviewUrl,
+share:permanent,
+share_temp:!permanent,
+format:document.getElementById('d_format').value,
+title:_lastPreviewData ? _lastPreviewData.title : ''
+};
+
+if(type==='audio'){
+payload.audio_only=true;
+payload.lyrics=document.getElementById('d_lyrics').checked;
+payload.smart_cover=document.getElementById('d_cover').checked;
+}else if(type==='video'){
+payload.video_only=true;
+payload.resolution=document.getElementById('d_res').value;
+payload.codec=document.getElementById('d_codec').value;
+}else{
+payload.thumbnail_only=true;
+payload.smart_cover=document.getElementById('d_external_cover').checked;
+payload.no_cover=true;
+}
+
+if(type!=='thumbnail')payload.cut_time=document.getElementById('d_cut').value||null;
+payload.group=document.getElementById('d_group').value||null;
+
+if(_lastPreviewData&&_lastPreviewData.is_playlist){
+payload.async_mode=document.getElementById('d_async').checked;
+payload.m3u=document.getElementById('d_m3u').checked;
+payload.zip=document.getElementById('d_zip').checked;
+payload.items=document.getElementById('d_items').value||null;
+if(!payload.group&&document.getElementById('d_group').value.trim()===''){
+payload.group=true;
+}
+}
+
+try{
+const r=await fetch(`${API}/download`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+const d=await r.json();
+toast(d.message||'Task: '+d.task_id);
+switchTab('tasks');
+}catch(err){toast('Error: '+err.message);}
+finally{btn.textContent='Process Download';btn.disabled=false;}
+});
+
+// --- TAB 2: SHARE BROWSER ---
+
+async function launchShare(key){
+const el=document.getElementById('share-error');
+el.style.display='none';
+try{
+const r=await fetch(`${API}/share/browse?path=quick:${key}`);
+const data=await r.json();
+if(!r.ok){el.textContent=data.detail;el.style.display='block';return;}
+await _doLaunch(data.path);
+}catch(e){el.textContent='Failed: '+e.message;el.style.display='block';}
+}
+
+async function _doLaunch(path){
+const el=document.getElementById('share-error');
+try{
+const r=await fetch(`${API}/share/launch`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})});
+const data=await r.json();
+if(!r.ok){el.textContent=data.detail;el.style.display='block';return;}
+window.open(data.url,'_blank');
+}catch(e){el.textContent='Failed: '+e.message;el.style.display='block';}
+}
+
+// --- TAB 3: TASKS ---
+
+let _logPollers={};
+
+async function pollTasks(){
+try{
+const r=await fetch(`${API}/tasks`);
+const tasks=await r.json();
+const container=document.getElementById('active-tasks');
+container.innerHTML='';
+const keys=Object.keys(tasks);
+document.getElementById('task-count').textContent=keys.length;
+
+if(keys.length===0){
+container.innerHTML='<span style="color:var(--text-muted);font-size:0.85rem">No active tasks.</span>';
+return;
+}
+
+let hasProcessing=false;
+window._taskDirs={};
+keys.forEach(id=>{
+const t=tasks[id];
+const badgeCls=t.status==='processing'?'processing':t.status.startsWith('error')?'error':'completed';
+if(t.status==='processing')hasProcessing=true;
+
+let actions='';
+if(t.status==='completed'&&t.file_path){
+const enc=encodeURIComponent(t.file_path);
+if(t.is_dir)window._taskDirs[t.file_path]=true;
+if(t.file_path.match(/\.zip$/i)){
+actions+=`<button class="btn btn-success btn-sm" onclick="downloadFile('${enc}')">Download ZIP</button> `;
+actions+=`<button class="btn btn-secondary btn-sm" onclick="viewTask('${enc}')">View</button>`;
+}else{
+actions+=`<button class="btn btn-success btn-sm" onclick="viewTask('${enc}')">View</button>`;
+}
+}
+
+let logHtml='';
+if(t.status==='processing'){
+logHtml=`<div class="log-box" id="log-${id}"><span style="color:var(--text-muted)">Waiting for logs...</span></div>`;
+}
+
+const displayTitle=esc(t.title||id);
+const details=t.details||'';
+
+container.innerHTML+=`
+<div class="task-item">
+<div class="task-title">${displayTitle}</div>
+<div class="task-details">${esc(details)}</div>
+<span class="badge ${badgeCls}">${t.status}</span>
+<div class="task-id">ID: ${id}</div>
+${logHtml}
+${actions ? '<div class="task-actions">'+actions+'</div>' : ''}
+</div>`;
+});
+
+keys.forEach(id=>{
+const t=tasks[id];
+if(t.status==='processing'&&!_logPollers[id]){
+_logPollers[id]=setInterval(()=>pollLogs(id),600);
+}else if(t.status!=='processing'&&_logPollers[id]){
+clearInterval(_logPollers[id]);
+delete _logPollers[id];
+}
+});
+
+if(hasProcessing)setTimeout(pollTasks,2000);
+}catch(_){}
+}
+
+async function pollLogs(id){
+try{
+const r=await fetch(`${API}/tasks/${id}/logs`);
+if(!r.ok)return;
+const data=await r.json();
+const el=document.getElementById('log-'+id);
+if(!el)return;
+el.innerHTML=sanitizeLog(data.logs)||'<span style="color:var(--text-muted)">(empty)</span>';
+el.scrollTop=el.scrollHeight;
+}catch(_){}
+}
+
+function _isImageExt(path){
+return /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
+}
+
+function viewTask(encPath){
+const path=decodeURIComponent(encPath);
+if(_isImageExt(path)){
+window.open(`${API}/share/stream?path=${encPath}`,'_blank');
+}else{
+const isDir=window._taskDirs&&window._taskDirs[path];
+if(isDir){
+window.open(`${API}/share/browse_html?path=${encPath}&root=${encPath}`,'_blank');
+}else{
+window.open(`${API}/share/player?path=${encPath}`,'_blank');
+}
+}
+}
+
+setInterval(pollTasks,4000);
+initApp();
+pollTasks();
+</script>
+</body>
+</html>

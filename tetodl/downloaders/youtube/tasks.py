@@ -64,21 +64,26 @@ def download_thumbnail_task(url, target_format='jpg'):
         print_process(f"Found {total} items. Processing thumbnails...")
         
         success_count = 0
+        first_path = None
         for i, entry in enumerate(entries, 1):
             print_process(f"[{i}/{total}] Processing: {entry.get('title')}")
-            if _process_single_thumbnail(entry, target_dir, target_format=target_format):
+            fpath = _process_single_thumbnail(entry, target_dir, target_format=target_format)
+            if fpath:
                 success_count += 1
+                if not first_path:
+                    first_path = fpath
         
         print_success(f"Processed {success_count}/{total} thumbnails.")
         wait_and_clear_prompt()
-        return {'success': True}
+        target_dir_abs = os.path.abspath(target_dir)
+        return {'success': success_count > 0, 'file_path': target_dir_abs, 'file_count': success_count}
     else:
-        success = _process_single_thumbnail(info, target_dir, target_format=target_format)
+        fpath = _process_single_thumbnail(info, target_dir, target_format=target_format)
         wait_and_clear_prompt()
-        return {'success': success}
+        return {'success': bool(fpath), 'file_path': fpath, 'file_count': 1 if fpath else 0}
 
 def _process_single_thumbnail(info, target_dir, target_format='jpg'):
-    """Internal helper to process logic for a single info dict"""
+    """Return path on success, None on failure."""
     title = info.get('title', 'Unknown')
     print_process(f"Processing cover for: {title}")
 
@@ -125,10 +130,10 @@ def _process_single_thumbnail(info, target_dir, target_format='jpg'):
             os.rename(final_path, new_path)
             
             print_success(f"Saved: {safe_name}")
-            return True
+            return os.path.abspath(new_path)
         except Exception:
             print_error(f"Saved as: {os.path.basename(final_path)}")
-            return True
+            return os.path.abspath(final_path)
     else:
         print_error("Failed to download thumbnail.")
-        return False
+        return None

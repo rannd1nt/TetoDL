@@ -22,7 +22,11 @@ class CLIHandler:
     def __init__(self):
         self.parser = argparse.ArgumentParser(
             prog="tetodl",
-            description=color("TetoDL - Hybrid CLI/TUI Media Suite", 'c')
+            description=color("TetoDL - Hybrid CLI/TUI Media Suite\n\n", 'c') +
+                        "Commands:\n" +
+                        "  [URL]           Download media (Legacy Mode)\n" +
+                        "  daemon          Manage Background API Server (Run 'tetodl daemon --help')",
+            formatter_class=argparse.RawTextHelpFormatter
         )
         self._setup_args()
 
@@ -39,7 +43,7 @@ class CLIHandler:
         dl_group.add_argument('-f', '--format', help='Force format (mp3/m4a/opus | mp4/mkv | jpg/png)')
         
         dl_group.add_argument('-r', '--resolution', 
-            choices=['480p', '720p', '1080p', '2k', '4k', '8k'],
+            choices=['144p', '240p', '360p', '480p', '720p', '1080p', '2k', '4k', '8k'],
             help='Max video resolution limit'
         )
         dl_group.add_argument('-c', '--codec', 
@@ -91,6 +95,33 @@ class CLIHandler:
         cfg_group.add_argument('--retries', type=int, metavar='NUM', help="Set retries")
         cfg_group.add_argument('--media-scanner', choices=['on', 'off'], help="Set Media Scanner")
 
+    def _handle_daemon_subcommand(self):
+        daemon_parser = argparse.ArgumentParser(
+            prog="tetodl daemon",
+            description=color("TetoDL Background API Daemon Manager", 'c')
+        )
+        
+        action_group = daemon_parser.add_mutually_exclusive_group(required=True)
+        action_group.add_argument('--run', action='store_true', help="Run the API daemon locally")
+        action_group.add_argument('--setup', action='store_true', help="Setup and register systemd service")
+        action_group.add_argument('--remove', action='store_true', help="Remove systemd service")
+        
+        daemon_parser.add_argument('--host', default="0.0.0.0", help="Bind IP Address (default: 0.0.0.0)")
+        daemon_parser.add_argument('--port', type=int, default=7370, help="Bind Port (default: 7370)")
+
+        args = daemon_parser.parse_args(sys.argv[2:])
+
+        if args.setup:
+            from ..daemon.service import setup_systemd
+            setup_systemd(args.host, args.port)
+        elif args.run:
+            from ..daemon.api import run_server
+            print_info(f"Starting TetoDL API Server on {args.host}:{args.port}...")
+            run_server(args.host, args.port)
+        elif args.remove:
+            from ..daemon.service import remove_systemd
+            remove_systemd()
+            
     def _handle_early_dispatch(self, args) -> bool:
         """Handle commands that exit immediately or don't require download context."""
         
@@ -404,7 +435,7 @@ class CLIHandler:
             overrides['codec'] = args.codec
 
         if args.resolution and overrides['type'] == 'video':
-            res_map = {'480p': '480p', '720p': '720p', '1080p': '1080p', '2k': '1440p', '4k': '2160p', '8k': '4320p'}
+            res_map = {'144p': '144p', '240p': '240p', '360p': '360p', '480p': '480p', '720p': '720p', '1080p': '1080p', '2k': '1440p', '4k': '2160p', '8k': '4320p'}
             overrides['resolution'] = res_map.get(args.resolution, '720p')
 
         if args.output:
@@ -476,6 +507,10 @@ class CLIHandler:
         Execute argument parsing flow.
         Returns: (handled, context)
         """
+        if len(sys.argv) > 1 and sys.argv[1].lower() == 'daemon':
+            self._handle_daemon_subcommand()
+            return True, {}
+        
         args = self.parser.parse_args()
         
         if self._handle_early_dispatch(args):

@@ -40,6 +40,8 @@ def load_config():
         RuntimeConfig.MAX_RETRIES = cfg.get("max_retries", 3)
         RuntimeConfig.MEDIA_SCANNER_ENABLED = cfg.get("media_scanner_enabled", False)
         RuntimeConfig.SPOTIFY_AVAILABLE = cfg.get("spotify_available", RuntimeConfig.SPOTIFY_AVAILABLE)
+        RuntimeConfig.DAEMON_DEFAULT_TEMP = cfg.get("daemon_default_temp", True)
+        RuntimeConfig.DAEMON_CLEANUP_INTERVAL = cfg.get("daemon_cleanup_interval", 3600)
         
         saved_lang = cfg.get("language")
         if saved_lang:
@@ -74,7 +76,9 @@ def save_config():
         "smart_cover_mode": RuntimeConfig.SMART_COVER_MODE,
         "verified_dependencies": RuntimeConfig.VERIFIED_DEPENDENCIES,
         "spotify_available": RuntimeConfig.SPOTIFY_AVAILABLE,
-        "language": RuntimeConfig.LANGUAGE
+        "language": RuntimeConfig.LANGUAGE,
+        "daemon_default_temp": RuntimeConfig.DAEMON_DEFAULT_TEMP,
+        "daemon_cleanup_interval": RuntimeConfig.DAEMON_CLEANUP_INTERVAL
     }
 
     try:

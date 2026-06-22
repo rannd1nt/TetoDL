@@ -92,6 +92,10 @@ test/
 test_*.py
 *_test.py
 
+# Development
+*ANALYSIS.md
+*URL.md
+
 # ==== System Files ====
 # macOS
 .DS_Store
