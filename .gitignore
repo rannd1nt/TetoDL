@@ -93,6 +93,7 @@ test_*.py
 *_test.py
 
 # Development
+*.D.md
 *ANALYSIS.md
 *URL.md
 

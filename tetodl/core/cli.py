@@ -24,7 +24,7 @@ class CLIHandler:
             prog="tetodl",
             description=color("TetoDL - Hybrid CLI/TUI Media Suite\n\n", 'c') +
                         "Commands:\n" +
-                        "  [URL]           Download media (Legacy Mode)\n" +
+                        "  [URL]           Download media\n" +
                         "  daemon          Manage Background API Server (Run 'tetodl daemon --help')",
             formatter_class=argparse.RawTextHelpFormatter
         )
@@ -101,17 +101,21 @@ class CLIHandler:
             description=color("TetoDL Background API Daemon Manager", 'c')
         )
         
-        action_group = daemon_parser.add_mutually_exclusive_group(required=True)
-        action_group.add_argument('--run', action='store_true', help="Run the API daemon locally")
-        action_group.add_argument('--setup', action='store_true', help="Setup and register systemd service")
-        action_group.add_argument('--remove', action='store_true', help="Remove systemd service")
+        action_group = daemon_parser.add_mutually_exclusive_group()
+        action_group.add_argument('-d', '--display', action='store_true', help="Show daemon access URL and QR code")
+        action_group.add_argument('-r', '--run', action='store_true', help="Run the API daemon locally")
+        action_group.add_argument('-s', '--setup', action='store_true', help="Setup and register systemd service")
+        action_group.add_argument('-rm', '--remove', action='store_true', help="Remove systemd service")
         
         daemon_parser.add_argument('--host', default="0.0.0.0", help="Bind IP Address (default: 0.0.0.0)")
         daemon_parser.add_argument('--port', type=int, default=7370, help="Bind Port (default: 7370)")
 
         args = daemon_parser.parse_args(sys.argv[2:])
 
-        if args.setup:
+        if args.display:
+            from ..daemon.display import display_daemon_url
+            display_daemon_url()
+        elif args.setup:
             from ..daemon.service import setup_systemd
             setup_systemd(args.host, args.port)
         elif args.run:
@@ -121,6 +125,8 @@ class CLIHandler:
         elif args.remove:
             from ..daemon.service import remove_systemd
             remove_systemd()
+        else:
+            daemon_parser.print_help()
             
     def _handle_early_dispatch(self, args) -> bool:
         """Handle commands that exit immediately or don't require download context."""

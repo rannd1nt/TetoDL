@@ -4,7 +4,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from ..utils.styles import print_success, print_error, print_info, print_process
+from ..utils.styles import print_success, print_error, print_info, print_process, color
 
 def get_executable_path():
     """
@@ -56,16 +56,16 @@ WantedBy=default.target
 
         subprocess.run(["systemctl", "--user", "daemon-reload"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
-        print_success(f"Systemd service file created at: {service_file}")
-        print_info("To START the daemon right now, run:")
-        print_info("  systemctl --user start tetodl.service")
-        print_info("To ENABLE it to start on boot automatically, run:")
-        print_info("  systemctl --user enable tetodl.service")
-        
-        # [PRO-TIP Linux] Mengingatkan user soal loginctl
-        print()
-        print_info("[Tip] To ensure the daemon starts on boot even BEFORE you log in:")
-        print_info(f"      sudo loginctl enable-linger {os.getenv('USER')}")
+        print_success(f"Systemd service file created at: {service_file}\n")
+        print_info(
+            f"To start the daemon right now, run: {color("systemctl --user start tetodl.service", 'g', True)}"
+        )
+        print_info(
+            f"To enable it to start on boot automatically, run: {color("systemctl --user enable tetodl.service", 'g', True)}"
+        )
+        print_info(
+            f"To ensure the daemon starts on boot even before you log in: {color(f"sudo loginctl enable-linger {os.getenv('USER')}", 'g', True)}"
+        )
         
     except Exception as e:
         print_error(f"Failed to setup systemd service: {e}")

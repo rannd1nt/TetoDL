@@ -4,7 +4,7 @@ Color codes and colored print functions
 import os
 from rich.console import Console
 from questionary import Style
-
+from typing import Literal
 console = Console()
 
 from prompt_toolkit.styles import Style
@@ -105,8 +105,8 @@ class Colors:
     WHITE = '\033[0m'
     CYAN = '\033[96m'
     LIGHT_GRAY = '\033[37m'
-
     BOLD = '\033[1m'
+
 
 def print_process(message, str_only=False):
     """Print untuk proses/progress (biru)"""
@@ -159,6 +159,7 @@ def print_neutral(message, symbol="[+]", str_only=False):
 def clear():
     os.system('cls' if os.name == 'nt' else 'clear')
 
+CCode = Literal['r', 'g', 'y', 'b', 'c', 'w', 'lgrn', 'lgry']
 
 colors = {
         'r': Colors.RED,
@@ -190,7 +191,7 @@ def colored_info(key: str, data, ansi_key=Colors.WHITE, ansi_data=Colors.GREEN, 
     else:
         return f'{Colors.BOLD}{ansi_key}{key}{Colors.RESET}{ansi_data}{data}{Colors.RESET}'
 
-def color(text: str, ansi: str, bold: bool = False) -> str:
+def color(text: str, ansi: CCode | str, bold: bool = False) -> str:
     """
     Apply ANSI coloring easily.
     """

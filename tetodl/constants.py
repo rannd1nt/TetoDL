@@ -128,6 +128,9 @@ CACHE_PATH = str(CACHE_DIR / "cache.json")
 HISTORY_PATH = str(DATA_DIR / "history.json")
 REGISTRY_PATH = str(DATA_DIR / "registry.json")
 
+# Daemon systemd service
+SERVICE_PATH = str(Path.home() / ".config" / "systemd" / "user" / "tetodl.service")
+
 # ==== DEFAULT ROOTS ====
 DEFAULT_MUSIC_ROOT = str(BASE_PATH / "music")
 DEFAULT_VIDEO_ROOT = str(BASE_PATH / "videos")
