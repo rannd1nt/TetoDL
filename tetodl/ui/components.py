@@ -7,11 +7,11 @@ import threading
 from ..constants import RuntimeConfig
 from ..utils.i18n import get_text as _
 from ..utils.display import show_ascii
-from ..utils.styles import Colors, console, clear
+from ..utils.formatters import Colors, console, clear
 
-def run_in_thread(fn, *args):
+def run_in_thread(fn, *args, **kwargs):
     """Run function in a separate thread"""
-    t = threading.Thread(target=fn, args=args, daemon=True)
+    t = threading.Thread(target=fn, args=args, kwargs=kwargs, daemon=True)
     t.start()
     return t
 

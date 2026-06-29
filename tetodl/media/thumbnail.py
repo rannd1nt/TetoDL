@@ -5,9 +5,9 @@ import os
 import subprocess
 import requests
 from ..constants import FFMPEG_CMD, RuntimeConfig
-from ..utils.i18n import get_text as _
-from ..utils.styles import print_error, print_success, print_process
-from ..utils.metadata_fetcher import fetcher
+from ..utils.i18n_keys import Keys
+from ..utils.console import console
+from ..core.metadata_fetcher import fetcher
 
 FAKE_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -35,11 +35,11 @@ def crop_thumbnail_to_square(thumbnail_path):
             os.rename(output_path, thumbnail_path)
             return True
         else:
-            print_error(_('media.crop_failed', error=result.stderr))
+            console.err(Keys.media.crop_failed(error=result.stderr))
             return False
             
     except Exception as e:
-        print_error(_('media.crop_error', error=str(e)))
+        console.err(Keys.media.crop_error(error=str(e)))
         return False
 
 def convert_thumbnail_format(thumbnail_path, target_format="jpg"):
@@ -68,7 +68,7 @@ def convert_thumbnail_format(thumbnail_path, target_format="jpg"):
     except Exception:
         return None
     
-def download_and_process_thumbnail(info_dict, download_folder, should_crop=True, smart_mode=True, quiet=False):
+def download_and_process_thumbnail(info_dict, download_folder, should_crop=True, smart_mode=True, force_crop=False):
     """
     Downloads thumbnail with robust fallback strategy.
     
@@ -83,7 +83,7 @@ def download_and_process_thumbnail(info_dict, download_folder, should_crop=True,
         thumbnail_path = os.path.join(download_folder, thumbnail_filename)
         
         # --- SMART COVER ---
-        if RuntimeConfig.SMART_COVER_MODE:
+        if smart_mode:
             artist = info_dict.get('artist') or info_dict.get('uploader', '').replace(' - Topic', '')
             title = info_dict.get('track') or info_dict.get('title')
             
@@ -101,9 +101,8 @@ def download_and_process_thumbnail(info_dict, download_folder, should_crop=True,
                         response = requests.get(image_url, headers=FAKE_HEADERS, timeout=10)
                         if response.status_code == 200:
                             source = 'Genius' if fetched_data.get('source') == 'Genius' else 'iTunes'
-                            if not quiet:
-                                print_success(_('download.youtube.fetch_success'))
-                                print_success(f"Cover art found via {source}!")
+                            console.ok(Keys.download.youtube.fetch_success)
+                            console.ok(Keys.media.cover_art_found_via(source=source))
                             
                             with open(thumbnail_path, 'wb') as f:
                                 f.write(response.content)
@@ -134,7 +133,7 @@ def download_and_process_thumbnail(info_dict, download_folder, should_crop=True,
                 continue
         
         if downloaded:
-            perform_crop = should_crop or RuntimeConfig.FORCE_CROP
+            perform_crop = should_crop or (force_crop or RuntimeConfig.FORCE_CROP)
 
             if perform_crop:
                 if crop_thumbnail_to_square(thumbnail_path):
@@ -149,6 +148,5 @@ def download_and_process_thumbnail(info_dict, download_folder, should_crop=True,
         return None, None
 
     except Exception as e:
-        if not quiet:
-            print_error(_('media.thumbnail_error', error=str(e)))
+        console.err(Keys.media.thumbnail_error(error=str(e)))
         return None, None

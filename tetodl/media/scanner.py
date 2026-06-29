@@ -4,9 +4,9 @@ Media file scanner for Android gallery (Optimized & Debugged)
 import os
 import subprocess
 import shutil
-from ..utils.spinner import Spinner
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
 from ..constants import IS_TERMUX
-from ..utils.styles import print_info, print_error
 
 def scan_media_files(target_path):
     """
@@ -18,32 +18,28 @@ def scan_media_files(target_path):
     if not os.path.exists(target_path):
         return
 
-    spinner = Spinner("Scanning media...")
-    spinner.start()
     try:
-        if shutil.which("termux-media-scan"):
-            cmd = ["termux-media-scan"]
-            if os.path.isdir(target_path):
-                cmd.extend(["-r", target_path])
+        with console.spin("Scanning media..."):
+            if shutil.which("termux-media-scan"):
+                cmd = ["termux-media-scan"]
+                if os.path.isdir(target_path):
+                    cmd.extend(["-r", target_path])
+                else:
+                    cmd.append(target_path)
+
+                subprocess.run(cmd, check=False, timeout=10)
+                return
+
+            if os.path.isfile(target_path):
+                scan_cmd = [
+                    "am", "broadcast",
+                    "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
+                    "-d", f"file://{target_path}"
+                ]
+                subprocess.run(scan_cmd, capture_output=True, timeout=10)
             else:
-                cmd.append(target_path)
-
-            subprocess.run(cmd, check=False, timeout=10)
-            spinner.stop()
-            return
-
-        if os.path.isfile(target_path):
-            scan_cmd = [
-                "am", "broadcast",
-                "-a", "android.intent.action.MEDIA_SCANNER_SCAN_FILE",
-                "-d", f"file://{target_path}"
-            ]
-            subprocess.run(scan_cmd, capture_output=True, timeout=10)
-            spinner.stop()
-        else:
-            spinner.stop()
-            print_error("Scanning Skipped")
-            print_error("Termux tools missing. Install 'termux-tools' for folder scanning.")
+                console.err(Keys.media.scan_skipped)
+                console.err(Keys.media.termux_tools_missing)
 
     except Exception as e:
-        print_error(f"Scan error: {e}")
+        console.err(Keys.media.scan_error(error=e))

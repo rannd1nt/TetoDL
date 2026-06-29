@@ -17,7 +17,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 
 from .models import DownloadRequest, PreviewRequest
 from .discovery import MDNSBroadcaster
-from ..ui.entry.dispatch import execute_cli_context
+from ..cli.dispatch import execute_download
+from ..core.models import DownloadSession, DownloadResult
 from ..constants import RuntimeConfig
 from ..core import config as config_mgr
 from ..utils.display import get_free_space
@@ -26,7 +27,7 @@ from ..utils.share import list_entries, stream_file, create_share_router, SVG as
 from ..utils.time_parser import get_cut_seconds
 from ..utils.processing import parse_playlist_items
 from ..utils.network import find_free_port, get_best_ip
-from ..utils.styles import console as rich_console
+from ..utils.formatters import console as rich_console
 
 share_launchers = {}
 
@@ -125,12 +126,12 @@ class _LogTee:
     def isatty(self):
         return False
 
-def background_task_runner(task_id: str, context: dict):
+def background_task_runner(task_id: str, session: DownloadSession, mode: str = 'cli_download', task_title: str = ''):
     log_buf = io.StringIO()
     task_data = {
         "status": "processing",
-        "details": context.get('url', 'Task Queued'),
-        "title": context.get('task_title', ''),
+        "details": session.url or 'Task Queued',
+        "title": task_title or '',
         "file_path": None,
         "logs": "",
     }
@@ -147,11 +148,11 @@ def background_task_runner(task_id: str, context: dict):
         pass
 
     try:
-        result = execute_cli_context(context) or {}
+        result = execute_download(session) or DownloadResult(success=False)
         task = active_tasks[task_id]
         task["status"] = "completed"
-        if isinstance(result, dict):
-            fp = result.get('file_path')
+        if isinstance(result, DownloadResult):
+            fp = result.file_path
             if fp:
                 fp_abs = os.path.abspath(fp)
                 task["file_path"] = fp_abs
@@ -160,7 +161,7 @@ def background_task_runner(task_id: str, context: dict):
                     task["dir_path"] = fp_abs
                 else:
                     task["dir_path"] = os.path.dirname(fp_abs)
-            fc = result.get('file_count')
+            fc = result.file_count
             if fc:
                 task["file_count"] = fc
     except Exception as e:
@@ -229,43 +230,6 @@ async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail="Must provide 'url' or 'search_query'")
 
     task_id = str(uuid.uuid4())[:8]
-    overrides = {'simple_mode': True}
-
-    if req.url: overrides['url'] = req.url
-    if req.audio_only: overrides['type'] = 'audio'
-    if req.video_only: overrides['type'] = 'video'
-    if req.thumbnail_only: overrides['thumbnail_only'] = True
-
-    if req.format: overrides['format'] = req.format
-    if req.resolution: overrides['resolution'] = req.resolution
-    if req.codec: overrides['codec'] = req.codec
-
-    if req.async_mode: overrides['async'] = True
-    if req.cut_time:
-        overrides['cut_raw'] = req.cut_time
-        try:
-            start, end = get_cut_seconds(req.cut_time)
-            overrides['cut_range'] = (start, end)
-        except ValueError:
-            pass
-    if req.items:
-        overrides['items_raw'] = req.items
-        try:
-            overrides['playlist_items'] = parse_playlist_items(req.items)
-        except ValueError:
-            pass
-    if req.group: overrides['group'] = req.group
-    if req.m3u: overrides['m3u'] = True
-    if req.smart_cover: overrides['smart_cover'] = True
-    if req.no_cover: overrides['no_cover'] = True
-    if req.force_crop: overrides['force_crop'] = True
-
-    # Explicit set semua boolean (biar gak ada state leakage antar request)
-    overrides['lyrics'] = req.lyrics
-    overrides['romaji'] = req.romaji
-
-    if req.title:
-        overrides['task_title'] = req.title
 
     # --- TEMP VS PERMANENT STORAGE LOGIC ---
     if req.share_temp:
@@ -275,23 +239,55 @@ async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
     else:
         is_temp = getattr(RuntimeConfig, 'DAEMON_DEFAULT_TEMP', True)
 
+    output_path: str | None = None
     if is_temp:
         task_dir = Path(str(TempManager.get_temp_dir())) / task_id
         task_dir.mkdir(parents=True, exist_ok=True)
-        overrides['output_path'] = str(task_dir)
+        output_path = str(task_dir)
 
-    context = {
-        'mode': 'cli_download' if req.url else 'cli_search',
-        'is_temp_session': False,
-        'overrides': overrides,
-        'task_title': req.title or '',
-    }
-        
-    # CATATAN PENTING: Di mode Daemon, `is_temp_session` sengaja False.
-    # Biarkan auto-cleanup worker yang hapus file lama, jangan `TempManager.cleanup()`.
-    # (Itu langsung hapus file sebelum sempat di-streaming).
+    media_type: str = 'audio'
+    if req.video_only:
+        media_type = 'video'
+    elif req.thumbnail_only:
+        media_type = 'thumbnail'
 
-    bg_tasks.add_task(background_task_runner, task_id, context)
+    cut_range: tuple[float, float] | None = None
+    if req.cut_time:
+        try:
+            cut_range = get_cut_seconds(req.cut_time)
+        except ValueError:
+            pass
+
+    playlist_items: set[int] | None = None
+    if req.items:
+        try:
+            playlist_items = parse_playlist_items(req.items)
+        except ValueError:
+            pass
+
+    session = DownloadSession(
+        url=req.url or '',
+        media_type=media_type,
+        output_path=output_path,
+        format=req.format or None,
+        resolution=req.resolution or None,
+        codec=req.codec or None,
+        cut_range=cut_range,
+        playlist_items=playlist_items,
+        group_folder=req.group or False,
+        m3u=req.m3u or False,
+        smart_cover=req.smart_cover or False,
+        no_cover=req.no_cover or False,
+        force_crop=req.force_crop or False,
+        lyrics=req.lyrics,
+        romaji=req.romaji,
+        async_mode=req.async_mode or False,
+        is_temp_session=False,
+    )
+
+    mode = 'cli_download' if req.url else 'cli_search'
+
+    bg_tasks.add_task(background_task_runner, task_id, session, mode, req.title or '')
 
     target_loc = "Temporary Storage" if is_temp else "Permanent Library"
     return {

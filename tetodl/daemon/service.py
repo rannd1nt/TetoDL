@@ -4,7 +4,9 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from ..utils.styles import print_success, print_error, print_info, print_process, color
+from ..utils.console import console
+from ..utils.formatters import color
+from ..utils.i18n_keys import Keys
 
 def get_executable_path():
     """
@@ -21,7 +23,7 @@ def get_executable_path():
 
 def setup_systemd(host: str, port: int):
     """Membuat dan mendaftarkan file .service ke Systemd User."""
-    print_process("Configuring systemd user service...")
+    console.proc(Keys.daemon.configuring_systemd)
     
     exec_path = get_executable_path()
     
@@ -56,27 +58,27 @@ WantedBy=default.target
 
         subprocess.run(["systemctl", "--user", "daemon-reload"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
-        print_success(f"Systemd service file created at: {service_file}\n")
-        print_info(
+        console.ok(Keys.daemon.service_file_created(path=service_file))
+        console.warn(
             f"To start the daemon right now, run: {color("systemctl --user start tetodl.service", 'g', True)}"
         )
-        print_info(
+        console.warn(
             f"To enable it to start on boot automatically, run: {color("systemctl --user enable tetodl.service", 'g', True)}"
         )
-        print_info(
+        console.warn(
             f"To ensure the daemon starts on boot even before you log in: {color(f"sudo loginctl enable-linger {os.getenv('USER')}", 'g', True)}"
         )
         
     except Exception as e:
-        print_error(f"Failed to setup systemd service: {e}")
+        console.err(Keys.daemon.failed_setup_systemd(error=e))
 
 def remove_systemd():
     """Menghapus file .service dengan aman."""
-    print_process("Removing systemd service...")
+    console.proc(Keys.daemon.removing_systemd)
     service_file = Path.home() / ".config" / "systemd" / "user" / "tetodl.service"
     
     if not service_file.exists():
-        print_error("TetoDL daemon is not installed.")
+        console.err(Keys.daemon.daemon_not_installed)
         return
 
     try:
@@ -90,6 +92,6 @@ def remove_systemd():
         # Reload daemon
         subprocess.run(["systemctl", "--user", "daemon-reload"], stderr=subprocess.DEVNULL)
         
-        print_success("Daemon service successfully removed.")
+        console.ok(Keys.daemon.daemon_removed)
     except Exception as e:
-        print_error(f"Failed to remove systemd service: {e}")
+        console.err(Keys.daemon.failed_remove_systemd(error=e))

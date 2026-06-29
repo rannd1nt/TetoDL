@@ -9,16 +9,15 @@ except Exception:
     yt = None
 
 from ...constants import RuntimeConfig
-from ...utils.i18n import get_text as _
-from ...utils.styles import print_process, print_info, print_success, print_error, clear
-from ...utils.spinner import Spinner
+from ...core.models import DownloadResult
+from ...utils.i18n_keys import Keys
+from ...utils.console import console
 from ...utils.network import check_internet
-from ...utils.display import wait_and_clear_prompt
-from ...ui.components import header
 from ...ui.navigation import select_download_folder
+from ...ui.provider import UIProvider, NullUI
 from ...media.thumbnail import download_and_process_thumbnail, convert_thumbnail_format
 
-def download_thumbnail_task(url, target_format='jpg'):
+def download_thumbnail_task(url, target_format='jpg', ui: UIProvider = NullUI()):
     """
     Standalone task for --thumbnail-only flag.
     Downloads cover art (Smart/YouTube) based on config without downloading media.
@@ -28,64 +27,59 @@ def download_thumbnail_task(url, target_format='jpg'):
         target_dir = RuntimeConfig.THUMBNAIL_ROOT
     else:
         target_dir = select_download_folder(RuntimeConfig.THUMBNAIL_ROOT, "thumbnails")
-        if not target_dir: return {'success': False, 'reason': 'cancel'}
+        if not target_dir: return DownloadResult(success=False, reason='cancel')
 
     if not os.path.exists(target_dir):
         try:
             os.makedirs(target_dir, exist_ok=True)
         except OSError as e:
-            print_error(f"Cannot create thumbnail directory: {e}")
-            return {'success': False}
+            console.err(Keys.media.cannot_create_thumb_dir(error=e))
+            return DownloadResult(success=False)
     
-    clear()
-    header()
+    ui.clear()
+    ui.header()
 
     if not check_internet():
-        print_error(_('download.youtube.no_internet'))
-        return {'success': False}
-
-    spinner = Spinner("Extracting information...")
-    spinner.start()
+        console.err(Keys.download.youtube.no_internet)
+        return DownloadResult(success=False)
 
     try:
-        with yt.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
-            info = ydl.extract_info(url, download=False)
+        with console.spin("Extracting information..."):
+            with yt.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
+                info = ydl.extract_info(url, download=False)
     except Exception as e:
-        spinner.stop()
-        print_error(f"Extraction failed: {e}")
-        return {'success': False}
-
-    spinner.stop()
+        console.err(Keys.media.extraction_failed(error=e))
+        return DownloadResult(success=False)
 
     if 'entries' in info:
-        print_info(f"Playlist detected: {info.get('title')}")
+        console.warn(Keys.media.playlist_detected(title=info.get('title')))
         entries = list(info['entries'])
         total = len(entries)
-        print_process(f"Found {total} items. Processing thumbnails...")
+        console.proc(Keys.media.found_items_processing(count=total))
         
         success_count = 0
         first_path = None
         for i, entry in enumerate(entries, 1):
-            print_process(f"[{i}/{total}] Processing: {entry.get('title')}")
+            console.proc(Keys.media.processing_entry(current=i, total=total, title=entry.get('title')))
             fpath = _process_single_thumbnail(entry, target_dir, target_format=target_format)
             if fpath:
                 success_count += 1
                 if not first_path:
                     first_path = fpath
         
-        print_success(f"Processed {success_count}/{total} thumbnails.")
-        wait_and_clear_prompt()
+        console.ok(Keys.media.processed_thumbnails(success=success_count, total=total))
+        ui.wait_and_clear_prompt()
         target_dir_abs = os.path.abspath(target_dir)
-        return {'success': success_count > 0, 'file_path': target_dir_abs, 'file_count': success_count}
+        return DownloadResult(success=success_count > 0, file_path=target_dir_abs, file_count=success_count)
     else:
         fpath = _process_single_thumbnail(info, target_dir, target_format=target_format)
-        wait_and_clear_prompt()
-        return {'success': bool(fpath), 'file_path': fpath, 'file_count': 1 if fpath else 0}
+        ui.wait_and_clear_prompt()
+        return DownloadResult(success=bool(fpath), file_path=fpath, file_count=1 if fpath else 0)
 
 def _process_single_thumbnail(info, target_dir, target_format='jpg'):
     """Return path on success, None on failure."""
     title = info.get('title', 'Unknown')
-    print_process(f"Processing cover for: {title}")
+    console.proc(Keys.media.processing_cover_for(title=title))
 
     uploader = info.get('uploader', '')
     description = info.get('description', '')
@@ -129,11 +123,11 @@ def _process_single_thumbnail(info, target_dir, target_format='jpg'):
             if os.path.exists(new_path): os.remove(new_path)
             os.rename(final_path, new_path)
             
-            print_success(f"Saved: {safe_name}")
+            console.ok(Keys.media.thumbnail_saved(name=safe_name))
             return os.path.abspath(new_path)
         except Exception:
-            print_error(f"Saved as: {os.path.basename(final_path)}")
+            console.err(Keys.media.thumbnail_saved_as(name=os.path.basename(final_path)))
             return os.path.abspath(final_path)
     else:
-        print_error("Failed to download thumbnail.")
+        console.err(Keys.media.failed_to_download_thumbnail)
         return None

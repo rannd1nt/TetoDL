@@ -6,7 +6,7 @@ from rich.text import Text
 
 from ..constants import APP_VERSION
 from ..utils.display import visit_github, visit_instagram
-from ..utils.styles import clear, menu_style, console
+from ..utils.formatters import clear, menu_style, console
 from ..utils.i18n import get_text as _
 
 def menu_about():

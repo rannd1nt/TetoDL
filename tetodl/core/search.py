@@ -6,16 +6,15 @@ from questionary import Choice
 
 from ..constants import IS_TERMUX
 # Import helper formatting yang sudah ada
-from ..utils.styles import (
-    print_error, 
-    print_info, 
-    print_success, 
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
+from ..utils.formatters import (
     color, 
     search_style, 
     truncate_title, 
     format_duration_digital
 )
-from ..utils.spinner import Spinner
+
 
 def perform_youtube_search(query, limit=5):
     """
@@ -24,12 +23,8 @@ def perform_youtube_search(query, limit=5):
     """
     yt_dlp_cmd = "yt-dlp"
     if not shutil.which(yt_dlp_cmd):
-        print_error("yt-dlp not found.")
+        console.err(Keys.search.ytdlp_not_found)
         return None
-
-    # Spinner tetap jalan saat searching
-    spinner = Spinner(f"Searching YouTube for '{query}'...")
-    spinner.start()
 
     try:
         search_query = f"ytsearch{limit}:{query}"
@@ -44,11 +39,11 @@ def perform_youtube_search(query, limit=5):
             search_query
         ]
         
-        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
-        spinner.stop()
+        with console.spin(f"Searching YouTube for '{query}'..."):
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8')
         
         if result.returncode != 0:
-            print_error("Search failed.")
+            console.err(Keys.search.search_failed)
             return None
 
         videos = []
@@ -56,7 +51,6 @@ def perform_youtube_search(query, limit=5):
             if line:
                 try:
                     data = json.loads(line)
-                    # Gunakan get dengan default value yang aman
                     videos.append({
                         'title': data.get('title', 'Unknown Title'),
                         'id': data.get('id'),
@@ -68,22 +62,17 @@ def perform_youtube_search(query, limit=5):
                     pass
         
         if not videos:
-            print_info("No results found.")
+            console.warn(Keys.search.no_results_found)
             return None
 
-        # --- TAMPILKAN HEADER (MANUAL) ---
         formatted_query = color(query, 'c') 
-        print_success(f"Search Results for '{formatted_query}':")
+        console.ok(f"Search Results for '{formatted_query}':")
 
-        # --- INTERACTIVE SELECTION ---
         choices = []
         for vid in videos:
             dur_str = format_duration_digital(vid.get('duration'))
-            
             clean_title = truncate_title(vid['title'], max_chars=50)
-            
             label = f"- {clean_title} >> | Dur: {dur_str} | Up: {vid['uploader']} |"
-            
             choices.append(Choice(title=label, value=vid['url']))
         
         choices.append(Choice(title="- Cancel", value="CANCEL"))
@@ -99,7 +88,6 @@ def perform_youtube_search(query, limit=5):
                 instruction=' '
             ).ask()
         else:
-            # Fallback Termux
             for i, vid in enumerate(videos):
                 d_str = format_duration_digital(vid.get('duration'))
                 t_str = truncate_title(vid['title'], max_chars=35)
@@ -123,6 +111,5 @@ def perform_youtube_search(query, limit=5):
         return selection
 
     except Exception as e:
-        spinner.stop()
-        print_error(f"Search error: {e}")
+        console.err(Keys.search.search_error(error=e))
         return None

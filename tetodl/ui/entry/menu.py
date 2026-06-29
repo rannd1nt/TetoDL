@@ -9,9 +9,9 @@ from questionary import Choice
 
 from tetodl.constants import RuntimeConfig, IS_TERMUX
 from tetodl.utils.i18n import get_text as _
-from tetodl.utils.styles import (
-    print_info, print_error, print_success, clear, color, menu_style
-)
+from tetodl.utils.console import console
+from tetodl.utils.i18n_keys import Keys
+from tetodl.utils.formatters import clear, color, menu_style
 from tetodl.core.config import get_audio_quality_info
 from tetodl.ui.components import header
 
@@ -76,7 +76,7 @@ def handle_update_prompt(update_status):
     
     clear()
     header()
-    print("  " + print_info(f"Dependency Update Available!", True))
+    console.warn(Keys.ui.dependency_update_available)
     print(f"      {color('Current:', 'y')} {current}")
     print(f"      {color('Latest :', 'g')} {latest}")
     print()
@@ -97,13 +97,13 @@ def handle_update_prompt(update_status):
 
     if should_update:
         print()
-        print_info("Updating yt-dlp...")
+        console.warn(Keys.ui.updating_ytdlp)
         try:
             subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"])
-            print_success("Update complete!")
+            console.ok(Keys.ui.update_complete)
             time.sleep(1)
         except subprocess.CalledProcessError:
-            print_error("Update failed. Please check your connection.")
+            console.err(Keys.ui.update_failed_check_connection)
             time.sleep(2)
 
 def prompt_download_url(title_key):

@@ -1,6 +1,7 @@
 import socket
 from zeroconf import ServiceInfo, Zeroconf
-from ..utils.styles import print_info
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
 
 class MDNSBroadcaster:
     def __init__(self, port: int, hostname: str = "tetodl"):
@@ -25,9 +26,9 @@ class MDNSBroadcaster:
             )
             self.zeroconf = Zeroconf()
             self.zeroconf.register_service(self.info)
-            print_info(f"mDNS Broadcast active. You can access via: http://{self.hostname[:-1]}:{self.port}")
+            console.warn(Keys.daemon.mdns_broadcast_active(hostname=self.hostname[:-1], port=self.port))
         except Exception as e:
-            print_info(f"mDNS Broadcast failed (Zeroconf might not be supported on this network): {e}")
+            console.warn(Keys.daemon.mdns_broadcast_failed(error=e))
 
     def stop(self):
         if self.zeroconf and self.info:

@@ -10,7 +10,9 @@ from rich.text import Text
 from ..constants import RuntimeConfig
 from ..ui.components import header
 from ..utils.i18n import get_text as _
-from ..utils.styles import print_error, print_info, clear, console, menu_style
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
+from ..utils.formatters import clear, menu_style, console as rich_console
 from ..utils.files import remove_nomedia_file
 from ..core.config import save_config, cleanup_ghost_subfolders
 
@@ -22,8 +24,8 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
 
     while True:
         clear()
-        console.print()
-        console.print(Padding(title, (0, 3)), style='bright_cyan')
+        rich_console.print()
+        rich_console.print(Padding(title, (0, 3)), style='bright_cyan')
 
         loc_text = Text.assemble(
             (_('download.navigation.current_location'), "bright_cyan"),
@@ -31,9 +33,9 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
             (current_path, "green")
         )
 
-        console.print() 
-        console.print(Padding(loc_text, (0, 3)))
-        console.print()
+        rich_console.print() 
+        rich_console.print(Padding(loc_text, (0, 3)))
+        rich_console.print()
 
         # 1. Ambil list folder
         try:
@@ -43,12 +45,12 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
                 if os.path.isdir(os.path.join(current_path, item))
             ]
         except PermissionError:
-            print_error(f"Akses ditolak ke: {current_path}")
+            console.err(Keys.ui.access_denied_to(path=current_path))
             current_path = os.path.dirname(current_path)
             time.sleep(1)
             continue
         except Exception as e:
-            print_error(f"Error membaca folder: {e}")
+            console.err(Keys.ui.error_reading_folder(error=e))
             return None
 
         choices = []
@@ -133,7 +135,7 @@ def select_download_folder(root_dir, type_key='Unknown'):
         header()
         
         def path_info():
-            console.print(Padding(
+            rich_console.print(Padding(
                 Text.assemble(
                     (_('download.folder.select_location', type=type_key), "bright_cyan"),
                     ("\nBase: ", "bright_cyan"),
@@ -234,7 +236,7 @@ def select_download_folder(root_dir, type_key='Unknown'):
                 return new_path
 
             except Exception as e:
-                print_error(_('download.folder.create_failed', error=e))
+                console.err(Keys.download.folder.create_failed(error=e))
                 time.sleep(1.5)
                 continue
 
@@ -256,7 +258,7 @@ def select_download_folder(root_dir, type_key='Unknown'):
 
             # Validasi apakah folder fisik masih ada?
             if not os.path.exists(selected_path):
-                print_info(_('download.folder.not_found', name=selected_folder))
+                console.warn(Keys.download.folder.not_found(name=selected_folder))
                 
                 # Hapus shortcut mati ini dari config
                 if root_key in RuntimeConfig.USER_SUBFOLDERS:
@@ -269,7 +271,7 @@ def select_download_folder(root_dir, type_key='Unknown'):
                     except ValueError:
                         pass # Sudah terhapus duluan
                 
-                print_info(_('download.folder.choose_again'))
+                console.warn(Keys.download.folder.choose_again)
                 time.sleep(1.5)
                 continue # Refresh menu
 

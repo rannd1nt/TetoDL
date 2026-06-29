@@ -1,19 +1,21 @@
 import argparse
 import sys
 import os
-from typing import Tuple, Dict, Any
+from typing import Tuple, Optional, Literal
 
 from ..constants import (
     APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS,
     IS_TERMUX, RuntimeConfig, VALID_THUMBNAIL_FORMATS
 )
-from ..utils.styles import print_error, print_process, print_success, print_info, color
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
+from ..utils.formatters import color
 from ..core import config as config_mgr
+from ..core.models import DownloadSession, CliResult, CliDownload, CliSearch, CliMenu, CliExit
 from ..utils.files import TempManager
 from ..utils.network import start_share_server
-from ..ui import analytics
 from ..utils.display import show_app_info
-from . import maintenance
+from ..core import maintenance
 
 class CLIHandler:
     """
@@ -61,7 +63,7 @@ class CLIHandler:
         dl_group.add_argument('--items', metavar='LIST', help="Playlist items to download (e.g. '1,2,5-10')")
         dl_group.add_argument('--group', nargs='?', const=True, default=False, metavar='NAME', 
             help="Group Playlist/Album downloads into a subfolder. Optional: Specify folder name.")
-        dl_group.add_argument('--m3u', action='store_true', help="Generate .m3u8 playlist file") # [NEW]
+        dl_group.add_argument('--m3u', action='store_true', help="Generate .m3u8 playlist file")
         dl_group.add_argument('--smart-cover', action='store_true', help="Force Enable Smart Cover")
         dl_group.add_argument('--no-cover', action='store_true', help="Disable all cover art & metadata")
         dl_group.add_argument('--force-crop', action='store_true', help="Force crop YouTube thumbnail")
@@ -120,7 +122,7 @@ class CLIHandler:
             setup_systemd(args.host, args.port)
         elif args.run:
             from ..daemon.api import run_server
-            print_info(f"Starting TetoDL API Server on {args.host}:{args.port}...")
+            console.warn(Keys.cli.starting_api_server(host=args.host, port=args.port))
             run_server(args.host, args.port)
         elif args.remove:
             from ..daemon.service import remove_systemd
@@ -154,17 +156,19 @@ class CLIHandler:
             config_mgr.load_config()
             from ..core.history import load_history
             load_history()
-            analytics.render_history_view(args.history, args.reverse, args.find)
+            from ..ui import analytics as _a
+            _a.render_history_view(args.history, args.reverse, args.find)
             return True
 
         if args.wrap:
             config_mgr.load_config()
-            analytics.render_analytics_view()
+            from ..ui import analytics as _a
+            _a.render_analytics_view()
             return True
 
         # Update / Uninstall
         if args.update:
-            print_info("Checking for updates...")
+            console.warn(Keys.cli.checking_for_updates)
             maintenance.perform_update()
             return True
         
@@ -203,30 +207,30 @@ class CLIHandler:
         changed = False
 
         if args.header and config_mgr.set_header_style(args.header):
-            print_success(f"Header style: {args.header}")
+            console.ok(Keys.cli.header_style(style=args.header))
             changed = True
         
         if args.progress_style and config_mgr.set_progress_style(args.progress_style):
-            print_success(f"Progress style: {args.progress_style}")
+            console.ok(Keys.cli.progress_style(style=args.progress_style))
             changed = True
             
         if args.lang and config_mgr.update_language(args.lang):
-            print_success(f"Language: {config_mgr.get_language_name(args.lang)}")
+            console.ok(Keys.cli.language_set(name=config_mgr.get_language_name(args.lang)))
             changed = True
             
         if args.delay is not None or args.retries is not None:
             config_mgr.set_network_config(delay=args.delay, retries=args.retries)
-            if args.delay: print_success(f"Delay: {args.delay}s")
-            if args.retries: print_success(f"Retries: {args.retries}")
+            if args.delay: console.ok(Keys.cli.delay_set(delay=args.delay))
+            if args.retries: console.ok(Keys.cli.retries_set(retries=args.retries))
             changed = True
 
         if args.media_scanner:
             state = (args.media_scanner == 'on')
             config_mgr.set_media_scanner(state)
             status = "Enabled" if state else "Disabled"
-            print_success(f"Media Scanner {status}.")
+            console.ok(Keys.cli.media_scanner_status(status=status))
             if not IS_TERMUX and state:
-                print_info("Note: Media Scanner only affects Android/Termux.")
+                console.warn(Keys.cli.media_scanner_note)
             changed = True
 
         return changed
@@ -249,8 +253,8 @@ class CLIHandler:
         # --- Logic Group Resolution ---
         if args.group:
             if not root_path:
-                print_error("To share a group folder, please specify mode: -a (Audio) or -v (Video).")
-                print_info("Example: tetodl --share -a --group \"My Folder\"")
+                console.err("To share a group folder, please specify mode: -a (Audio) or -v (Video).")
+                console.warn("Example: tetodl --share -a --group \"My Folder\"")
                 return
 
             if isinstance(args.group, str):
@@ -260,11 +264,11 @@ class CLIHandler:
                 if os.path.exists(potential_path):
                     target_path = potential_path
                 else:
-                    print_error(f"Group folder not found: '{group_name}'")
-                    print_info(f"Searched in: {root_path}")
+                    console.err(Keys.cli.group_folder_not_found(name=group_name))
+                    console.warn(Keys.cli.searched_in(path=root_path))
                     return 
             else:
-                print_error("Please specify the folder name to share.") 
+                console.err(Keys.cli.specify_folder_name) 
                 return
         
         # --- Fallback & LATEST ---
@@ -277,13 +281,13 @@ class CLIHandler:
             load_history()
             history = RuntimeConfig.DOWNLOAD_HISTORY
             if not history:
-                print_error("No download history found.")
+                console.err(Keys.cli.no_download_history)
                 return
             last = next((x for x in reversed(history) if x['success']), None)
             if last and os.path.exists(last['file_path']):
                 target_path = last['file_path']
             else:
-                print_error("Last downloaded file missing.")
+                console.err(Keys.cli.last_download_missing)
                 return
 
         # 3. Final Execution
@@ -292,36 +296,36 @@ class CLIHandler:
                 if os.path.isdir(target_path):
                     from ..utils.files import create_zip_archive
                     
-                    print_process(f"Archiving folder for temporary share: {os.path.basename(target_path)}...")
+                    console.proc(Keys.cli.archiving_folder(name=os.path.basename(target_path)))
                     
                     zip_path = create_zip_archive(target_path)
                     
                     if zip_path and os.path.exists(zip_path):
                         try:
-                            print_success(f"Serving Temporary Archive: {os.path.basename(zip_path)}")
+                            console.ok(Keys.cli.serving_temp_archive(name=os.path.basename(zip_path)))
                             start_share_server(zip_path)
                         except KeyboardInterrupt:
                             print()
                             pass
                         finally:
                             if os.path.exists(zip_path):
-                                print_info("Cleaning up temporary archive...")
+                                console.warn(Keys.cli.cleaning_temp_archive)
                                 try:
                                     os.remove(zip_path)
-                                    print_success("Cleanup complete.")
+                                    console.ok(Keys.cli.cleanup_complete)
                                 except Exception as e:
-                                    print_error(f"Failed to remove temp zip: {e}")
+                                    console.err(Keys.cli.failed_remove_temp_zip(error=e))
                         
                         return
                     else:
-                        print_error("Failed to create zip archive.")
+                        console.err(Keys.cli.failed_to_create_zip)
                         return
                 else:
-                    print_info("Target is a file, skipping zip creation.")
+                    console.warn(Keys.cli.skipping_zip_creation)
 
             # Normal Share (Folder Mode)
             if args.group:
-                print_success(f"Sharing Group: {os.path.basename(target_path)}")
+                console.ok(Keys.cli.sharing_group(name=os.path.basename(target_path)))
             
             try:
                 start_share_server(target_path)
@@ -329,11 +333,11 @@ class CLIHandler:
                 print()
                 pass
         else:
-            print_error(f"Cannot share: Path not found.")
+            console.err(f"Cannot share: Path not found.")
             if target_path:
-                print_info(f"Path: {target_path}")
+                console.warn(f"Path: {target_path}")
             else:
-                print_info("Usage: tetodl --share [PATH] or --share -a/-v [--group NAME]")
+                console.warn("Usage: tetodl --share [PATH] or --share -a/-v [--group NAME]")
 
     def _validate_rules(self, args) -> bool:
         """Perform strict validation rules on arguments."""
@@ -356,7 +360,6 @@ class CLIHandler:
         ]
         
         if any(processing_flags) and not has_target:
-            # Share temp exception handled in early dispatch check
             if not args.share: 
                 self.parser.error("Processing flags require a URL or --search query.")
 
@@ -379,7 +382,7 @@ class CLIHandler:
             if args.resolution or args.codec: self.parser.error("Invalid flag: Video settings cannot be used with --thumbnail-only.")
         
         if args.audio and (args.resolution or args.codec):
-            print_info("Note: --resolution and --codec are ignored in Audio mode.")
+            console.warn(Keys.cli.audio_mode_note)
         
         # RULE 5: Search Constraints
         if args.limit != 5 and not args.search:
@@ -387,102 +390,115 @@ class CLIHandler:
             
         return True
 
-    def _prepare_context(self, args) -> Dict[str, Any]:
-        """Prepare the execution context dictionary."""
-        context = {}
-        if args.recheck:
-            context['force_recheck'] = True
+    def _prepare_context(self, args) -> CliResult:
+        """Prepare the execution result from parsed args."""
+        detected_type, validated_format = self._detect_type_and_format(args)
 
-        overrides = {'simple_mode': True}
+        # --- Path / share-temp ---
+        is_share_temp = bool(args.share_temp)
+        output_path = None
+        share_after = bool(args.share) or is_share_temp
 
-        # Target
-        if args.url:
-            overrides['url'] = args.url
-        elif args.search:
-            context['mode'] = 'cli_search'
-            context['query'] = args.search
-            context['limit'] = args.limit
+        if is_share_temp:
+            output_path = str(TempManager.get_temp_dir())
+        elif args.output:
+            if not os.path.exists(args.output):
+                try:
+                    os.makedirs(args.output)
+                except OSError:
+                    self.parser.error(f"Error: Cannot create directory {args.output}")
+            output_path = os.path.abspath(args.output)
 
-        # Flags
-        if args.async_mode: overrides['async'] = True
-        if args.smart_cover: overrides['smart_cover'] = True
-        if args.no_cover: overrides['no_cover'] = True
-        if args.force_crop: overrides['force_crop'] = True
-        if args.thumbnail_only: overrides['thumbnail_only'] = True
-        if args.group: overrides['group'] = args.group
-        if args.lyrics: overrides['lyrics'] = True
-        if args.romaji: overrides['romaji'] = True
-        if args.zip: overrides['zip'] = True
-        if args.m3u: overrides['m3u'] = True
-        if args.quiet: overrides['quiet'] = True
-
+        # --- Playlist items ---
+        playlist_items = None
         if args.items:
             from ..utils.processing import parse_playlist_items
             try:
-                indices = parse_playlist_items(args.items)
-                overrides['playlist_items'] = indices
-                overrides['items_raw'] = args.items
+                playlist_items = parse_playlist_items(args.items)
             except ValueError as e:
                 self.parser.error(str(e))
-        
-        # Share
-        if args.share_temp:
-            overrides['share_after_download'] = True
-            overrides['output_path'] = str(TempManager.get_temp_dir())
-            context['is_temp_session'] = True
-        elif args.share:
-            overrides['share_after_download'] = True
 
-        # Type Detection
-        self._detect_type_and_format(args, overrides)
-
-        # Other Overrides
-        if args.codec and overrides['type'] == 'video':
-            overrides['codec'] = args.codec
-
-        if args.resolution and overrides['type'] == 'video':
-            res_map = {'144p': '144p', '240p': '240p', '360p': '360p', '480p': '480p', '720p': '720p', '1080p': '1080p', '2k': '1440p', '4k': '2160p', '8k': '4320p'}
-            overrides['resolution'] = res_map.get(args.resolution, '720p')
-
-        if args.output:
-            if not os.path.exists(args.output):
-                try: os.makedirs(args.output)
-                except OSError: self.parser.error(f"Error: Cannot create directory {args.output}")
-            overrides['output_path'] = os.path.abspath(args.output)
-
+        # --- Cut range ---
+        cut_range = None
         if args.cut:
             from ..utils.time_parser import get_cut_seconds
             try:
-                start, end = get_cut_seconds(args.cut)
-                overrides['cut_range'] = (start, end)
-                overrides['cut_raw'] = args.cut
+                cut_range = get_cut_seconds(args.cut)
             except ValueError as e:
                 self.parser.error(f"Invalid --cut format: {e}")
 
-        if not context.get('mode') == 'cli_search':
-            if args.url:
-                context['mode'] = 'cli_download'
-        
-        context['overrides'] = overrides
-        return context
+        # --- Resolution ---
+        resolution = None
+        if args.resolution and detected_type == 'video':
+            res_map = {
+                '144p': '144p', '240p': '240p', '360p': '360p',
+                '480p': '480p', '720p': '720p', '1080p': '1080p',
+                '2k': '1440p', '4k': '2160p', '8k': '4320p',
+            }
+            resolution = res_map.get(args.resolution, '720p')
 
-    def _detect_type_and_format(self, args, overrides):
-        """Helper to detect download type and validate format."""
+        # --- Build DownloadSession ---
+        session = DownloadSession(
+            url=args.url or '',
+            media_type=detected_type,
+            output_path=output_path,
+            format=validated_format,
+            codec=args.codec if (args.codec and detected_type == 'video') else None,
+            resolution=resolution,
+            cut_range=cut_range,
+            playlist_items=playlist_items,
+            group_folder=args.group or False,
+            lyrics=bool(args.lyrics),
+            romaji=bool(args.romaji),
+            zip=bool(args.zip),
+            m3u=bool(args.m3u),
+            smart_cover=bool(args.smart_cover),
+            no_cover=bool(args.no_cover),
+            force_crop=bool(args.force_crop),
+            quiet=bool(args.quiet),
+            async_mode=bool(args.async_mode),
+            share_after_download=share_after,
+            is_temp_session=is_share_temp,
+        )
+
+        if args.search:
+            return CliSearch(
+                query=args.search,
+                limit=args.limit,
+                session=session,
+                force_recheck=args.recheck,
+            )
+
+        if args.url:
+            return CliDownload(
+                session=session,
+                force_recheck=args.recheck,
+            )
+
+        return CliMenu()
+
+    def _detect_type_and_format(self, args) -> Tuple[Literal['audio', 'video', 'thumbnail'], Optional[str]]:
+        """Detect media type and validate format."""
         detected_type = None
-        
-        if args.thumbnail_only: detected_type = 'thumbnail'
-        elif args.audio: detected_type = 'audio'
-        elif args.video: detected_type = 'video'
 
-        # Inference
+        if args.thumbnail_only:
+            detected_type = 'thumbnail'
+        elif args.audio:
+            detected_type = 'audio'
+        elif args.video:
+            detected_type = 'video'
+
         if detected_type is None and args.format:
-            if args.format in VALID_THUMBNAIL_FORMATS: detected_type = 'thumbnail'
-            elif args.format in AUDIO_QUALITY_OPTIONS: detected_type = 'audio'
-            elif args.format in VALID_CONTAINERS: detected_type = 'video'
+            if args.format in VALID_THUMBNAIL_FORMATS:
+                detected_type = 'thumbnail'
+            elif args.format in AUDIO_QUALITY_OPTIONS:
+                detected_type = 'audio'
+            elif args.format in VALID_CONTAINERS:
+                detected_type = 'video'
 
         if detected_type is None and (args.resolution or args.codec):
             detected_type = 'video'
-        
+
         if detected_type is None and args.url:
             url_lower = args.url.lower()
             if "music.youtube.com" in url_lower or "spotify.com" in url_lower:
@@ -490,10 +506,10 @@ class CLIHandler:
             else:
                 detected_type = 'video'
 
-        if detected_type is None: detected_type = 'video'
-        overrides['type'] = detected_type
+        if detected_type is None:
+            detected_type = 'video'
 
-        # Format Validation
+        validated_format = None
         if args.format:
             fmt = args.format.lower()
             if detected_type == 'thumbnail':
@@ -505,26 +521,24 @@ class CLIHandler:
             elif detected_type == 'video':
                 if fmt not in VALID_CONTAINERS:
                     self.parser.error(f"Invalid video format '{fmt}'.")
-            
-            overrides['format'] = fmt
+            validated_format = fmt
 
-    def parse(self) -> Tuple[bool, Dict[str, Any]]:
-        """
-        Execute argument parsing flow.
-        Returns: (handled, context)
-        """
+        return detected_type, validated_format
+
+    def parse(self) -> Tuple[bool, CliResult]:
+        """Returns: (handled, result)"""
         if len(sys.argv) > 1 and sys.argv[1].lower() == 'daemon':
             self._handle_daemon_subcommand()
-            return True, {}
-        
+            return True, CliExit()
+
         args = self.parser.parse_args()
-        
+
         if self._handle_early_dispatch(args):
-            return True, {}
+            return True, CliExit()
 
         self._validate_rules(args)
-        context = self._prepare_context(args)
-        
-        return False, context
+        result = self._prepare_context(args)
+
+        return False, result
 
 cli = CLIHandler()

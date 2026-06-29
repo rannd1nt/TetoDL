@@ -7,20 +7,13 @@ from .processing import (
     extract_video_id,
 )
 
-from .styles import (
+from .formatters import (
     Colors,
     color,
     colored_info,
     colored_switch,
-    print_process,
-    print_info,
-    print_success,
-    print_debug,
-    print_error,
-    print_neutral
+    clear,
 )
-
-from .spinner import Spinner
 
 from .network import (
     check_internet,
@@ -52,10 +45,6 @@ from .i18n import (
     get_current_language,
 )
 
-from .metadata_fetcher import (
-    MetadataFetcher
-)
-
 from .hooks import (
     QuietLogger,
     get_progress_hook
@@ -67,17 +56,11 @@ __all__ = [
     'color',
     'colored_info',
     'colored_switch',
-    'print_process',
-    'print_info',
-    'print_success',
-    'print_debug',
-    'print_error',
-    'print_neutral',
+    'clear',
     'show_ascii',
     'visit_instagram',
     'visit_github',
     'wait_and_clear_prompt',
-    'Spinner',
     'check_internet',
     'is_valid_youtube_url',
     'is_youtube_music_url',

@@ -5,7 +5,8 @@ Handles embedding of Lyrics, Cover Art, and ID3/MP4 tags.
 import os
 from typing import Optional, Dict, Any, Union
 
-from ..utils.styles import print_error
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
 
 try:
     # Import MP3 & ID3 Handlers
@@ -24,7 +25,7 @@ try:
 except ImportError:
     HAS_MUTAGEN = False
 
-def embed_lyrics(file_path: str, lyrics_text: str, quiet: bool = False) -> bool:
+def embed_lyrics(file_path: str, lyrics_text: str) -> bool:
     """
     Embeds lyrics into the audio file based on its format.
     
@@ -34,11 +35,11 @@ def embed_lyrics(file_path: str, lyrics_text: str, quiet: bool = False) -> bool:
     - FLAC: Uses Vorbis 'LYRICS' comment.
     """
     if not HAS_MUTAGEN:
-        if not quiet: print_error("Mutagen library not found. Cannot embed lyrics.")
+        console.err(Keys.tagger.mutagen_not_found_lyrics)
         return False
 
     if not os.path.exists(file_path):
-        if not quiet: print_error(f"File does not exist: {file_path}")
+        console.err(Keys.tagger.file_not_found(path=file_path))
         return False
         
     ext = os.path.splitext(file_path)[1].lower()
@@ -72,7 +73,7 @@ def embed_lyrics(file_path: str, lyrics_text: str, quiet: bool = False) -> bool:
             return True
             
     except Exception as e:
-        if not quiet: print_error(f"Failed to embed lyrics: {e}")
+        console.err(Keys.tagger.failed_embed_lyrics(error=e))
         return False
         
     return False
@@ -81,8 +82,7 @@ def embed_metadata(
     audio_path: str, 
     thumbnail_path: str, 
     audio_format: str, 
-    metadata: Optional[Dict[str, Any]] = None, 
-    quiet: bool = False
+    metadata: Optional[Dict[str, Any]] = None
 ) -> bool:
     """
     Embeds Cover Art and Extended Metadata (Composer, Album Artist, Year, etc.).
@@ -92,7 +92,7 @@ def embed_metadata(
     - M4A: MP4/iTunes atoms (covr, aART, ©day, etc.)
     """
     if not HAS_MUTAGEN:
-        if not quiet: print_error("Mutagen library not found. Cannot embed metadata.")
+        console.err(Keys.tagger.mutagen_not_found_metadata)
         return False
 
     if not os.path.exists(audio_path):
@@ -202,7 +202,7 @@ def embed_metadata(
             return True
 
     except Exception as e:
-        if not quiet: print_error(f"Metadata embedding error: {e}")
+        console.err(Keys.tagger.metadata_embedding_error(error=e))
         return False
     
     return False

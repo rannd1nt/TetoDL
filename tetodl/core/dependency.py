@@ -7,11 +7,8 @@ import subprocess
 import importlib.util
 import time
 from ..constants import RuntimeConfig, IS_WINDOWS
-from ..utils.i18n import get_text as _
-from ..utils.styles import (
-    print_process, print_success, print_error, 
-    print_info, print_neutral
-)
+from ..utils.i18n_keys import Keys
+from ..utils.console import console
 from .config import save_config
 
 
@@ -19,11 +16,11 @@ def check_python_version():
     """Check if Python version is 3.8 or higher"""
     version = sys.version_info
     if version.major >= 3 and version.minor >= 8:
-        print_success(_("dependency.python_version",
+        console.ok(Keys.dependency.python_version(
             version=f"{version.major}.{version.minor}.{version.micro}"))
         return True
     else:
-        print_error(_("dependency.python_old",
+        console.err(Keys.dependency.python_old(
             version=f"{version.major}.{version.minor}"))
         return False
 
@@ -55,12 +52,12 @@ def check_ffmpeg():
             if result.returncode == 0:
                 version_line = result.stdout.split('\n')[0]
                 version = version_line.split()[2] if len(version_line.split()) > 2 else "unknown"
-                print_success(_("dependency.ffmpeg_version", version=version))
+                console.ok(Keys.dependency.ffmpeg_version(version=version))
                 return True
         except Exception:
             pass
     
-    print_error(_("dependency.ffmpeg_not_found"))
+    console.err(Keys.dependency.ffmpeg_not_found)
     return False
 
 
@@ -75,16 +72,16 @@ def check_python_package(package_name, import_name=None):
             try:
                 module = importlib.import_module(import_name)
                 version = getattr(module, '__version__', 'unknown')
-                print_success(_("dependency.package_installed",
+                console.ok(Keys.dependency.package_installed(
                                 package=package_name, version=version))
             except Exception:
-                print_success(_("dependency.package_simple", package=package_name))
+                console.ok(Keys.dependency.package_simple(package=package_name))
             return True
         else:
-            print_error(_("dependency.package_not_found", package=package_name))
+            console.err(Keys.dependency.package_not_found(package=package_name))
             return False
     except Exception:
-        print_error(_("dependency.package_not_found", package=package_name))
+        console.err(Keys.dependency.package_not_found(package=package_name))
         return False
 
 def verify_platform_compatibility():
@@ -94,7 +91,7 @@ def verify_platform_compatibility():
     Returns (False, ErrorMessage) if unsupported.
     """
     if IS_WINDOWS:
-        return False, _("error.platform.windows_not_supported")
+        return False, Keys.error.platform.windows_not_supported
     return True, None
 
 def get_ytdlp_version_info():
@@ -134,7 +131,7 @@ def get_ytdlp_version_info():
 
 def verify_core_dependencies(check_updates: bool = True):
     """Verify all core dependencies (required)"""
-    print_process(_("dependency.core_verifying"))
+    console.proc(Keys.dependency.core_verifying)
     time.sleep(2)
 
     checks = {
@@ -147,7 +144,7 @@ def verify_core_dependencies(check_updates: bool = True):
     all_passed = all(checks.values())
     
     if all_passed:
-        print_success(_("dependency.core_success"))
+        console.ok(Keys.dependency.core_success)
         if check_updates and checks['yt-dlp']:
             try:
                 is_outdated, current, latest = get_ytdlp_version_info()
@@ -156,50 +153,50 @@ def verify_core_dependencies(check_updates: bool = True):
             except Exception:
                 pass
     else:
-        print_error(_("dependency.core_failed"))
-        print_info(_("dependency.install_missing"))
+        console.err(Keys.dependency.core_failed)
+        console.warn(Keys.dependency.install_missing)
 
         if not checks['ffmpeg']:
-            print_neutral(_("dependency.install_ffmpeg"))
+            console.neutral(Keys.dependency.install_ffmpeg)
         
         if not checks['yt-dlp']:
-            print_neutral(_("dependency.install_ytdlp"))
+            console.neutral(Keys.dependency.install_ytdlp)
         
         if not checks['requests']:
-            print_neutral(_("dependency.install_requests"))
+            console.neutral(Keys.dependency.install_requests)
     
     return all_passed
 
 
 def verify_spotify_dependency():
     """Verify Spotify dependency (optional)"""
-    print_process(_("dependency.checking_spotify"))
+    console.proc(Keys.dependency.checking_spotify)
     time.sleep(1.25)
     
     if check_python_package('spotdl'):
-        print_success(_("dependency.spotify_available"))
+        console.ok(Keys.dependency.spotify_available)
         return True
     else:
-        print_info(_("dependency.spotify_unavailable"))
-        print_info(_("dependency.spotify_install"))
-        print_info(_("dependency.spotify_warning"))
+        console.warn(Keys.dependency.spotify_unavailable)
+        console.warn(Keys.dependency.spotify_install)
+        console.warn(Keys.dependency.spotify_warning)
         return False
 
 def verify_spotify_functional():
     """
     Verify Spotify dependency availability and FUNCTIONALITY (Rate Limit Check).
     """
-    print_process(_("dependency.checking_spotify"))
+    console.proc(Keys.dependency.checking_spotify)
     time.sleep(1)
     
     # 1. Cek Package Terinstall
     if not check_python_package('spotdl'):
-        print_info(_("dependency.spotify_unavailable"))
-        print_info(_("dependency.spotify_install"))
+        console.warn(Keys.dependency.spotify_unavailable)
+        console.warn(Keys.dependency.spotify_install)
         return False
 
     # 2. Cek Fungsionalitas (Rate Limit Check)
-    print_process(_("dependency.spotify_testing"))
+    console.proc(Keys.dependency.spotify_testing)
     
     dummy_track = "https://open.spotify.com/track/2ksyzVfU0WJoBpu8otr4pz?si=9cb9bd5dbfa64f61" 
     
@@ -214,19 +211,19 @@ def verify_spotify_functional():
         output = result.stdout + result.stderr
         
         if "429" in output or "rate" in output or "request limit" in output:
-            print_error(_("dependency.spotify_ratelimited"))
-            print_info(_("dependency.spotify_ratelimit_desc"))
+            console.err(Keys.dependency.spotify_ratelimited)
+            console.warn(Keys.dependency.spotify_ratelimit_desc)
             return False
             
         if result.returncode != 0:
-            print_error(_("dependency.spotify_error_test"))
+            console.err(Keys.dependency.spotify_error_test)
             return False
 
-        print_success(_("dependency.spotify_available"))
+        console.ok(Keys.dependency.spotify_available)
         return True
 
     except Exception:
-        print_error(_("dependency.spotify_error_test"))
+        console.err(Keys.dependency.spotify_error_test)
         return False
     
 def reset_verification():
@@ -234,5 +231,5 @@ def reset_verification():
     RuntimeConfig.VERIFIED_DEPENDENCIES = False
     RuntimeConfig.SPOTIFY_AVAILABLE = False
     save_config()
-    print_success(_("dependency.verification_reset"))
-    print_info(_("dependency.verify_next_run"))
+    console.ok(Keys.dependency.verification_reset)
+    console.warn(Keys.dependency.verify_next_run)

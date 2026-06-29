@@ -7,11 +7,12 @@ from questionary import Choice, Separator
 
 from ..core.cache import get_cache_size
 from ..ui.navigation import navigate_folders, remove_nomedia_file
-from ..utils.styles import (
-    clear, color, menu_style, print_error, print_info, print_success,
-    colored_switch, console
+from ..utils.console import console
+from ..utils.formatters import (
+    clear, color, menu_style, colored_switch, console as rich_console
 )
 from ..utils.i18n import get_language_display_name, get_available_languages, get_text as _
+from ..utils.i18n_keys import Keys
 from ..utils.display import formatted_video_codec
 from ..constants import RuntimeConfig, AUDIO_QUALITY_OPTIONS, VALID_RESOLUTIONS, VALID_CODECS
 from ..utils.files import get_free_space
@@ -66,20 +67,20 @@ def menu_audio_quality():
 
         if choice == "1":
             toggle_audio_quality("mp3")
-            print_success(_('menu.audio_quality.changed', format=color("MP3", 'lgrn')))
+            console.ok(Keys.menu.audio_quality.changed(format=color("MP3", 'lgrn')))
             time.sleep(1)
         elif choice == "2":
             toggle_audio_quality("m4a")
-            print_success(_('menu.audio_quality.changed', format=color("M4A", 'lgrn')))
+            console.ok(Keys.menu.audio_quality.changed(format=color("M4A", 'lgrn')))
             time.sleep(1)
         elif choice == "3":
             toggle_audio_quality("opus")
-            print_success(_('menu.audio_quality.changed', format=color("OPUS", 'lgrn')))
+            console.ok(Keys.menu.audio_quality.changed(format=color("OPUS", 'lgrn')))
             time.sleep(1)
         elif choice == "0" or choice == '':
             return
         else:
-            print_error(_('error.invalid_input'))
+            console.err(Keys.error.invalid_input)
             time.sleep(0.6)
 
 def menu_video_resolution():
@@ -127,18 +128,17 @@ def menu_video_resolution():
             if 1 <= choice_int <= len(VALID_RESOLUTIONS):
                 selected_res = VALID_RESOLUTIONS[choice_int - 1]
                 set_video_resolution(selected_res)
-                print_success(_('config.resolution_changed',
-                                resolution=color(selected_res, 'lgrn')))
+                console.ok(Keys.config.resolution_changed(resolution=color(selected_res, 'lgrn')))
                 time.sleep(1)
             elif choice_int == back_idx:
                 return
             else:
-                print_error(_('error.invalid_input'))
+                console.err(Keys.error.invalid_input)
                 time.sleep(0.6)
         elif choice == '':
             return
         else:
-            print_error(_('error.invalid_input'))
+            console.err(Keys.error.invalid_input)
             time.sleep(0.6)
 
 def menu_video_codec():
@@ -191,18 +191,17 @@ def menu_video_codec():
                 selected_codec = VALID_CODECS[choice_int - 1]
                 set_video_codec(selected_codec)
                 
-                print_success(_('config.codec_changed', 
-                                codec=color(formatted_video_codec(selected_codec), 'lgrn')))
+                console.ok(Keys.config.codec_changed(codec=color(formatted_video_codec(selected_codec), 'lgrn')))
                 time.sleep(1)
             elif choice_int == back_idx:
                 return
             else:
-                print_error(_('error.invalid_input'))
+                console.err(Keys.error.invalid_input)
                 time.sleep(0.6)
         elif choice == '':
             return
         else:
-            print_error(_('error.invalid_input'))
+            console.err(Keys.error.invalid_input)
             time.sleep(0.6)
 
 def prompt_language_selection(force_selection=False):
@@ -284,7 +283,7 @@ def menu_folder():
             )
 
             # Render table ke layar
-            console.print(table)
+            rich_console.print(table)
 
         path_info()
 
@@ -330,7 +329,7 @@ def menu_folder():
             reset_to_defaults()
             clear()
             path_info()
-            print("   " + print_success(_('config.reset_default'), str_only=True))
+            console.ok(Keys.config.reset_default)
             time.sleep(1)
 
         elif choice == "4":
@@ -345,7 +344,7 @@ def menu_settings():
         current_container = getattr(RuntimeConfig, 'VIDEO_CONTAINER', 'mp4')
         current_codec = getattr(RuntimeConfig, 'VIDEO_CODEC', 'default')
 
-        console.print("="*15, f"{_('menu.settings.title')}", "="*15, justify='center', end='\n\n')
+        rich_console.print("="*15, f"{_('menu.settings.title')}", "="*15, justify='center', end='\n\n')
 
         # Simple Mode
         simple_status = colored_switch(RuntimeConfig.SIMPLE_MODE, _('common.active'), _('common.inactive'))
@@ -398,19 +397,19 @@ def menu_settings():
         if choice == "1":
             toggle_simple_mode(not RuntimeConfig.SIMPLE_MODE)
             status = _('config.simple_mode_enabled') if RuntimeConfig.SIMPLE_MODE else _('config.simple_mode_disabled')
-            print_success(status)
+            console.ok(status)
             time.sleep(1)
 
         elif choice == "2":
             toggle_smart_cover(not RuntimeConfig.SMART_COVER_MODE)
             status = _('config.smart_cover_enabled') if RuntimeConfig.SMART_COVER_MODE else _('config.smart_cover_disabled')
-            print_success(status)
+            console.ok(status)
             time.sleep(1)
 
         elif choice == "3":
             toggle_skip_existing(not RuntimeConfig.SKIP_EXISTING_FILES)
             status = _('config.skip_existing_enabled') if RuntimeConfig.SKIP_EXISTING_FILES else _('config.skip_existing_disabled')
-            print_success(status)
+            console.ok(status)
             time.sleep(1)
 
         elif choice == "4":
@@ -421,7 +420,7 @@ def menu_settings():
             new_container = "mkv" if current == "mp4" else "mp4"
             
             if toggle_video_container(new_container):
-                print_success(_('config.container_changed', container=new_container.upper()))
+                console.ok(Keys.config.container_changed(container=new_container.upper()))
             time.sleep(1)
 
         elif choice == "6":
@@ -437,14 +436,14 @@ def menu_settings():
             confirm = input(_('config.confirm_clear_cache')).strip().lower()
             if confirm == _('common.yes'):
                 if clear_cache():
-                    print_success(_('config.cache_deleted'))
+                    console.ok(Keys.config.cache_deleted)
                 else:
-                    print_info(_('config.cache_empty'))
+                    console.warn(Keys.config.cache_empty)
             time.sleep(1)
 
         elif choice == "0" or choice == '':
             return
 
         else:
-            print_error(_('error.invalid_input'))
+            console.err(Keys.error.invalid_input)
             time.sleep(0.6)

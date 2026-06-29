@@ -6,8 +6,9 @@ import glob
 import atexit
 import shutil
 from ..constants import TEMP_DIR
-from ..utils.styles import print_error, print_process, print_info, print_success
-from ..utils.i18n import get_text as _
+from ..utils.console import console
+
+from ..utils.i18n_keys import Keys
 
 class TempManager:
     """Singleton helper for managing temporary files."""
@@ -58,7 +59,7 @@ def move_contents_and_cleanup(source_dir, target_dir):
                 shutil.move(s, d)
                 moved_files.append(d)
             except Exception as e:
-                print_error(f"Failed to move {item}: {e}")
+                console.err(Keys.files.failed_to_move(item=item, error=e))
 
     try:
         os.rmdir(source_dir) 
@@ -84,7 +85,7 @@ def create_zip_archive(source_dir_path):
         zip_path = shutil.make_archive(base_name, 'zip', root_dir=parent_dir, base_dir=base_dir)
         return zip_path
     except Exception as e:
-        print_error(f"Failed to create zip: {e}")
+        console.err(Keys.files.failed_create_zip(error=e))
         return None
 
 def create_zip_archive(source_dir_path):
@@ -93,7 +94,7 @@ def create_zip_archive(source_dir_path):
     Returns the ABSOLUTE PATH to the generated zip file.
     """
     if not os.path.exists(source_dir_path):
-        print_error(f"Zip source not found: {source_dir_path}")
+        console.err(Keys.files.zip_source_not_found(path=source_dir_path))
         return None
 
     abs_source = os.path.abspath(source_dir_path)
@@ -103,7 +104,7 @@ def create_zip_archive(source_dir_path):
     output_base = os.path.join(parent_dir, base_name)
     
     try:
-        print_process(f"Archiving to {base_name}.zip ...")
+        console.proc(Keys.files.archiving_to(name=base_name))
         
         zip_path = shutil.make_archive(
             output_base, 
@@ -113,18 +114,18 @@ def create_zip_archive(source_dir_path):
         )
         
         if os.path.exists(zip_path):
-            print_success(f"Archive created at: {zip_path}")
-            print_success(f"Archive created: {os.path.basename(zip_path)}")
+            console.ok(Keys.files.archive_created_at(path=zip_path))
+            console.ok(Keys.files.archive_created(name=os.path.basename(zip_path)))
             return zip_path
         else:
-            print_error(f"Zip reported success but file missing at: {zip_path}")
+            console.err(Keys.files.zip_success_but_file_missing(path=zip_path))
             return None
 
     except Exception as e:
-        print_error(f"Failed to create zip: {e}")
+        console.err(Keys.files.failed_create_zip(error=e))
         return None
 
-def create_m3u8_playlist(target_dir, playlist_name, file_list, quiet=False):
+def create_m3u8_playlist(target_dir, playlist_name, file_list):
     """
     Create an .m3u8 playlist file containing a list of file_lists.
     """
@@ -143,10 +144,10 @@ def create_m3u8_playlist(target_dir, playlist_name, file_list, quiet=False):
             for filename in file_list:
                 f.write(f"{os.path.basename(filename)}\n")
                 
-        if not quiet: print_success(f"Playlist generated: {os.path.basename(m3u_path)}")
+        console.ok(Keys.files.playlist_generated(name=os.path.basename(m3u_path)))
         return m3u_path
     except Exception as e:
-        if not quiet: print_error(f"Failed to create playlist: {e}")
+        console.err(Keys.files.failed_create_playlist(error=e))
         return None
 
 def remove_nomedia_file(folder_path):
@@ -158,10 +159,10 @@ def remove_nomedia_file(folder_path):
         try:
             os.remove(nomedia_path)
         except Exception as e:
-            print_error(f"Gagal menghapus .nomedia: {e}")
+            console.err(Keys.files.failed_delete_nomedia(error=e))
 
 
-def clean_temp_files(download_folder, video_id, quiet=False):
+def clean_temp_files(download_folder, video_id):
     """
     Clean temporary files after processing (thumbnails, temp files, etc.)
 
@@ -187,13 +188,13 @@ def clean_temp_files(download_folder, video_id, quiet=False):
                         os.remove(file_path)
                         deleted_files.append(os.path.basename(file_path))
                     except Exception as e:
-                        if not quiet: print_error(_('media.temp_clean_error', error=str(e)))
+                        console.err(Keys.media.temp_clean_error(error=str(e)))
 
-        if deleted_files and not quiet:
-            print_process(f"Cleaned {len(deleted_files)} temporary files")
+        if deleted_files:
+            console.proc(Keys.files.cleaned_temp_files(count=len(deleted_files)))
 
     except Exception as e:
-        if not quiet: print_error(_('media.temp_clean_error', error=str(e)))
+        console.err(Keys.media.temp_clean_error(error=str(e)))
 
 def get_free_space(path):
     """Helper to get free space in a human-readable GB format"""

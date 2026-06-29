@@ -7,8 +7,10 @@ from ..constants import (
     CONFIG_PATH, VALID_CONTAINERS, VALID_RESOLUTIONS, REGISTRY_PATH,
     DEFAULT_MUSIC_ROOT, DEFAULT_VIDEO_ROOT, RuntimeConfig, VALID_CODECS
 )
-from ..utils.styles import print_error
+from ..core.models import AppConfig
+from ..utils.console import console
 from ..utils.i18n import set_language, detect_system_language
+from ..utils.i18n_keys import Keys
 
 
 def load_config():
@@ -56,6 +58,46 @@ def load_config():
         set_language(sys_lang)
 
 
+def load_app_config() -> AppConfig:
+    """Return current RuntimeConfig state as a frozen AppConfig."""
+    return AppConfig(
+        music_root=str(RuntimeConfig.MUSIC_ROOT),
+        video_root=str(RuntimeConfig.VIDEO_ROOT),
+        thumbnail_root=str(RuntimeConfig.THUMBNAIL_ROOT),
+        simple_mode=RuntimeConfig.SIMPLE_MODE,
+        async_mode=RuntimeConfig.ASYNC_MODE,
+        quiet=RuntimeConfig.QUIET,
+        smart_cover_mode=RuntimeConfig.SMART_COVER_MODE,
+        no_cover_mode=RuntimeConfig.NO_COVER_MODE,
+        force_crop=RuntimeConfig.FORCE_CROP,
+        thumbnail_format=RuntimeConfig.THUMBNAIL_FORMAT,
+        group_mode=RuntimeConfig.GROUP_MODE,
+        lyrics_mode=RuntimeConfig.LYRICS_MODE,
+        romaji_mode=RuntimeConfig.ROMAJI_MODE,
+        zip_mode=RuntimeConfig.ZIP_MODE,
+        create_m3u=RuntimeConfig.CREATE_M3U,
+        skip_existing_files=RuntimeConfig.SKIP_EXISTING_FILES,
+        max_video_resolution=RuntimeConfig.MAX_VIDEO_RESOLUTION,
+        audio_quality=RuntimeConfig.AUDIO_QUALITY,
+        video_container=RuntimeConfig.VIDEO_CONTAINER,
+        video_codec=RuntimeConfig.VIDEO_CODEC,
+        header_style=RuntimeConfig.HEADER_STYLE,
+        progress_style=RuntimeConfig.PROGRESS_STYLE,
+        language=RuntimeConfig.LANGUAGE,
+        media_scanner_enabled=RuntimeConfig.MEDIA_SCANNER_ENABLED,
+        download_delay=RuntimeConfig.DOWNLOAD_DELAY,
+        max_retries=RuntimeConfig.MAX_RETRIES,
+        retry_delay=RuntimeConfig.RETRY_DELAY,
+        async_workers=RuntimeConfig.ASYNC_WORKERS,
+        daemon_default_temp=RuntimeConfig.DAEMON_DEFAULT_TEMP,
+        daemon_cleanup_interval=RuntimeConfig.DAEMON_CLEANUP_INTERVAL,
+        verified_dependencies=RuntimeConfig.VERIFIED_DEPENDENCIES,
+        spotify_available=RuntimeConfig.SPOTIFY_AVAILABLE,
+        spotify_client_id=RuntimeConfig.SPOTIFY_CLIENT_ID,
+        spotify_client_secret=RuntimeConfig.SPOTIFY_CLIENT_SECRET,
+    )
+
+
 def save_config():
     """Save current configuration to file"""
     cfg = {
@@ -85,7 +127,7 @@ def save_config():
         with open(CONFIG_PATH, "w") as f:
             json.dump(cfg, f, indent=2)
     except Exception:
-        print_error("Gagal menyimpan config.")
+        console.err(Keys.core.failed_save_config)
 
 
 def cleanup_ghost_subfolders():
@@ -318,6 +360,16 @@ def update_language(lang_code: str):
         save_config()
         return True
     return False
+
+
+def add_user_subfolder(root_path: str, folder_name: str):
+    """Track a subfolder under root_path in config for cleanup/audit purposes."""
+    root_key = os.path.abspath(root_path)
+    if root_key not in RuntimeConfig.USER_SUBFOLDERS:
+        RuntimeConfig.USER_SUBFOLDERS[root_key] = []
+    if folder_name not in RuntimeConfig.USER_SUBFOLDERS[root_key]:
+        RuntimeConfig.USER_SUBFOLDERS[root_key].append(folder_name)
+        save_config()
 
 
 def get_language_name(lang_code: str) -> str:

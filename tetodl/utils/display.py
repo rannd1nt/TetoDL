@@ -11,8 +11,10 @@ from ..constants import RuntimeConfig, APP_VERSION, CONFIG_PATH, DATA_DIR
 from ..core import cache
 from ..utils.files import get_free_space
 from ..utils.network import open_url
-from ..utils.styles import print_error, clear, console
+from .formatters import clear, console as rich_console
+from ..utils.console import console
 from ..utils.i18n import get_text as _
+from ..utils.i18n_keys import Keys
 
 
 def show_ascii(filename=None, str_only=False) -> str | None:
@@ -31,7 +33,7 @@ def show_ascii(filename=None, str_only=False) -> str | None:
         if str_only:
             return header_raw
         text = Text(header_raw, style="bold bright_cyan")
-        console.print(text)
+        rich_console.print(text)
         return None
 
     target_file = filename if filename else 'default'
@@ -48,13 +50,13 @@ def show_ascii(filename=None, str_only=False) -> str | None:
     except FileNotFoundError:
         if target_file != 'classic':
             if not str_only:
-                print_error(f"Header '{target_file}' not found. Falling back.")
+                console.err(Keys.ui.header_not_found(file=target_file))
                 pass
             return show_ascii('classic', str_only)
 
     except Exception as e:
         if not str_only:
-            print_error(f"Error tak terduga: {e}")
+            console.err(Keys.ui.unexpected_error(error=e))
         return None
 
 def show_app_info() -> None:
@@ -116,22 +118,22 @@ def show_app_info() -> None:
     table.add_row("Video Settings", f"{container.upper()} | {res} | {codec.upper()}")
 
     # Render
-    console.print()
-    console.print(table)
-    console.print()
+    rich_console.print()
+    rich_console.print(table)
+    rich_console.print()
 
 def visit_instagram():
     """Open Instagram profile"""
     url = "https://www.instagram.com/rannd1nt/"
     if not open_url(url):
-        print_error(f"Failed to Load Content. Visit: {url}")
+        console.err(Keys.ui.failed_load_content(url=url))
 
 
 def visit_github():
     """Open GitHub profile"""
     url = "https://github.com/rannd1nt"
     if not open_url(url):
-        print_error(f"Failed to Load Content. Visit: {url}")
+        console.err(Keys.ui.failed_load_content(url=url))
 
 
 def wait_and_clear_prompt(msg: str = None):

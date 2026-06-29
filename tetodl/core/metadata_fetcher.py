@@ -4,7 +4,8 @@ from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
 from typing import Optional, Dict, Any, Generator
 
-from .styles import print_info
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
 
 class MetadataFetcher:
     """
@@ -335,8 +336,7 @@ class MetadataFetcher:
         self, 
         artist: str, 
         title: str, 
-        romaji: bool = False, 
-        quiet: bool = False
+        romaji: bool = False
     ) -> Optional[str]:
         """
         Scrapes lyrics from Genius.com.
@@ -391,12 +391,12 @@ class MetadataFetcher:
                     for hit in valid_hits:
                         if "Romanized" in hit['result']['title_with_featured']:
                             target_url = hit['result']['url']
-                            if not quiet: print_info(f"Found Romanized lyrics: {hit['result']['title']}")
+                            console.warn(Keys.media.found_romanized_lyrics(title=hit['result']['title']))
                             break
                 
                 if not target_url:
                     target_url = valid_hits[0]['result']['url']
-                    if not quiet: print_info(f"Fetching lyrics from: {valid_hits[0]['result']['title']}")
+                    console.warn(Keys.media.fetching_lyrics_from(title=valid_hits[0]['result']['title']))
 
                 page_resp = requests.get(target_url, headers=self.HEADERS, timeout=10)
                 soup = BeautifulSoup(page_resp.text, 'html.parser')

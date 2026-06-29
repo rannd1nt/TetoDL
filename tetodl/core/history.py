@@ -8,7 +8,8 @@ from datetime import datetime
 
 from ..constants import HISTORY_PATH, RuntimeConfig
 from ..core.registry import registry
-from ..utils.styles import console
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
 
 
 # --- LOAD, SAVE, RESET, ADD  ---
@@ -30,7 +31,7 @@ def save_history():
         with open(HISTORY_PATH, "w") as f:
             json.dump(RuntimeConfig.DOWNLOAD_HISTORY, f, indent=2)
     except Exception as e:
-        console.print(f"[red]Gagal menyimpan history: {e}[/red]")
+        console.err(Keys.core.failed_save_history(error=e))
 
 def reset_history():
     """Clear all download history"""
@@ -40,7 +41,7 @@ def reset_history():
         RuntimeConfig.DOWNLOAD_HISTORY = []
         return True
     except Exception as e:
-        console.print(f"[red]Gagal menghapus history: {e}[/red]")
+        console.err(Keys.core.failed_delete_history(error=e))
         return False
 
 def add_to_history(

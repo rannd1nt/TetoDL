@@ -14,7 +14,7 @@ import questionary
 from ..constants import RuntimeConfig, HISTORY_DISPLAY_LIMIT
 from ..core.registry import registry
 from ..core.history import calculate_stats, load_history, get_history_stats, reset_history
-from ..utils.styles import clear, menu_style, format_duration, format_duration_digital, console
+from ..utils.formatters import clear, menu_style, format_duration, format_duration_digital, console
 from ..utils.processing import get_platform_badge
 
 def render_analytics_view():

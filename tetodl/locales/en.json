@@ -23,7 +23,6 @@
     "unknown": "Unknown",
     "total": "Total"
   },
-
   "menu": {
     "main": {
       "title": "TetoDL by rannd1nt",
@@ -38,7 +37,6 @@
       "about": "About",
       "exit": "Exit"
     },
-
     "settings": {
       "title": "TetoDL Settings",
       "simple_mode": "Simple Mode: {status}",
@@ -71,7 +69,6 @@
       "language": "Current language: {lang}",
       "language_desc": "→ Change application language"
     },
-
     "audio_quality": {
       "title": "Audio Quality Settings",
       "current": "Current: {format} {bitrate}",
@@ -90,8 +87,7 @@
       "opus_desc_3": "→ Larger file size, best fidelity",
       "changed": "Audio quality changed to: {format}"
     },
-
-    "video_resolution":{
+    "video_resolution": {
       "title": "Video Resolution Limit Settings",
       "current": "Current Resolution: {resolution}",
       "select": "Select video resolution:",
@@ -107,7 +103,6 @@
       "save_storage": "Save Storage",
       "slow_connection": "Slow Connection"
     },
-    
     "video_codec": {
       "title": "Video Codec Settings",
       "select": "Select video codec format:",
@@ -118,13 +113,11 @@
       "h265_title": "H.265 (HEVC)",
       "h265_desc": "→ Smaller file size with equal quality\n→ Requires modern device to play\n→ Slower download speed (Re-encoding required)"
     },
-
     "language": {
       "title": "Language Settings",
       "current": "Current language: {lang}",
       "choose": "Select languague:"
     },
-
     "root_folder": {
       "title": "Download Destination Path Settings",
       "change_music": "Change music download path",
@@ -132,7 +125,6 @@
       "reset": "Reset to default",
       "nav_folder_title": "Select download destination folder"
     },
-
     "about": {
       "title": "TetoDL v{version}, by rannd1nt",
       "subtitle": "The author kins Kasane Teto",
@@ -142,7 +134,6 @@
       "instagram": "Visit author's Instagram >"
     }
   },
-
   "download": {
     "youtube": {
       "url_input_ytm": "Youtube/Youtube Music URL: ",
@@ -190,7 +181,6 @@
       "complete_metadata": "Download successful with metadata: {title}",
       "cancelled": "Cancelled."
     },
-
     "spotify": {
       "url_input": "Spotify URL: ",
       "invalid_url": "Invalid Spotify URL.",
@@ -205,7 +195,6 @@
       "install_instruction": "Install with: pip install spotdl",
       "reset_verification_hint": "Or reset verification in Settings menu"
     },
-
     "folder": {
       "select_location": "Select Save Location ({type})",
       "root": "Target: {path}",
@@ -219,7 +208,6 @@
       "not_found": "Subfolder '{name}' not found, removing from config...",
       "choose_again": "Please choose again."
     },
-
     "navigation": {
       "title": "Select Root Folder",
       "current_location": "Current location:",
@@ -232,14 +220,12 @@
       "setted_video": "Video root setted to: {video_root}"
     }
   },
-
   "history": {
     "title": "Download History",
     "empty": "No download history yet.",
     "total_duration": "Total Duration: {duration}",
     "entries": "entries"
   },
-
   "dependency": {
     "title": "TetoDL - First Run Setup",
     "verifying": "Verifying dependencies for the first time...",
@@ -270,7 +256,6 @@
     "verification_reset": "Verification status reset",
     "verify_next_run": "Program will verify again on next run"
   },
-
   "config": {
     "simple_mode_enabled": "Simple Mode enabled.",
     "simple_mode_disabled": "Simple Mode disabled.",
@@ -296,7 +281,6 @@
     "save_failed": "Failed to save config.",
     "language_changed": "Language changed to: {lang}."
   },
-
   "media": {
     "scanning": "Starting media scan...",
     "scan_complete": "Media scan complete...",
@@ -307,12 +291,242 @@
     "thumbnail_error": "Error processing thumbnail: {error}",
     "embed_error": "Error embedding thumbnail: {error}",
     "temp_clean_error": "Error cleaning temp files: {error}",
-    "encoding": "Re-encoding video to {codec} (this might take a while)..."
+    "encoding": "Re-encoding video to {codec} (this might take a while)...",
+    "download_cancelled": "Download cancelled by user.",
+    "cleaning_partial_files": "Cleaning up partial files...",
+    "lyrics_embedded_success": "Lyrics embedded successfully (Genius)",
+    "failed_to_embed_lyrics": "Failed to embed lyrics",
+    "lyrics_not_found_genius": "Lyrics not found on Genius.",
+    "trimming_audio": "Trimming audio: {start}s to {end}s",
+    "trimming_video": "Trimming video: {start}s to {end}s (This may take longer)",
+    "searching_lyrics_for": "Searching lyrics for: {artist} - {title}",
+    "cover_art_found_via": "Cover art found via {source}!",
+    "found_romanized_lyrics": "Found Romanized lyrics: {title}",
+    "fetching_lyrics_from": "Fetching lyrics from: {title}",
+    "stopping_threads": "Stopping threads... (Please wait)",
+    "high_concurrency_warning": "Warning: High concurrency {n} increases risk of IP Ban.",
+    "async_mode": "Async Mode: {count} threads active. Press Ctrl+C to stop.",
+    "all_items_exist": "All items exist in library. Staging folder is empty. Nothing to share.",
+    "scan_skipped": "Scanning Skipped",
+    "termux_tools_missing": "Termux tools missing. Install 'termux-tools' for folder scanning.",
+    "scan_error": "Scan error: {error}",
+    "cannot_create_thumb_dir": "Cannot create thumbnail directory: {error}",
+    "extraction_failed": "Extraction failed: {error}",
+    "playlist_detected": "Playlist detected: {title}",
+    "found_items_processing": "Found {count} items. Processing thumbnails...",
+    "processing_entry": "[{current}/{total}] Processing: {title}",
+    "processed_thumbnails": "Processed {success}/{total} thumbnails.",
+    "processing_cover_for": "Processing cover for: {title}",
+    "thumbnail_saved": "Saved: {name}",
+    "thumbnail_saved_as": "Saved as: {name}",
+    "failed_to_download_thumbnail": "Failed to download thumbnail.",
+    "skipping_item": "Skipping item {index} (Not selected)",
+    "cut_flag_ignored_playlist": "Warning: '--cut' flag is ignored for playlists."
   },
-
   "error": {
     "invalid_input": "Invalid input!",
     "file_check_failed": "Error checking existing files: {error}",
     "documentation_unavailable": "Documentation not yet available."
+  },
+  "cli": {
+    "starting_api_server": "Starting TetoDL API Server on {host}:{port}...",
+    "checking_for_updates": "Checking for updates...",
+    "header_style": "Header style: {style}",
+    "progress_style": "Progress style: {style}",
+    "language_set": "Language: {name}",
+    "delay_set": "Delay: {delay}s",
+    "retries_set": "Retries: {retries}",
+    "media_scanner_status": "Media Scanner {status}.",
+    "media_scanner_note": "Note: Media Scanner only affects Android/Termux.",
+    "share_specify_mode": "To share a group folder, please specify mode: -a (Audio) or -v (Video).",
+    "share_example": "Example: tetodl --share -a --group \"My Folder\"",
+    "group_folder_not_found": "Group folder not found: '{name}'",
+    "searched_in": "Searched in: {path}",
+    "specify_folder_name": "Please specify the folder name to share.",
+    "no_download_history": "No download history found.",
+    "last_download_missing": "Last downloaded file missing.",
+    "archiving_folder": "Archiving folder for temporary share: {name}...",
+    "serving_temp_archive": "Serving Temporary Archive: {name}",
+    "cleaning_temp_archive": "Cleaning up temporary archive...",
+    "cleanup_complete": "Cleanup complete.",
+    "failed_remove_temp_zip": "Failed to remove temp zip: {error}",
+    "failed_to_create_zip": "Failed to create zip archive.",
+    "skipping_zip_creation": "Target is a file, skipping zip creation.",
+    "sharing_group": "Sharing Group: {name}",
+    "cannot_share_path_not_found": "Cannot share: Path not found.",
+    "share_path": "Path: {path}",
+    "share_usage": "Usage: tetodl --share [PATH] or --share -a/-v [--group NAME]",
+    "audio_mode_note": "Note: --resolution and --codec are ignored in Audio mode.",
+    "share_group_folder_error": "To share a group folder, please specify mode: -a (Audio) or -v (Video)."
+  },
+  "maint": {
+    "not_git_repo": "Not a Git repository.",
+    "manual_update_required": "Manual update required (please re-download the source code).",
+    "already_up_to_date": "TetoDL is already up to date.",
+    "found_new_commits": "Found {count} new commit(s)! Updating...",
+    "update_successful": "Update successful! Please restart TetoDL.",
+    "update_failed": "Update failed: {error}",
+    "repo_broken": "Your repository might be broken or incompatible.",
+    "try_reinstall": "Try reinstalling TetoDL using the installer.",
+    "git_not_found": "Command 'git' not found. Please install git.",
+    "uninstaller_script_not_found": "Uninstaller script not found at: {path}",
+    "uninstall_warning": "WARNING: You are about to uninstall TetoDL.",
+    "uninstall_details": "This will remove global shortcuts, the launcher, and the virtual environment.",
+    "invalid_choice_aborting": "Invalid choice. Aborting uninstall.",
+    "alert_permanent_delete": "ALERT: This will permanently delete EVERYTHING. Including your download statistics (Registry) !!",
+    "uninstall_cancelled": "Uninstall cancelled.",
+    "cleaning_user_data": "Cleaning up user data...",
+    "cache_dir_removed": "Cache directory removed",
+    "config_dir_removed": "Config directory removed",
+    "data_dir_removed": "Data directory (History & Registry) removed",
+    "history_file_removed": "History file removed",
+    "registry_kept_safe": "Registry/Stats file kept safe.",
+    "failed_clean_data": "Failed to clean some data: {error}",
+    "launching_uninstaller": "Launching system uninstaller script...",
+    "error_executing_uninstaller": "Error executing uninstaller: {error}",
+    "cache_nothing_to_clean": "Cache: Nothing to clean",
+    "cache_cleared": "Cache cleared.",
+    "nothing_to_clean": "{target}: Nothing to clean",
+    "wipe_registry_warning": "{warning} You are about to wipe the DOWNLOAD REGISTRY.",
+    "will_lose_track": "TetoDL will lose track of ALL downloaded files.",
+    "will_also_reset": "This will also reset: {items}",
+    "reset_cancelled": "Reset cancelled.",
+    "download_history_cleared": "Download history cleared.",
+    "config_reset_to_defaults": "Configuration reset to defaults.",
+    "registry_nuked": "Registry database has been nuked.",
+    "about_to_reset": "You are about to reset: {items}"
+  },
+  "search": {
+    "ytdlp_not_found": "yt-dlp not found.",
+    "search_failed": "Search failed.",
+    "no_results_found": "No results found.",
+    "search_results": "Search Results for '{query}':",
+    "search_error": "Search error: {error}"
+  },
+  "core": {
+    "failed_save_cache": "Failed to save cache.",
+    "failed_delete_cache": "Failed to delete cache: {error}",
+    "failed_save_config": "Failed to save config.",
+    "failed_save_history": "Failed to save history: {error}",
+    "failed_delete_history": "Failed to delete history: {error}"
+  },
+  "dispatch": {
+    "m3u_auto_group": "Notice: '--m3u' automatically enabled '--group' mode.",
+    "no_url_provided": "Error: No URL provided for download.",
+    "moving_files_back": "Moving files back to parent folder...",
+    "moved_files_and_updated": "Moved {count} files and updated registry.",
+    "no_files_moved": "No files moved (Empty or Error).",
+    "cannot_share_path_not_found": "Cannot share: Path not found.",
+    "nothing_to_share": "Nothing to share (Download failed and no existing files found).",
+    "operation_cancelled": "Operation cancelled by user.",
+    "cleaning_temp_files": "Cleaning up temporary files...",
+    "cleanup_complete": "Cleanup complete."
+  },
+  "tagger": {
+    "mutagen_not_found_lyrics": "Mutagen library not found. Cannot embed lyrics.",
+    "file_not_found": "File does not exist: {path}",
+    "failed_embed_lyrics": "Failed to embed lyrics: {error}",
+    "mutagen_not_found_metadata": "Mutagen library not found. Cannot embed metadata.",
+    "metadata_embedding_error": "Metadata embedding error: {error}"
+  },
+  "net": {
+    "file_dir_not_found": "File/Directory not found: {path}",
+    "ports_busy": "All ports from {start} to {end} are busy.",
+    "wsl_nat_warning": "WSL uses a separate network (NAT). Devices on your local Wi-Fi likely CANNOT connect to this IP.",
+    "wsl_share_tip": "Tip: Move the file to Windows (/mnt/c/...) and share from there.",
+    "no_lan_ip": "Cannot detect valid LAN IP. Are you connected to Wi-Fi/Hotspot?",
+    "localhost_only": "Sharing via localhost only (Phone won't connect).",
+    "sharing_started": "TetoDL Sharing started!",
+    "not_git_repo": "Not a git repository. Cannot auto-update.",
+    "pulling_latest": "Pulling latest changes from remote...",
+    "update_successful": "Update successful! Please restart TetoDL.",
+    "git_pull_failed": "Git pull failed. Please check your internet or git status.",
+    "git_command_not_found": "Git command not found. Please install git."
+  },
+  "spot": {
+    "invalid_url": "Invalid Spotify URL.",
+    "no_internet": "No internet connection or connection is unstable.",
+    "simple_mode_download": "Simple Mode: Downloading directly to {path}",
+    "cancelled": "Cancelled.",
+    "type_detected": "Spotify {type} detected",
+    "classification_failed": "URL Classification failed, unknown URL.",
+    "downloading": "Downloading...",
+    "command_debug": "Running command: {command}",
+    "download_complete": "Spotify download complete.",
+    "download_failed": "Download failed.",
+    "error_details": "Error details:",
+    "no_valid_spotdl_method": "Failed to find a valid SpotDL execution method.",
+    "spotdl_binary_path": "Path Binary: {path}",
+    "python_interpreter": "Python Interpreter: {interpreter}"
+  },
+  "files": {
+    "failed_to_move": "Failed to move {item}: {error}",
+    "failed_create_zip": "Failed to create zip: {error}",
+    "zip_source_not_found": "Zip source not found: {path}",
+    "archiving_to": "Archiving to {name}.zip ...",
+    "archive_created_at": "Archive created at: {path}",
+    "archive_created": "Archive created: {name}",
+    "zip_success_but_file_missing": "Zip reported success but file missing at: {path}",
+    "playlist_generated": "Playlist generated: {name}",
+    "failed_create_playlist": "Failed to create playlist: {error}",
+    "failed_delete_nomedia": "Failed to delete .nomedia: {error}",
+    "cleaned_temp_files": "Cleaned {count} temporary files"
+  },
+  "daemon": {
+    "not_configured": "TetoDL daemon is not configured.",
+    "run_setup": "Run 'tetodl daemon --setup' to register a systemd service,",
+    "or_run_manually": "or 'tetodl daemon --run' to start it manually.",
+    "registered_not_running": "TetoDL daemon is registered but not currently running.",
+    "start_with_systemctl": "Start it with:  systemctl --user start tetodl.service",
+    "service_unavailable": "TetoDL daemon service is unavailable.",
+    "could_not_detect_lan_ip": "Could not detect LAN IP address. Are you connected to a network?",
+    "daemon_url": "TetoDL Daemon URL: {url}",
+    "daemon_port": "Port: {port}",
+    "scan_qr": "Scan QR above with your phone camera to open the daemon.",
+    "open_browser": "Open {url} in your browser.",
+    "configuring_systemd": "Configuring systemd user service...",
+    "service_file_created": "Systemd service file created at: {path}",
+    "failed_setup_systemd": "Failed to setup systemd service: {error}",
+    "removing_systemd": "Removing systemd service...",
+    "daemon_not_installed": "TetoDL daemon is not installed.",
+    "daemon_removed": "Daemon service successfully removed.",
+    "failed_remove_systemd": "Failed to remove systemd service: {error}",
+    "mdns_broadcast_active": "mDNS Broadcast active. You can access via: http://{hostname}:{port}",
+    "mdns_broadcast_failed": "mDNS Broadcast failed (Zeroconf might not be supported on this network): {error}"
+  },
+  "ui": {
+    "dependency_update_available": "Dependency Update Available!",
+    "updating_ytdlp": "Updating yt-dlp...",
+    "update_complete": "Update complete!",
+    "update_failed_check_connection": "Update failed. Please check your connection.",
+    "fatal_error_unsupported_platform": "Fatal Error: Unsupported Platform",
+    "no_windows_support": "This application does not support native Windows (CMD/PowerShell).",
+    "use_wsl_or_linux": "Please use WSL2 (Ubuntu/Debian) or Linux/Termux.",
+    "checking_core_engine": "Checking Core Engine (yt-dlp) status...",
+    "core_engine_updated_to": "Core Engine updated to: {version}",
+    "core_engine_up_to_date": "Core Engine is up to date: {version}",
+    "core_engine_installed": "Core Engine installed: {version} (Network check skipped)",
+    "failed_check_engine_version": "Failed to check engine version: {error}",
+    "initializing_language_setup": "Initializing Language Setup...",
+    "detected_system_language": "Detected System Language: {language} | ({code})",
+    "language_set_to": "Language set to: {name}",
+    "selection_cancelled_defaulting": "Selection cancelled. Defaulting to use detected system language: {name}.",
+    "environment_detected": "Environment Detected: {env}",
+    "wsl_detected": "WSL Detected: We recommend saving files to Windows folders",
+    "wsl_file_explorer_access": "So you can access them easily via File Explorer.",
+    "default_download_locations": "Default Download Locations:",
+    "default_paths_applied": "Default paths applied.",
+    "select_custom_music_folder": "Select Custom Music Folder:",
+    "music_path_set_to": "Music Path set to: {path}",
+    "cancelled_default_music_path": "Cancelled. Using default music path.",
+    "select_custom_video_folder": "Select Custom Video Folder:",
+    "video_path_set_to": "Video Path set to: {path}",
+    "cancelled_default_video_path": "Cancelled. Using default video path.",
+    "verification_completed": "Verification Completed!",
+    "access_denied_to": "Access denied to: {path}",
+    "error_reading_folder": "Error reading folder: {error}",
+    "unexpected_error": "Unexpected error: {error}",
+    "failed_load_content": "Failed to Load Content. Visit: {url}",
+    "header_not_found": "Header '{file}' not found. Falling back."
   }
 }

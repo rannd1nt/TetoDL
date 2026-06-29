@@ -6,7 +6,8 @@ import json
 import time
 import hashlib
 from ..constants import CACHE_PATH
-from ..utils.styles import print_error
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
 
 
 def load_cache():
@@ -27,7 +28,7 @@ def save_cache(cache_data):
         with open(CACHE_PATH, "w") as f:
             json.dump(cache_data, f, indent=2)
     except Exception:
-        print_error("Gagal menyimpan cache.")
+        console.err(Keys.core.failed_save_cache)
 
 def reset_cache():
     """Clear and reset all cache metadata"""
@@ -37,7 +38,7 @@ def reset_cache():
             return True
         return True
     except Exception as e:
-        print_error(f"Gagal menghapus cache: {e}")
+        console.err(Keys.core.failed_delete_cache(error=e))
         return False
 
 def get_url_hash(url: str):

@@ -9,7 +9,7 @@ from .thumbnail import (
     download_and_process_thumbnail,
 )
 
-from .tagger import (
+from ..core.tagger import (
     embed_metadata,
     embed_lyrics,
 )

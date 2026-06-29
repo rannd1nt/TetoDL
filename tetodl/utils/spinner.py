@@ -4,7 +4,7 @@ Loading spinner for long operations
 import sys
 import time
 import threading
-from ..utils.styles import Colors
+from .formatters import Colors
 
 
 class Spinner:

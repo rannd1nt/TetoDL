@@ -93,7 +93,6 @@ def format_duration_digital(seconds):
     else:
         return f"{minutes:02d}:{secs:02d}"
 
-# PRINT UTILITY STYLES
 class Colors:
     """ANSI color codes"""
     RESET = '\033[0m'
@@ -106,54 +105,6 @@ class Colors:
     CYAN = '\033[96m'
     LIGHT_GRAY = '\033[37m'
     BOLD = '\033[1m'
-
-
-def print_process(message, str_only=False):
-    """Print untuk proses/progress (biru)"""
-    msg = f"{Colors.BLUE}[i]{Colors.WHITE} {message}"
-    if str_only:
-        return msg
-    print(msg)
-
-
-def print_info(message, str_only=False):
-    """Print untuk info/warning (kuning)"""
-    msg = f"{Colors.YELLOW}[!]{Colors.WHITE} {message}"
-    if str_only:
-        return msg
-    print(msg)
-
-
-def print_success(message, str_only=False):
-    """Print untuk success (hijau)"""
-    msg = f"{Colors.GREEN}[✓]{Colors.WHITE} {message}"
-    if str_only:
-        return msg
-    print(msg)
-
-
-def print_debug(message, str_only=False):
-    """Print untuk debug (light green)"""
-    msg = f"{Colors.LIGHT_GREEN}[DEBUG]{Colors.WHITE} {message}"
-    if str_only:
-        return msg
-    print(msg)
-
-
-def print_error(message, str_only=False):
-    """Print untuk error (merah)"""
-    msg = f"{Colors.RED}[✗]{Colors.WHITE} {message}"
-    if str_only:
-        return msg
-    print(msg)
-
-
-def print_neutral(message, symbol="[+]", str_only=False):
-    """Print untuk pesan netral (putih)"""
-    msg = f"{Colors.WHITE}{symbol} {message}"
-    if str_only:
-        return msg
-    print(msg)
 
 
 def clear():

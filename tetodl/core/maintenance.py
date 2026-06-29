@@ -10,7 +10,9 @@ from ..core.history import reset_history
 from ..core.config import reset_config
 from ..core.cache import reset_cache
 from ..utils.files import TempManager
-from ..utils.styles import print_error, print_success, print_info, print_neutral, color
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
+from ..utils.formatters import color
 
 def get_project_root() -> Path:
     """
@@ -25,11 +27,11 @@ def perform_update() -> bool:
     git_dir = root_dir / ".git"
 
     if not git_dir.exists():
-        print_error("Not a Git repository.")
-        print_info("Manual update required (please re-download the source code).")
+        console.err(Keys.maint.not_git_repo)
+        console.warn(Keys.maint.manual_update_required)
         return False
 
-    # print_info(f"Checking for updates in {root_dir}...")
+    # console.warn(f"Checking for updates in {root_dir}...")
     
     git_env = os.environ.copy()
     git_env["LC_ALL"] = "C"
@@ -44,23 +46,23 @@ def perform_update() -> bool:
         ).decode().strip()
 
         if commits_behind == "0":
-            print_success("TetoDL is already up to date.")
+            console.ok(Keys.maint.already_up_to_date)
             return True
         else:
-            print_info(f"Found {commits_behind} new commit(s)! Updating...")
+            console.warn(Keys.maint.found_new_commits(count=commits_behind))
             
             subprocess.check_call(["git", "pull"], cwd=root_dir, env=git_env)
             
-            print_success("Update successful! Please restart TetoDL.")
+            console.ok(Keys.maint.update_successful)
             return True
 
     except subprocess.CalledProcessError as e:
-        print_error(f"Update failed: {e}")
-        print_info("Your repository might be broken or incompatible.")
-        print_info("Try reinstalling TetoDL using the installer.")
+        console.err(Keys.maint.update_failed(error=e))
+        console.warn(Keys.maint.repo_broken)
+        console.warn(Keys.maint.try_reinstall)
         return False
     except FileNotFoundError:
-        print_error("Command 'git' not found. Please install git.")
+        console.err(Keys.maint.git_not_found)
         return False
 
 def perform_uninstall():
@@ -69,12 +71,12 @@ def perform_uninstall():
     script_path = root_dir / "uninstall.sh"
 
     if not script_path.exists():
-        print_error(f"Uninstaller script not found at: {script_path}")
+        console.err(Keys.maint.uninstaller_script_not_found(path=script_path))
         return
 
     # Warning Header
-    print_info("WARNING: You are about to uninstall TetoDL.")
-    print_info("This will remove global shortcuts, the launcher, and the virtual environment.")
+    console.warn(Keys.maint.uninstall_warning)
+    console.warn(Keys.maint.uninstall_details)
     print()
 
     # Opsi Cleanup Data User
@@ -94,12 +96,12 @@ def perform_uninstall():
     if choice == '2': wipe_mode = "partial"
     elif choice == '3': wipe_mode = "full"
     elif choice != '1':
-        print_neutral("Invalid choice. Aborting uninstall.", "[-]")
+        console.neutral(Keys.maint.invalid_choice_aborting)
         return
 
     print()
     if wipe_mode == "full":
-        print_info("ALERT: This will permanently delete EVERYTHING. Including your download statistics (Registry) !!")
+        console.warn(Keys.maint.alert_permanent_delete)
     
     try:
         confirm = input(f"{color('Are you sure you want to proceed? (y/N) > ', 'y')}").strip().lower()
@@ -108,42 +110,42 @@ def perform_uninstall():
         return
 
     if confirm != 'y':
-        print_neutral("Uninstall cancelled.", "[-]")
+        console.neutral(Keys.maint.uninstall_cancelled)
         return
 
     # --- EXECUTE CLEANUP DATA ---
     if wipe_mode != "none":
-        print_info("Cleaning up user data...")
+        console.warn(Keys.maint.cleaning_user_data)
         try:
             # Delete Cache
             if CACHE_DIR.exists():
                 shutil.rmtree(CACHE_DIR)
-                print_success("Cache directory removed")
+                console.ok(Keys.maint.cache_dir_removed)
 
             # Delete Config
             if CONFIG_DIR.exists():
                 shutil.rmtree(CONFIG_DIR)
-                print_success("Config directory removed")
+                console.ok(Keys.maint.config_dir_removed)
 
             # Logic Data Dir (History & Registry)
             if DATA_DIR.exists():
                 if wipe_mode == "full":
                     shutil.rmtree(DATA_DIR)
-                    print_success("Data directory (History & Registry) removed")
+                    console.ok(Keys.maint.data_dir_removed)
                 else:
                     # Partial: Delete history.json but kept registry.json
                     history_file = DATA_DIR / "history.json"
                     if history_file.exists():
                         os.remove(history_file)
-                        print_success("History file removed")
+                        console.ok(Keys.maint.history_file_removed)
                     
-                    print_info("Registry/Stats file kept safe.")
+                    console.warn(Keys.maint.registry_kept_safe)
 
         except Exception as e:
-            print_error(f"Failed to clean some data: {e}")
+            console.err(Keys.maint.failed_clean_data(error=e))
 
     # --- EXECUTE BASH UNINSTALLER ---
-    print_info("Launching system uninstaller script...")
+    console.warn(Keys.maint.launching_uninstaller)
     
     try:
         subprocess.run(["chmod", "+x", str(script_path)], check=False)
@@ -152,7 +154,7 @@ def perform_uninstall():
         sys.exit(0)
         
     except Exception as e:
-        print_error(f"Error executing uninstaller: {e}")
+        console.err(Keys.maint.error_executing_uninstaller(error=e))
 
 def reset_data(targets: list[str]):
     """
@@ -188,7 +190,7 @@ def reset_data(targets: list[str]):
             except OSError: pass
 
         if not has_garbage:
-            print_info("Cache: Nothing to clean")
+            console.warn(Keys.maint.cache_nothing_to_clean)
         else:
             TempManager.cleanup()
             
@@ -200,7 +202,7 @@ def reset_data(targets: list[str]):
                 try: shutil.rmtree(CACHE_DIR)
                 except OSError: pass
                 
-            print_success("Cache cleared.")
+            console.ok(Keys.maint.cache_cleared)
 
         if len(targets) == 1:
             return
@@ -227,19 +229,19 @@ def reset_data(targets: list[str]):
             nothing_to_clean.append(t)
 
     for t in nothing_to_clean:
-        print_info(f"{t.capitalize()}: Nothing to clean")
+        console.warn(Keys.maint.nothing_to_clean(target=t.capitalize()))
 
     if not valid_targets:
         return
 
     if 'registry' in valid_targets:
         print()
-        print_info(f"{color('Warning:', 'y')} You are about to wipe the DOWNLOAD REGISTRY.")
-        print_info("TetoDL will lose track of ALL downloaded files.")
+        console.warn(f"{color('Warning:', 'y')} You are about to wipe the DOWNLOAD REGISTRY.")
+        console.warn("TetoDL will lose track of ALL downloaded files.")
         
         other_valid = [t for t in valid_targets if t != 'registry']
         if other_valid:
-            print_info(f"This will also reset: {', '.join([t.upper() for t in other_valid])}")
+            console.warn(Keys.maint.will_also_reset(items=', '.join([t.upper() for t in other_valid])))
         
         print()
         
@@ -250,7 +252,7 @@ def reset_data(targets: list[str]):
             return
 
         if confirm not in ['y', 'yes']:
-            print_info("Reset cancelled.")
+            console.warn(Keys.maint.reset_cancelled)
             return
 
         try:
@@ -264,15 +266,15 @@ def reset_data(targets: list[str]):
             
             if 'history' in valid_targets:
                 reset_history()
-                print_success("Download history cleared.")
+                console.ok(Keys.maint.download_history_cleared)
 
             if 'config' in valid_targets:
                 reset_config()
-                print_success("Configuration reset to defaults.")
+                console.ok(Keys.maint.config_reset_to_defaults)
 
             if 'registry' in valid_targets:
                 registry.reset()
-                print_success("Registry database has been nuked.")
+                console.ok(Keys.maint.registry_nuked)
             
         except KeyboardInterrupt:
             sys.stdout.write("\r" + " " * 60 + "\r")
@@ -280,7 +282,7 @@ def reset_data(targets: list[str]):
             return
 
     else:
-        print_info(f"You are about to reset: {', '.join([t.upper() for t in valid_targets])}")
+        console.warn(Keys.maint.about_to_reset(items=', '.join([t.upper() for t in valid_targets])))
         
         try:
             confirm = input(f"{color('Are you sure? (y/N) > ', 'y')}").strip().lower()
@@ -289,13 +291,13 @@ def reset_data(targets: list[str]):
             return
 
         if confirm not in ['y', 'yes']:
-            print_info("Reset cancelled.")
+            console.warn(Keys.maint.reset_cancelled)
             return
 
         if 'history' in valid_targets:
             reset_history()
-            print_success("Download history cleared.")
+            console.ok(Keys.maint.download_history_cleared)
 
         if 'config' in valid_targets:
             reset_config()
-            print_success("Configuration reset to defaults.")
+            console.ok(Keys.maint.config_reset_to_defaults)

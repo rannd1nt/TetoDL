@@ -15,26 +15,19 @@ import webbrowser
 import requests
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from ..utils.i18n import get_text as _
-from ..utils.styles import print_info, print_error, print_success, console
-from ..utils.spinner import Spinner
+from ..utils.i18n_keys import Keys
+from .formatters import console as rich_console
+from ..utils.console import console
 from ..utils.share import create_share_router
 from ..constants import IS_TERMUX, IS_WSL
 
-def check_internet(quiet=False) -> bool:
+def check_internet() -> bool:
     """Check if internet connection is available"""
-    if not quiet:
-        spinner = Spinner(_('download.youtube.checking_internet'))
     try:
-        if not quiet:
-            spinner.start()
-        r = requests.get("https://www.google.com", timeout=5)
-        if not quiet:
-            spinner.stop()
-        return r.status_code == 200
+        with console.spin(Keys.download.youtube.checking_internet):
+            r = requests.get("https://www.google.com", timeout=5)
+            return r.status_code == 200
     except Exception:
-        if not quiet:
-            spinner.stop()
         return False
 
 def open_url(url: str) -> bool:
@@ -125,12 +118,12 @@ def check_firewall_status(port):
         return
 
     if shutil.which("ufw"):
-        console.print(f"\n[dim][Tip] If connection fails, allow port in UFW:[/dim]")
-        console.print(f"[dim cyan]  sudo ufw allow {port}/tcp[/dim cyan]")
+        rich_console.print(f"\n[dim][Tip] If connection fails, allow port in UFW:[/dim]")
+        rich_console.print(f"[dim cyan]  sudo ufw allow {port}/tcp[/dim cyan]")
     
     elif shutil.which("firewall-cmd"):
-        console.print(f"\n[dim][Tip] If connection fails, allow port in FirewallD:[/dim]")
-        console.print(f"[dim cyan]  sudo firewall-cmd --add-port={port}/tcp --temporary[/dim cyan]")
+        rich_console.print(f"\n[dim][Tip] If connection fails, allow port in FirewallD:[/dim]")
+        rich_console.print(f"[dim cyan]  sudo firewall-cmd --add-port={port}/tcp --temporary[/dim cyan]")
 
 
 # --- MAIN SHARING FUNCTION (FastAPI) ---
@@ -139,12 +132,12 @@ def start_share_server(file_path_str: str, start_port=8989):
     path = Path(file_path_str).resolve()
     
     if not path.exists():
-        print_error(f"File/Directory not found: {path}")
+        console.err(Keys.net.file_dir_not_found(path=path))
         return
 
     port = find_free_port(start_port)
     if port is None:
-        print_error(f"All ports from {start_port} to {start_port+10} are busy.")
+        console.err(Keys.net.ports_busy(start=start_port, end=start_port+10))
         return
 
     if IS_WSL:
@@ -153,13 +146,13 @@ def start_share_server(file_path_str: str, start_port=8989):
         ip_address = get_best_ip()
 
     if IS_WSL:
-        console.print(f"\n[bold yellow][!] WSL Environment Detected[/bold yellow]")
-        print_info("WSL uses a separate network (NAT). Devices on your local Wi-Fi likely CANNOT connect to this IP.")
-        print_info("Tip: Move the file to Windows (/mnt/c/...) and share from there.")
+        rich_console.print(f"\n[bold yellow][!] WSL Environment Detected[/bold yellow]")
+        console.warn(Keys.net.wsl_nat_warning)
+        console.warn(Keys.net.wsl_share_tip)
 
     if ip_address.startswith("127.") and not IS_WSL:
-        print_error("Cannot detect valid LAN IP. Are you connected to Wi-Fi/Hotspot?")
-        print_info("Sharing via localhost only (Phone won't connect).")
+        console.err(Keys.net.no_lan_ip)
+        console.warn(Keys.net.localhost_only)
 
     if path.is_file():
         serve_dir = path.parent
@@ -178,40 +171,40 @@ def start_share_server(file_path_str: str, start_port=8989):
     qr.add_data(target_url)
     qr.make(fit=True)
 
-    print_success("TetoDL Sharing started!")
-    console.print()
+    console.ok(Keys.net.sharing_started)
+    rich_console.print()
 
-    console.print(f"Hosting: [cyan]{path.name}[/cyan]")
-    console.print(f"Address: [yellow]{target_url}[/yellow]")
+    rich_console.print(f"Hosting: [cyan]{path.name}[/cyan]")
+    rich_console.print(f"Address: [yellow]{target_url}[/yellow]")
     
     check_firewall_status(port)
     
-    console.print()
+    rich_console.print()
     qr.print_ascii(invert=True) 
     
-    console.print()
-    console.print("[dim]Scan QR above with your phone camera.[/dim]")
-    console.print("[bold red]Press Ctrl+C to stop server.[/bold red]")
+    rich_console.print()
+    rich_console.print("[dim]Scan QR above with your phone camera.[/dim]")
+    rich_console.print("[bold red]Press Ctrl+C to stop server.[/bold red]")
 
     try:
         uvicorn.run(app, host="0.0.0.0", port=port, log_level="error")
     except KeyboardInterrupt:
-        console.print("\n[yellow]Sharing stopped.[/yellow]")
+        rich_console.print("\n[yellow]Sharing stopped.[/yellow]")
         raise KeyboardInterrupt
 
 def perform_update():
     if not os.path.isdir(".git"):
-        print_error("Not a git repository. Cannot auto-update.")
+        console.err(Keys.net.not_git_repo)
         return
 
     try:
-        print_info("Pulling latest changes from remote...")
+        console.warn(Keys.net.pulling_latest)
         subprocess.check_call(["git", "pull"])
-        print_success("Update successful! Please restart TetoDL.")
+        console.ok(Keys.net.update_successful)
     except subprocess.CalledProcessError:
-        print_error("Git pull failed. Please check your internet or git status.")
+        console.err(Keys.net.git_pull_failed)
     except FileNotFoundError:
-        print_error("Git command not found. Please install git.")
+        console.err(Keys.net.git_command_not_found)
 
 def is_forbidden_error(e):
     """Mendeteksi HTTP 403 Forbidden"""

@@ -3,14 +3,10 @@ Spotify downloader
 """
 import os
 import sys
-import time
-import threading
 import subprocess
 from ..constants import RuntimeConfig, SPOTDL_CMD, FFMPEG_CMD, IS_TERMUX
-from ..utils.styles import (
-    print_process, print_info, print_success,
-    print_error, Colors
-)
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
 from ..utils.network import (
     is_valid_spotify_url, classify_spotify_url, check_internet
 )
@@ -23,43 +19,33 @@ from ..ui.navigation import select_download_folder
 def download_spotify(url):
     """Download Spotify tracks, playlists, or albums"""
     if not is_valid_spotify_url(url):
-        print_error("URL Spotify tidak valid.")
+        console.err(Keys.spot.invalid_url)
         return
     if not check_internet():
-        print_error("Tidak ada koneksi internet atau internet kurang stabil.")
+        console.err(Keys.spot.no_internet)
         return
 
     if RuntimeConfig.SIMPLE_MODE:
-        print_process(f"Simple Mode: Download langsung ke {RuntimeConfig.MUSIC_ROOT}")
+        console.proc(Keys.spot.simple_mode_download(path=RuntimeConfig.MUSIC_ROOT))
         target_dir = RuntimeConfig.MUSIC_ROOT
     else:
         target_dir = select_download_folder(RuntimeConfig.MUSIC_ROOT, "music")
         if not target_dir:
-            print_info("Dibatalkan.")
+            console.warn(Keys.spot.cancelled)
             return
 
     url_type = classify_spotify_url(url)
     if url_type != "Unknown":
-        print_process(f"Spotify {url_type} terdeteksi")
+        console.proc(Keys.spot.type_detected(type=url_type))
     else:
-        print_error("URL Classification gagal, URL tidak diketahui.")
+        console.err(Keys.spot.classification_failed)
         return
 
     # Scan target folder to ensure no .nomedia
     if IS_TERMUX:
         remove_nomedia_file(target_dir)
 
-    done = False
-    def spinner():
-        symbols = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]
-        idx = 0
-        while not done:
-            print(f"\r{Colors.BLUE}[i]{Colors.WHITE} Downloading... {symbols[idx]}", end="", flush=True)
-            idx = (idx + 1) % len(symbols)
-            time.sleep(0.1)
-
-    spin_thread = threading.Thread(target=spinner, daemon=True)
-    spin_thread.start()
+    console.proc(Keys.spot.downloading)
 
     base_args = [
         url,
@@ -84,7 +70,7 @@ def download_spotify(url):
 
     for cmd in commands_to_try:
         try:
-            print(f"\n[DEBUG] Running command: {' '.join(cmd)}")
+            console.debug(Keys.spot.command_debug(command=' '.join(cmd)))
             res = subprocess.run(cmd, capture_output=False, text=True)
 
             if res.returncode == 0:
@@ -104,12 +90,10 @@ def download_spotify(url):
             continue
 
 
-    done = True
-    time.sleep(0.2)
-    print("\r" + " " * 50 + "\r", end="")  # Hapus spinner
+
 
     if success:
-        print_success("Download Spotify selesai.")
+        console.ok(Keys.spot.download_complete)
 
         # History & Scan
         url_type = classify_spotify_url(url)
@@ -119,14 +103,14 @@ def download_spotify(url):
             scan_media_files(target_dir)
 
     else:
-        print_error("Download gagal.")
+        console.err(Keys.spot.download_failed)
         if last_error:
-            print_info("Detail Error:")
+            console.warn(Keys.spot.error_details)
             print(last_error.strip())
         else:
-            print_info("Gagal menemukan metode eksekusi SpotDL yang valid.")
-            print_info(f"Path Binary: {SPOTDL_CMD}")
-            print_info(f"Python Interpreter: {sys.executable}")
+            console.warn(Keys.spot.no_valid_spotdl_method)
+            console.warn(Keys.spot.spotdl_binary_path(path=SPOTDL_CMD))
+            console.warn(Keys.spot.python_interpreter(interpreter=sys.executable))
 
         url_type = classify_spotify_url(url)
         add_to_history(False, f"Spotify {url_type} Error", "audio", "Spotify", url_type, 0)
