@@ -5,19 +5,15 @@ import re
 import os
 import socket
 import shutil
-import qrcode
-import uvicorn
 from urllib.parse import quote
 from pathlib import Path
 import subprocess
 import webbrowser
 import requests
-from fastapi import FastAPI
 from ..utils.i18n_keys import Keys
 from tetodl.utils.tracer import trace
 from .formatters import console as rich_console
 from ..utils.console import console
-from ..utils.share import create_share_router
 from ..constants import IS_TERMUX, IS_WSL
 
 @trace
@@ -130,6 +126,11 @@ def check_firewall_status(port):
 # --- MAIN SHARING FUNCTION (FastAPI) ---
 
 def start_share_server(file_path_str: str, start_port=8989):
+    import qrcode
+    import uvicorn
+    from fastapi import FastAPI
+    from ..utils.share import create_share_router
+
     path = Path(file_path_str).resolve()
     
     if not path.exists():
