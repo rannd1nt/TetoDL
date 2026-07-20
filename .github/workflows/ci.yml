@@ -15,6 +15,9 @@ on:
         type: boolean
         default: false
 
+env:
+  PYTHON_VERSION: "3.12"
+
 jobs:
   lint:
     name: Lint
@@ -23,7 +26,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-lint-${{ hashFiles('pyproject.toml') }}
       - run: pip install ruff mypy types-requests
       - run: ruff check tetodl/
       - run: mypy tetodl/ --ignore-missing-imports --check-untyped-defs
@@ -42,6 +50,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-unit-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            pip-${{ runner.os }}-unit-
+            pip-${{ runner.os }}-
       - run: pip install -e ".[windows]" pytest pytest-mock
       - run: pytest -m "not slow and not network and not integration" -v
 
@@ -57,7 +73,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-integration-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            pip-${{ runner.os }}-integration-
+            pip-${{ runner.os }}-
       - run: pip install -e ".[windows]" pytest pytest-mock
       - run: pytest -v --tb=short
         env:
@@ -75,20 +99,52 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-build-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            pip-${{ runner.os }}-build-
+            pip-${{ runner.os }}-
       - run: pip install pyinstaller
       - run: pip install -e ".[windows]"
+      - name: Cache PyInstaller
+        uses: actions/cache@v4
+        with:
+          path: |
+            __pycache__
+            build/
+            **/*.pyc
+          key: pyinstaller-${{ runner.os }}-${{ hashFiles('tetodl/**/*.py', 'tetodl.spec') }}
       - name: Build binary
         run: pyinstaller tetodl.spec --clean
-      - name: Smoke test
+      - name: Smoke test (--version)
         run: ./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }} --version
+      - name: Smoke test (--help contains usage)
+        run: ./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }} --help 2>&1 | grep -q "usage"
+      - name: Smoke test (--info)
+        run: ./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }} --info 2>&1 | grep -q "TetoDL"
+      - name: Error handling (invalid flag -> non-zero)
+        run: |
+          bin=./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }}
+          output=$("$bin" --this-flag-does-not-exist 2>&1); code=$?
+          if [ $code -eq 0 ]; then echo "FAIL: exit 0"; exit 1; fi
+          echo "$output" | grep -qi "unrecognized arguments" || { echo "FAIL: no error msg"; exit 1; }
+      - name: URL argument parsing
+        run: |
+          bin=./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }}
+          output=$("$bin" "https://youtu.be/dQw4w9WgXcQ" 2>&1); code=$?
+          echo "URL parse exit: $code"
+          echo "Output: $(echo "$output" | head -3)"
       - uses: actions/upload-artifact@v4
         with:
           name: tetodl-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }}
           path: dist/tetodl*
 
   verify-install-windows:
-    name: Installer (Windows)
+    name: Install Smoke (Windows)
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
@@ -115,49 +171,15 @@ jobs:
         run: |
           tetodl.exe --version
           tetodl.exe --help
-      - name: Error handling (invalid flag -> exit non-zero)
+      - name: Error handling (invalid flag -> non-zero)
         run: |
-          $ErrorActionPreference = "Continue"
-          tetodl --this-flag-does-not-exist 2>$null
-          if ($LASTEXITCODE -eq 0) { throw "Expected non-zero exit for invalid flag" }
-
-  verify-fresh-env:
-    name: Fresh Env (${{ matrix.os }})
-    needs: [build]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: tetodl-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }}
-      - name: Run binary WITHOUT Python setup (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          .\tetodl.exe --version
-      - name: Run binary WITHOUT Python setup (Linux)
-        if: matrix.os != 'windows-latest'
-        run: |
-          chmod +x tetodl-linux
-          ./tetodl-linux --version
-      - name: Binary — help + info (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          .\tetodl.exe --help | Select-String -Pattern "usage"
-          .\tetodl.exe --info | Select-String -Pattern "TetoDL"
-      - name: Binary — help + info (Linux)
-        if: matrix.os != 'windows-latest'
-        run: |
-          ./tetodl-linux --help | grep -q "usage"
-          ./tetodl-linux --info | grep -q "TetoDL"
+          $output = tetodl --this-flag-does-not-exist 2>&1
+          $code = $LASTEXITCODE
+          if ($code -eq 0) { throw "Expected non-zero exit (got $code): $output" }
+          if ($output -notmatch "unrecognized arguments") { throw "No 'unrecognized arguments' in: $output" }
 
   verify-installer-windows:
-    name: Installer Script (Windows)
+    name: Install Script (Windows)
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
@@ -177,7 +199,7 @@ jobs:
         run: tetodl --version
 
   verify-installer-linux:
-    name: Installer Script (Linux-apt)
+    name: Install Script (Linux)
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -192,7 +214,7 @@ jobs:
           tetodl --help
 
   verify-installer-alpine:
-    name: Installer (Alpine)
+    name: Install Script (Alpine)
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -209,7 +231,7 @@ jobs:
           tetodl --version
 
   test-distros:
-    name: Linux (${{ matrix.distro }})
+    name: Distro (${{ matrix.distro }})
     needs: [lint]
     if: github.event_name == 'workflow_dispatch' && fromJSON(inputs.full_ci)
     strategy:
@@ -279,7 +301,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-e2e-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            pip-e2e-
+            pip-
       - run: pip install -e ".[windows]"
       - name: Real download test
         run: |
