@@ -64,7 +64,7 @@ if BUILD_VARIANT in ("daemon", "full"):
 
 # ── Exclude unused feature libraries ───────────────────────────
 EXCLUDES = [
-    "tkinter", "unittest", "email", "http.server", "pydoc", "test",
+    "tkinter", "unittest", "http.server", "pydoc", "test",
     "venv", "ensurepip",
 ]
 if BUILD_VARIANT == "cli":
