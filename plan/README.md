@@ -339,16 +339,7 @@ def cli():
     return parser
 ```
 
-Binary variants menghasilkan:
-
-| Binary | `rich`/`questionary` | `fastapi`/`uvicorn` | Flags di --help |
-|--------|---------------------|---------------------|-----------------|
-| `tetodl-cli` | ❌ (not bundled) | ❌ (not bundled) | Core only |
-| `tetodl-tui` | ✅ | ❌ | Core + TUI |
-| `tetodl-daemon` | ❌ | ✅ | Core + Daemon |
-| `tetodl` (full) | ✅ | ✅ | Core + TUI + Daemon |
-
-**Source code 100% sama.** Tidak ada `#ifdef`, tidak ada branch compile. PyInstaller build script yang menentukan library mana yang masuk ke bundle.
+Awalnya direncanakan 4 variant binary (CLI, TUI, Daemon, Full) dengan selective bundling. Tapi karena core modules (`formatters.py`, `search.py`) sudah tightly coupled dengan `questionary` dan `rich`, variant separation tidak feasible — semua binary akhirnya jadi "full" (~50 MB Linux, ~70 MB Windows).
 
 ### Graceful Library Degradation
 
@@ -781,9 +772,9 @@ Files affected (dari hasil scan):
 
 ## Phase B — Build & CI/CD
 
-### B1. PyInstaller Packaging — Single Spec, 8 Binaries
+### B1. PyInstaller Packaging — Single Binary
 
-Satu file `tetodl.spec` menghasilkan 8 binary berbeda (4 platform × 4 variant).
+Satu file `tetodl.spec` menghasilkan 1 binary per platform (`tetodl.exe` / `tetodl-linux`). All features bundled.
 
 **Prinsip:** PyInstaller cuma bundle library yang *terinstall* di build machine + yang explicitly di-include di `hiddenimports`. Linux build machine gak punya `av` (PyAV) atau `ffmpeg.exe`, jadi binary Linux gak kebawa kode platform Windows — cuma nyisa beberapa byte Python bytecode di dalam `if IS_WINDOWS:` guard.
 
@@ -885,32 +876,15 @@ exe = EXE(
 Build commands:
 
 ```bash
-# ── Windows Build Machine ──
-set BUILD_VARIANT=cli     && pyinstaller tetodl.spec   → tetodl-cli.exe     (25 MB)
-set BUILD_VARIANT=tui     && pyinstaller tetodl.spec   → tetodl-tui.exe     (40 MB)
-set BUILD_VARIANT=daemon  && pyinstaller tetodl.spec   → tetodl-daemon.exe  (45 MB)
-set BUILD_VARIANT=full    && pyinstaller tetodl.spec   → tetodl.exe         (70 MB)
-
-# ── Linux Build Machine ──
-BUILD_VARIANT=cli    pyinstaller tetodl.spec           → tetodl-cli-linux    (20 MB)
-BUILD_VARIANT=tui    pyinstaller tetodl.spec           → tetodl-tui-linux    (35 MB)
-BUILD_VARIANT=daemon pyinstaller tetodl.spec           → tetodl-daemon-linux (40 MB)
-BUILD_VARIANT=full   pyinstaller tetodl.spec           → tetodl-linux        (50 MB)
+pyinstaller tetodl.spec   → tetodl.exe (Windows, ~70 MB)
+pyinstaller tetodl.spec   → tetodl-linux (Linux, ~50 MB)
 ```
 
-**Ukuran optimal karena:**
-| Binary | ffmpeg.exe | PyAV DLL | rich/fastapi DLL | Total |
-|--------|-----------|---------|-----------------|-------|
-| `tetodl-cli.exe` | ❌ | ❌ | ❌ | **~25 MB** |
-| `tetodl-tui.exe` | ❌ | ❌ | ✅ TUI | **~40 MB** |
-| `tetodl-daemon.exe` | ❌ | ❌ | ✅ Daemon | **~45 MB** |
-| `tetodl.exe` | ✅ 40 MB | ✅ 5 MB | ✅ All | **~70 MB** |
-| `tetodl-cli-linux` | ❌ | ❌ | ❌ | **~20 MB** |
-| `tetodl-tui-linux` | ❌ | ❌ | ✅ TUI | **~35 MB** |
-| `tetodl-daemon-linux` | ❌ | ❌ | ✅ Daemon | **~40 MB** |
-| `tetodl-linux` | ❌ | ❌ | ✅ All | **~50 MB** |
-
-**tldr:** Satu source code. 8 binary. Gak ada library/platform tools yang nyasar ke binary yang gak butuh.
+**Ukuran:**
+| Binary | ffmpeg.exe | PyAV | All libs | Total |
+|--------|-----------|------|----------|-------|
+| `tetodl.exe` | ✅ 40 MB | ✅ 5 MB | ✅ | **~70 MB** |
+| `tetodl-linux` | ❌ | ❌ | ✅ | **~50 MB** |
 
 ### B2. GitHub Actions Workflow
 
@@ -1185,13 +1159,9 @@ jobs:
 
   # ── Tier 4a: Windows binary install + shell PATH test ──────────────
   verify-install-windows:
-    name: Win Install (${{ matrix.variant }})
+    name: Installer (Windows)
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: [cli, tui, daemon, full]
     runs-on: windows-latest
     defaults:
       run:
@@ -1204,7 +1174,7 @@ jobs:
         run: |
           $installDir = "$env:LOCALAPPDATA\TetoDL"
           New-Item -ItemType Directory -Path $installDir -Force | Out-Null
-          Move-Item -Path "tetodl-${{ matrix.variant }}.exe" -Destination "$installDir\tetodl.exe" -Force
+          Move-Item -Path "tetodl.exe" -Destination "$installDir\tetodl.exe" -Force
           echo "$installDir" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
       - name: Smoke test — PowerShell
         run: |
@@ -1368,7 +1338,7 @@ jobs:
       - name: Test binary — shell compatibility
         run: |
           pip install pyinstaller
-          BUILD_VARIANT=full pyinstaller tetodl.spec --clean
+          pyinstaller tetodl.spec --clean
 
           # bash
           ./dist/tetodl-linux --version
@@ -1381,8 +1351,7 @@ jobs:
 
       - name: Test install.sh script (non-interactive)
         run: |
-          # simulate headless install — pilih binary mode (option 2)
-          echo "2" | bash install.sh 2>&1
+          bash install.sh 2>&1
 
           export PATH="$HOME/.local/bin:$PATH"
 
@@ -1390,18 +1359,6 @@ jobs:
           bash -c 'tetodl --version'
           zsh -c 'tetodl --version'
           fish -c 'tetodl --version'
-
-      - name: Binary — all flag combos smoke test
-        run: |
-          # Test that each variant's CLI is properly wired
-          for variant in cli tui daemon full; do
-            BUILD_VARIANT=$variant pyinstaller tetodl.spec --clean --noconfirm
-            ./dist/tetodl${variant:+-$variant}-linux --version
-            ./dist/tetodl${variant:+-$variant}-linux --help 2>&1 | head -5
-            ./dist/tetodl${variant:+-$variant}-linux --info 2>&1 | head -5
-            # verify each variant doesn't load unused feature imports
-            ./dist/tetodl${variant:+-$variant}-linux --info 2>&1 | grep -i "variant: $variant"
-          done
 
   e2e:
     name: E2E (Real URLs)
@@ -1754,7 +1711,7 @@ Download langsung dari GitHub Releases tanpa installer interaktif:
 | Interaktif? | ✅ | ❌ | ❌ |
 | Update app | Download ulang | `pip install --upgrade` | Download ulang |
 | Update yt-dlp | Built-in override | `pip install --upgrade` | Built-in override |
-| Size | ~25-70 MB | ~15 MB + Python | ~25-70 MB |
+| Size | ~50-70 MB | ~15 MB + Python | ~50-70 MB |
 
 ---
 
@@ -1779,7 +1736,7 @@ Download langsung dari GitHub Releases tanpa installer interaktif:
 ```
 Binary startup dengan --update flag
   ↓
-Detect platform (windows/linux) + variant (cli/tui/daemon/full)
+Detect platform (windows/linux)
   ↓
 Download {binary}.new dari GitHub Releases
   ↓
@@ -1876,14 +1833,7 @@ Naming convention:
 
 ### Graceful Degradation Matrix
 
-| Code Path | CLI-only binary | CLI+TUI binary | CLI+Daemon binary | Full binary |
-|-----------|----------------|----------------|-------------------|-------------|
-| `import rich` | ❌ → PlainTheme | ✅ | ❌ → PlainTheme | ✅ |
-| `import questionary` | ❌ → simple input() | ✅ | ❌ → simple input() | ✅ |
-| `import fastapi` | ❌ → "Daemon unavailable" | ❌ → "Daemon unavailable" | ✅ | ✅ |
-| `import av` (Windows) | ❌ → fallback subprocess | ❌ → fallback subprocess | ❌ → fallback subprocess | ✅ |
-
-Semua fallback memastikan **app tidak crash** — hanya fitur yang tidak tersedia.
+**Catatan:** Awalnya direncanakan 4 variant binary dengan selective bundling + graceful degradation. Tapi karena core modules (`formatters.py`, `search.py`) sudah tightly coupled dengan `questionary`/`rich`, variant separation tidak feasible. Semua binary sekarang build sebagai "full" — seluruh fitur terbundle. Lazy import tetap dipakai untuk `pip install` tanpa extra opsional.
 
 ---
 
@@ -1902,7 +1852,7 @@ Semua fallback memastikan **app tidak crash** — hanya fitur yang tidak tersedi
 | 9 | `tetodl/utils/network.py` | Modified | `os.startfile()` for Windows URL opening |
 | 10 | `tetodl/daemon/service.py` | Modified | IS_WINDOWS guard on systemd functions |
 | 11 | `tetodl/daemon/display.py` | Modified | IS_WINDOWS guard on systemctl check |
-| 12 | `tetodl.spec` | **New** | PyInstaller config with ffmpeg bundling + build variants |
+| 12 | `tetodl.spec` | **New** | PyInstaller config with ffmpeg bundling + all features |
 | 13 | `.github/workflows/ci.yml` | **New** | Full CI/CD: lint → unit test → integration test → build → release |
 | 14 | `install.ps1` | **New** | Windows binary installer (interactive, one-liner, no deps) |
 | 15 | `tetodl.sh` | Deprecated | Replaced by pip install + Linux binary installer |
