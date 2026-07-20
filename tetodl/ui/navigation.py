@@ -7,7 +7,7 @@ import questionary
 from questionary import Choice, Separator
 from rich.padding import Padding
 from rich.text import Text
-from ..constants import RuntimeConfig
+from ..core import config as cfg
 from ..ui.components import header
 from ..utils.i18n import get_text as _
 from ..utils.console import console
@@ -123,7 +123,7 @@ def select_download_folder(root_dir, type_key='Unknown'):
     Download folder selection yang terikat pada PATH (root_dir).
     Menggunakan Questionary & Rich UI.
     """
-    if RuntimeConfig.SIMPLE_MODE:
+    if cfg.simple_mode:
         return root_dir
         
     cleanup_ghost_subfolders()
@@ -145,7 +145,7 @@ def select_download_folder(root_dir, type_key='Unknown'):
             ))
 
         path_info()
-        current_subfolders = RuntimeConfig.USER_SUBFOLDERS.get(root_key, [])
+        current_subfolders = cfg.user_subfolders.get(root_key, [])
         
         choices = []
 
@@ -226,11 +226,11 @@ def select_download_folder(root_dir, type_key='Unknown'):
                 os.makedirs(new_path, exist_ok=True)
                 remove_nomedia_file(new_path)
 
-                if root_key not in RuntimeConfig.USER_SUBFOLDERS:
-                    RuntimeConfig.USER_SUBFOLDERS[root_key] = []
+                if root_key not in cfg.user_subfolders:
+                    cfg.user_subfolders[root_key] = []
                 
-                if name.strip() not in RuntimeConfig.USER_SUBFOLDERS[root_key]:
-                    RuntimeConfig.USER_SUBFOLDERS[root_key].append(name.strip())
+                if name.strip() not in cfg.user_subfolders[root_key]:
+                    cfg.user_subfolders[root_key].append(name.strip())
                     save_config()
 
                 return new_path
@@ -261,12 +261,12 @@ def select_download_folder(root_dir, type_key='Unknown'):
                 console.warn(Keys.download.folder.not_found(name=selected_folder))
                 
                 # Hapus shortcut mati ini dari config
-                if root_key in RuntimeConfig.USER_SUBFOLDERS:
+                if root_key in cfg.user_subfolders:
                     try:
-                        RuntimeConfig.USER_SUBFOLDERS[root_key].remove(selected_folder)
+                        cfg.user_subfolders[root_key].remove(selected_folder)
                         # Hapus key dictionary jika list jadi kosong (bersih-bersih)
-                        if not RuntimeConfig.USER_SUBFOLDERS[root_key]:
-                            del RuntimeConfig.USER_SUBFOLDERS[root_key]
+                        if not cfg.user_subfolders[root_key]:
+                            del cfg.user_subfolders[root_key]
                         save_config()
                     except ValueError:
                         pass # Sudah terhapus duluan

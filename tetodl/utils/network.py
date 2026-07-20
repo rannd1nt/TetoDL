@@ -6,7 +6,6 @@ import os
 import socket
 import shutil
 import qrcode
-import threading
 import uvicorn
 from urllib.parse import quote
 from pathlib import Path
@@ -14,19 +13,21 @@ import subprocess
 import webbrowser
 import requests
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from ..utils.i18n_keys import Keys
+from tetodl.utils.tracer import trace
 from .formatters import console as rich_console
 from ..utils.console import console
 from ..utils.share import create_share_router
 from ..constants import IS_TERMUX, IS_WSL
 
+@trace
 def check_internet() -> bool:
     """Check if internet connection is available"""
     try:
         with console.spin(Keys.download.youtube.checking_internet):
             r = requests.get("https://www.google.com", timeout=5)
-            return r.status_code == 200
+            result = r.status_code == 200
+            return result
     except Exception:
         return False
 
@@ -214,18 +215,22 @@ def is_forbidden_error(e):
 def is_connection_error(e):
     pass
 
+@trace
 def is_valid_youtube_url(url: str) -> bool:
     """Check if URL is a valid YouTube/YouTube Music URL"""
     youtube_patterns = [
         r'https?://(www\.)?(youtube\.com|youtu\.be)/.+',
         r'https?://(www\.)?music\.youtube\.com/.+'
     ]
-    return any(re.match(pattern, url) for pattern in youtube_patterns)
+    result = any(re.match(pattern, url) for pattern in youtube_patterns)
+    return result
 
 
+@trace
 def is_youtube_music_url(url: str) -> bool:
     """Check if URL is from YouTube Music"""
-    return 'music.youtube.com' in url
+    result = 'music.youtube.com' in url
+    return result
 
 
 def classify_youtube_url(url: str) -> dict:
@@ -248,22 +253,3 @@ def classify_youtube_url(url: str) -> dict:
         result['type'] = 'video'
     
     return result
-
-
-def is_valid_spotify_url(url: str) -> bool:
-    """Check if URL is a valid Spotify URL"""
-    return re.match(r'https?://open\.spotify\.com/.+', url) is not None
-
-
-def classify_spotify_url(url: str) -> str:
-    """
-    Classify Spotify URL into 'playlist', 'album', 'track', or 'unknown'
-    """
-    if 'open.spotify.com/playlist/' in url:
-        return "Playlist"
-    elif 'open.spotify.com/album/' in url:
-        return "Album"
-    elif 'open.spotify.com/track/' in url:
-        return "Single Track"
-    else:
-        return "Unknown"

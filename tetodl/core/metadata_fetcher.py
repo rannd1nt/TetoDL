@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any, Generator
 
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
+from tetodl.utils.tracer import trace, traced
 
 class MetadataFetcher:
     """
@@ -295,15 +296,15 @@ class MetadataFetcher:
                 continue
         return None
 
+    @trace
     def fetch_metadata(self, artist: str, title: str) -> Optional[Dict[str, Any]]:
         """
         Orchestrates the metadata fetching strategy.
-        
+
         1. Attempts to fetch from iTunes first (preferred for standardized tags).
         2. If iTunes succeeds, attempts to enrich data (composers, dates) via Genius.
         3. If iTunes fails, falls back completely to Genius.
         """
-        
         itunes_data = self.fetch_cover_itunes(artist, title)
 
         if itunes_data:
@@ -326,22 +327,25 @@ class MetadataFetcher:
                     itunes_data['source'] = 'iTunes + Genius (Rich)'
             except Exception:
                 pass
-            
-            return itunes_data
 
-        else:
-            return self.fetch_cover_genius(artist, title)
+            with traced('iTunes success'):
+                return itunes_data
 
+        with traced('iTunes failed, fallback to Genius'):
+            result = self.fetch_cover_genius(artist, title)
+            return result
+
+    @trace
     def fetch_lyrics_genius(
-        self, 
-        artist: str, 
-        title: str, 
+        self,
+        artist: str,
+        title: str,
         romaji: bool = False
     ) -> Optional[str]:
         """
         Scrapes lyrics from Genius.com.
-        
-        Features strict validation to ensure the lyrics match the requested 
+
+        Features strict validation to ensure the lyrics match the requested
         artist/title, and supports Romanized lyrics search for non-English tracks.
         """
         target_compare_title = self._clean_title(title, artist)
@@ -407,12 +411,15 @@ class MetadataFetcher:
                     for div in lyrics_divs:
                         for br in div.find_all("br"): br.replace_with("\n")
                         lyrics_text += div.get_text() + "\n\n"
-                    
-                    return self._clean_genius_lyrics(lyrics_text)
-                    
+
+                    cleaned = self._clean_genius_lyrics(lyrics_text)
+                    with traced(f'lyrics found ({len(cleaned)} chars)'):
+                        return cleaned
+
             except Exception:
                 continue
 
-        return None
+        with traced('no lyrics found'):
+            return None
 
 fetcher = MetadataFetcher()

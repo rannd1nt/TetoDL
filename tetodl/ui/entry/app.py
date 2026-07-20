@@ -2,9 +2,8 @@
 App: The main application controller.
 """
 import sys
-import time
 
-from tetodl.constants import RuntimeConfig, IS_TERMUX
+from tetodl.constants import IS_TERMUX
 
 from . import bootstrap
 from . import menu
@@ -20,8 +19,6 @@ from tetodl.cli.parser import cli
 from tetodl.core.models import CliDownload, CliSearch, CliMenu, DownloadSession
 from tetodl.core.config import save_config, load_app_config
 from tetodl.core.search import perform_youtube_search
-
-from tetodl.downloaders.spotify import download_spotify
 
 class App:
     """
@@ -93,36 +90,28 @@ class App:
             self._interactive_dl("yt_video", _dl)
 
         elif choice == "3":
-            if RuntimeConfig.SPOTIFY_AVAILABLE:
-                self._interactive_dl("spotify", download_spotify, use_thread=False)
-            else:
-                clear(); header()
-                console.err(Keys.download.spotify.not_available)
-                console.warn(Keys.download.spotify.install_instruction)
-                time.sleep(3.5)
-
-        elif choice == "4":
             from tetodl.ui.settings import menu_folder
             clear(); header(); menu_folder()
 
-        elif choice == "5":
+        elif choice == "4":
             from tetodl.ui.settings import menu_settings
             clear(); header(); menu_settings()
 
-        elif choice == "6":
+        elif choice == "5":
             from tetodl.ui.analytics import display_history
             clear(); header(); display_history()
 
-        elif choice == "7":
+        elif choice == "6":
             from tetodl.ui.about import menu_about
             clear(); header(); menu_about()
 
-        elif choice == "8":
+        elif choice == "7":
             self._exit_app()
 
         else:
             if IS_TERMUX:
                 console.err(Keys.error.invalid_input)
+                import time
                 time.sleep(0.6)
 
     def _interactive_dl(self, title_key, dl_func, use_thread=True):
@@ -148,7 +137,6 @@ class App:
         """Clean exit."""
         clear()
         save_config()
-        console.neutral(Keys.menu.main.exit)
-        sys.exit(0)
+        console.exit(Keys.menu.main.exit)
 
 app = App()

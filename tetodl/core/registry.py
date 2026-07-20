@@ -2,6 +2,7 @@
 import os
 import json
 from ..constants import REGISTRY_PATH
+from tetodl.utils.tracer import trace, traced
 
 class RegistryManager:
     def __init__(self):
@@ -55,16 +56,18 @@ class RegistryManager:
         
         self.save()
 
+    @trace
     def check_existing(self, video_id, content_type, target_folder):
         """
         Cek apakah ID ini ada file fisiknya di folder target spesifik?
         Sekaligus membersihkan path sampah (file yg udah dihapus user).
-        
+
         Returns:
             (bool, dict_metadata_if_found)
         """
         if not video_id or video_id not in self.data:
-            return False, None
+            with traced('not found'):
+                return False, None
 
         c_type = 'audio' if 'audio' in content_type.lower() or 'music' in content_type.lower() else 'video'
         

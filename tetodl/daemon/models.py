@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Union
+from typing import Optional, Union
 
 class DownloadRequest(BaseModel):
     url: Optional[str] = Field(None, description="Media URL to download")

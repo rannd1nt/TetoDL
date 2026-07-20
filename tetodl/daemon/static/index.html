@@ -733,7 +733,6 @@ return;
 }
 
 let hasProcessing=false;
-window._taskDirs={};
 keys.forEach(id=>{
 const t=tasks[id];
 const badgeCls=t.status==='processing'?'processing':t.status.startsWith('error')?'error':'completed';
@@ -742,12 +741,15 @@ if(t.status==='processing')hasProcessing=true;
 let actions='';
 if(t.status==='completed'&&t.file_path){
 const enc=encodeURIComponent(t.file_path);
-if(t.is_dir)window._taskDirs[t.file_path]=true;
 if(t.file_path.match(/\.zip$/i)){
 actions+=`<button class="btn btn-success btn-sm" onclick="downloadFile('${enc}')">Download ZIP</button> `;
-actions+=`<button class="btn btn-secondary btn-sm" onclick="viewTask('${enc}')">View</button>`;
+actions+=`<a href="${API}/share/player?path=${enc}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">View</a>`;
+}else if(/\.(jpg|jpeg|png|gif|webp)$/i.test(t.file_path)){
+actions+=`<a href="${API}/share/stream?path=${enc}" target="_blank" rel="noopener" class="btn btn-success btn-sm">View</a>`;
+}else if(t.is_dir){
+actions+=`<a href="${API}/share/browse_html?path=${enc}&root=${enc}" target="_blank" rel="noopener" class="btn btn-success btn-sm">View</a>`;
 }else{
-actions+=`<button class="btn btn-success btn-sm" onclick="viewTask('${enc}')">View</button>`;
+actions+=`<a href="${API}/share/player?path=${enc}" target="_blank" rel="noopener" class="btn btn-success btn-sm">View</a>`;
 }
 }
 
@@ -794,24 +796,6 @@ if(!el)return;
 el.innerHTML=sanitizeLog(data.logs)||'<span style="color:var(--text-muted)">(empty)</span>';
 el.scrollTop=el.scrollHeight;
 }catch(_){}
-}
-
-function _isImageExt(path){
-return /\.(jpg|jpeg|png|gif|webp)$/i.test(path);
-}
-
-function viewTask(encPath){
-const path=decodeURIComponent(encPath);
-if(_isImageExt(path)){
-window.open(`${API}/share/stream?path=${encPath}`,'_blank');
-}else{
-const isDir=window._taskDirs&&window._taskDirs[path];
-if(isDir){
-window.open(`${API}/share/browse_html?path=${encPath}&root=${encPath}`,'_blank');
-}else{
-window.open(`${API}/share/player?path=${encPath}`,'_blank');
-}
-}
 }
 
 setInterval(pollTasks,4000);

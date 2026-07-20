@@ -1,10 +1,8 @@
-import os
 import sys
-import shutil
 from threading import Thread
 import threading
 
-from ..constants import RuntimeConfig
+from ..core import config as cfg
 from ..utils.i18n import get_text as _
 from ..utils.display import show_ascii
 from ..utils.formatters import Colors, console, clear
@@ -17,7 +15,7 @@ def run_in_thread(fn, *args, **kwargs):
 
 def header():
     # reccomended size: stretch 35x16
-    current_style = getattr(RuntimeConfig, 'HEADER_STYLE', 'default')
+    current_style = getattr(cfg, 'header_style', 'default')
     show_ascii(current_style)
     
     title = _('menu.main.title')

@@ -1,19 +1,48 @@
 """
-Dependency verification system
+Dependency verification system.
+
+Provides functions to verify that the runtime environment meets all
+requirements: Python version, FFmpeg availability, importable Python
+packages, and platform compatibility.
+
+See Also
+--------
+:func:`verify_core_dependencies` : Orchestrate all dependency checks.
+:class:`tetodl.core.resolver.ConfigResolver` : Configuration resolution.
 """
 import sys
 import requests
 import subprocess
 import importlib.util
 import time
-from ..constants import RuntimeConfig, IS_WINDOWS
+from ..constants import IS_WINDOWS
 from ..utils.i18n_keys import Keys
 from ..utils.console import console
-from .config import save_config
+from . import config as cfg
 
 
 def check_python_version():
-    """Check if Python version is 3.8 or higher"""
+    """
+    Verify that the Python interpreter is version 3.8 or higher.
+
+    Compares ``sys.version_info`` against (3, 8) and prints a success
+    or error message through the console.
+
+    Returns
+    -------
+    bool
+        ``True`` if Python >= 3.8, ``False`` otherwise.
+
+    Examples
+    --------
+    >>> check_python_version()
+    True
+
+    See Also
+    --------
+    :data:`sys.version_info` : Standard library version tuple.
+    :func:`check_command_exists` : Lookup external executables.
+    """
     version = sys.version_info
     if version.major >= 3 and version.minor >= 8:
         console.ok(Keys.dependency.python_version(
@@ -26,7 +55,35 @@ def check_python_version():
 
 
 def check_command_exists(command):
-    """Check if a command exists in PATH"""
+    """
+    Determine whether an executable is present on ``PATH``.
+
+    Runs ``which <command>`` via :class:`subprocess` and returns
+    ``True`` if the return code is zero.  Exceptions (timeout,
+    ``FileNotFoundError``, etc.) are silently caught.
+
+    Parameters
+    ----------
+    command : str
+        Name of the executable to look up (e.g. ``'ffmpeg'``).
+
+    Returns
+    -------
+    bool
+        ``True`` if the command is found, ``False`` otherwise.
+
+    Examples
+    --------
+    >>> check_command_exists("python3")
+    True
+    >>> check_command_exists("nonexistent")
+    False
+
+    See Also
+    --------
+    :func:`check_ffmpeg` : Check FFmpeg specifically.
+    :func:`python:shutil.which` : Alternative pure-Python lookup.
+    """
     try:
         result = subprocess.run(
             ['which', command],
@@ -40,7 +97,29 @@ def check_command_exists(command):
 
 
 def check_ffmpeg():
-    """Check if FFmpeg is installed"""
+    """
+    Verify that FFmpeg is installed and print its version.
+
+    Delegates to :func:`check_command_exists` and then runs
+    ``ffmpeg -version`` to extract the version string.  Prints the
+    version or an error message through the console.
+
+    Returns
+    -------
+    bool
+        ``True`` if FFmpeg is available and ran successfully,
+        ``False`` otherwise.
+
+    Examples
+    --------
+    >>> check_ffmpeg()
+    True
+
+    See Also
+    --------
+    :func:`check_command_exists` : Underlying PATH lookup.
+    :func:`check_python_package` : Check Python package imports.
+    """
     if check_command_exists('ffmpeg'):
         try:
             result = subprocess.run(
@@ -62,7 +141,39 @@ def check_ffmpeg():
 
 
 def check_python_package(package_name, import_name=None):
-    """Check if a Python package is installed"""
+    """
+    Verify that a Python package is importable and report its version.
+
+    Uses :func:`importlib.util.find_spec` to locate the package and
+    :func:`importlib.import_module` to load its ``__version__``.
+    Prints status through the console.
+
+    Parameters
+    ----------
+    package_name : str
+        Display name of the package (e.g. ``'yt-dlp'``).
+    import_name : str, optional
+        Actual import name if it differs from ``package_name``
+        (e.g. ``'yt_dlp'`` when the package is ``'yt-dlp'``).
+        Defaults to ``package_name``.
+
+    Returns
+    -------
+    bool
+        ``True`` if the package can be imported, ``False`` otherwise.
+
+    Examples
+    --------
+    >>> check_python_package("requests")
+    True
+    >>> check_python_package("yt-dlp", "yt_dlp")
+    True
+
+    See Also
+    --------
+    :func:`importlib.util.find_spec` : Standard import spec finder.
+    :func:`check_command_exists` : Check external executables.
+    """
     if import_name is None:
         import_name = package_name
     
@@ -86,9 +197,30 @@ def check_python_package(package_name, import_name=None):
 
 def verify_platform_compatibility():
     """
-    Check if the current platform is supported.
-    Returns (True, None) if supported.
-    Returns (False, ErrorMessage) if unsupported.
+    Verify that the current operating system is supported.
+
+    On Windows the function returns an error; all other platforms
+    are considered compatible.
+
+    Returns
+    -------
+    tuple[bool, str | None]
+        ``(True, None)`` if the platform is supported.
+        ``(False, error_message)`` if unsupported, where
+        ``error_message`` is a localised key from ``Keys``.
+
+    Examples
+    --------
+    >>> ok, err = verify_platform_compatibility()
+    >>> ok
+    True
+    >>> err is None
+    True
+
+    See Also
+    --------
+    :attr:`IS_WINDOWS` : Platform flag from ``constants``.
+    :func:`verify_core_dependencies` : Full dependency check.
     """
     if IS_WINDOWS:
         return False, Keys.error.platform.windows_not_supported
@@ -96,10 +228,31 @@ def verify_platform_compatibility():
 
 def get_ytdlp_version_info():
     """
-    Check installed yt-dlp version against PyPI.
-    Returns: (is_outdated, current_version, latest_version)
+    Compare the installed yt-dlp version with the latest PyPI release.
+
+    Fetches ``https://pypi.org/pypi/yt-dlp/json`` and compares version
+    strings numerically.  If the network request fails or any exception
+    occurs the function safely returns ``(False, "unknown", "unknown")``.
+
+    Returns
+    -------
+    tuple[bool, str, str]
+        ``(is_outdated, current_version, latest_version)``.
+        ``is_outdated`` is ``True`` when ``current < latest``.
+
+    Examples
+    --------
+    >>> outdated, cur, latest = get_ytdlp_version_info()
+    >>> outdated
+    False
+
+    See Also
+    --------
+    :func:`verify_core_dependencies` : Orchestrates version checks.
+    :pypi:`yt-dlp` : PyPI project page.
     """
     def normalize_version(v_str):
+        """Normalise a PEP 440 version string to a comparable dotted form."""
         try:
             return ".".join([str(int(x)) for x in v_str.split('.') if x.isdigit()])
         except ValueError:
@@ -130,7 +283,43 @@ def get_ytdlp_version_info():
     return False, "unknown", "unknown"
 
 def verify_core_dependencies(check_updates: bool = True):
-    """Verify all core dependencies (required)"""
+    """
+    Run all core dependency checks and optionally query for updates.
+
+    Sequentially verifies Python version, FFmpeg, yt-dlp and
+    ``requests``.  If all pass and ``check_updates`` is ``True``,
+    calls :func:`get_ytdlp_version_info` to detect newer yt-dlp
+    releases.  Prints status messages through the console at each
+    stage.
+
+    Parameters
+    ----------
+    check_updates : bool
+        Whether to check PyPI for a newer yt-dlp version after core
+        dependencies pass.  Defaults to ``True``.
+
+    Returns
+    -------
+    bool or tuple
+        ``True`` if all dependencies pass and no update is available.
+        ``("update_available", current, latest)`` if all pass but a
+        newer yt-dlp exists.
+        ``False`` if any dependency fails.
+
+    Examples
+    --------
+    >>> result = verify_core_dependencies(check_updates=False)
+    >>> result
+    True
+
+    See Also
+    --------
+    :func:`check_python_version` : Python version check.
+    :func:`check_ffmpeg` : FFmpeg presence check.
+    :func:`check_python_package` : Package import check.
+    :func:`get_ytdlp_version_info` : yt-dlp update check.
+    :func:`reset_verification` : Reset verified flag.
+    """
     console.proc(Keys.dependency.core_verifying)
     time.sleep(2)
 
@@ -168,68 +357,24 @@ def verify_core_dependencies(check_updates: bool = True):
     return all_passed
 
 
-def verify_spotify_dependency():
-    """Verify Spotify dependency (optional)"""
-    console.proc(Keys.dependency.checking_spotify)
-    time.sleep(1.25)
-    
-    if check_python_package('spotdl'):
-        console.ok(Keys.dependency.spotify_available)
-        return True
-    else:
-        console.warn(Keys.dependency.spotify_unavailable)
-        console.warn(Keys.dependency.spotify_install)
-        console.warn(Keys.dependency.spotify_warning)
-        return False
-
-def verify_spotify_functional():
-    """
-    Verify Spotify dependency availability and FUNCTIONALITY (Rate Limit Check).
-    """
-    console.proc(Keys.dependency.checking_spotify)
-    time.sleep(1)
-    
-    # 1. Cek Package Terinstall
-    if not check_python_package('spotdl'):
-        console.warn(Keys.dependency.spotify_unavailable)
-        console.warn(Keys.dependency.spotify_install)
-        return False
-
-    # 2. Cek Fungsionalitas (Rate Limit Check)
-    console.proc(Keys.dependency.spotify_testing)
-    
-    dummy_track = "https://open.spotify.com/track/2ksyzVfU0WJoBpu8otr4pz?si=9cb9bd5dbfa64f61" 
-    
-    try:
-        result = subprocess.run(
-            ['spotdl', dummy_track],
-            capture_output=True,
-            text=True,
-            timeout=15 
-        )
-        
-        output = result.stdout + result.stderr
-        
-        if "429" in output or "rate" in output or "request limit" in output:
-            console.err(Keys.dependency.spotify_ratelimited)
-            console.warn(Keys.dependency.spotify_ratelimit_desc)
-            return False
-            
-        if result.returncode != 0:
-            console.err(Keys.dependency.spotify_error_test)
-            return False
-
-        console.ok(Keys.dependency.spotify_available)
-        return True
-
-    except Exception:
-        console.err(Keys.dependency.spotify_error_test)
-        return False
-    
 def reset_verification():
-    """Reset verification status"""
-    RuntimeConfig.VERIFIED_DEPENDENCIES = False
-    RuntimeConfig.SPOTIFY_AVAILABLE = False
-    save_config()
+    """
+    Reset the dependency verification flag and persist the change.
+
+    Sets ``cfg.verified_dependencies`` to ``False``, calls
+    :meth:`config.save_config`, and prints confirmation and warning
+    messages through the console.
+
+    Examples
+    --------
+    >>> reset_verification()
+
+    See Also
+    --------
+    :attr:`config.verified_dependencies` : The flag being reset.
+    :func:`verify_core_dependencies` : Re-run verification.
+    """
+    cfg.verified_dependencies = False
+    cfg.save_config()
     console.ok(Keys.dependency.verification_reset)
     console.warn(Keys.dependency.verify_next_run)

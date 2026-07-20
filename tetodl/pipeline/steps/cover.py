@@ -3,19 +3,19 @@ CoverStep — fetch, process, and embed cover art into audio files.
 """
 
 import os
-import subprocess
 from typing import Optional
 
 import requests
 
-from ...constants import FFMPEG_CMD
-from ...core.models import CoverConfig, CoverResult, DownloadedFile, LyricsMetadata, MediaInfo
-from ...core.step import PipelineStep, PipelineError
+from ...core.models import CoverResult, LyricsMetadata, MediaInfo, PipelineContext
+from ...core.step import PipelineStep
 from ...core.tagger import embed_metadata
 from ...utils.i18n_keys import Keys
 from ...utils.console import console
+from tetodl.utils.tracer import trace, traced
 from ...core.metadata_fetcher import fetcher
 from ...utils.files import clean_temp_files
+from ...utils.thumbnail import crop_thumbnail_to_square, convert_thumbnail_format
 
 FAKE_HEADERS = {
     "User-Agent": (
@@ -26,119 +26,147 @@ FAKE_HEADERS = {
 }
 
 
-class CoverStep(PipelineStep):
+class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
     """Fetch, crop, and embed cover art into a downloaded audio file.
+
+    Reads ``ctx.media_info``, ``ctx.downloaded_file``, ``ctx.target_dir``,
+    and ``ctx.config``.  Writes ``ctx.cover_result``.
 
     Supports two strategies in order:
     1. **Smart cover** — query iTunes / Genius for high-quality artwork.
     2. **YouTube fallback** — download the best available thumbnail from
        the video metadata (``thumbnail`` or ``thumbnails`` list).
 
-    When the source is an auto-generated YouTube Music track (``is_art_track``)
-    the thumbnail is cropped to a 1:1 square.  Crop can also be forced via
-    ``CoverConfig.force_crop``.
+    The step is skipped entirely for video media types, when
+    ``no_cover_mode`` is enabled, or for Opus-encoded audio.
+
+    See Also
+    --------
+    :class:`LyricsStep` : Next step in the pipeline after cover.
+    :meth:`_smart_download` : iTunes / Genius artwork lookup.
+    :meth:`_youtube_fallback` : Thumbnail-based fallback.
+    :func:`embed_metadata` : Tagging of cover art into the audio file.
+
+    Example
+    -------
+    >>> step = CoverStep()
+    >>> ctx = PipelineContext(media_info=some_info, downloaded_file=some_file)
+    >>> result = step(ctx)
+    >>> result.cover_result is not None or ctx.error is not None
+    True
     """
 
-    def __init__(
-        self,
-        config: Optional[CoverConfig] = None,
-        is_youtube_music: bool = False,
-        audio_format: str = "m4a",
-    ) -> None:
-        """Configure the cover step.
+    @trace
+    def __call__(self, ctx: PipelineContext) -> PipelineContext:
+        """Process and embed cover art for the downloaded audio file.
+
+        Skips processing when any of the following conditions hold:
+        - ``media_info`` or ``downloaded_file`` is ``None``
+        - ``no_cover_mode`` is enabled
+        - media type is ``"video"``
+        - audio quality is ``"opus"``
+        - neither ``is_youtube_music`` nor ``smart_cover_mode`` is set
+
+        Otherwise tries smart download (iTunes / Genius) first, then
+        falls back to YouTube thumbnails.  On success, the cover image
+        is cropped (for art tracks) and embedded via
+        :func:`embed_metadata`.
 
         Parameters
         ----------
-        config : CoverConfig | None
-            Cover art options (smart_mode, disabled, force_crop).
-            When ``None`` defaults are used (smart_mode=True).
-        is_youtube_music : bool
-            True when the URL is a YouTube Music link.  Skips the
-            auto-generated-track heuristics in ``_is_art_track``.
-        audio_format : str
-            Target audio extension.  Covers are skipped for ``opus``
-            (no embedded cover support).
-        """
-        self._config = config or CoverConfig()
-        self._is_youtube_music = is_youtube_music
-        self._audio_format = audio_format
-
-    def __call__(
-        self,
-        info: MediaInfo,
-        downloaded: DownloadedFile,
-        target_dir: str,
-    ) -> Optional[CoverResult]:
-        """Process and embed cover art.
-
-        Parameters
-        ----------
-        info : MediaInfo
-            Extracted media metadata (thumbnail, uploader, track, etc.).
-        downloaded : DownloadedFile
-            The successfully downloaded audio file.
-        target_dir : str
-            Directory used for temporary thumbnail files.
+        ctx : PipelineContext
+            Context with ``media_info``, ``downloaded_file``, and
+            ``target_dir`` populated.
 
         Returns
         -------
-        CoverResult | None
-            Cover processing result, or ``None`` when cover art is
-            disabled, format doesn't support covers, or processing
-            fails.
+        PipelineContext
+            Context with ``cover_result`` set, or unchanged if cover
+            processing is skipped.
 
         Raises
         ------
-        PipelineError
-            On unexpected errors during cover processing.
-        """
-        if self._config.disabled or self._audio_format == "opus":
-            return None
+        None
+            All errors are captured in ``ctx.cover_result`` or logged;
+            no exceptions are propagated.
 
+        See Also
+        --------
+        :meth:`_smart_download` : High-quality artwork from iTunes/Genius.
+        :meth:`_youtube_fallback` : Thumbnail-based fallback strategy.
+        :func:`embed_metadata` : Embedding cover art into the audio file.
+        :func:`crop_thumbnail_to_square` : Square cropping for art tracks.
+
+        Example
+        -------
+        >>> step = CoverStep()
+        >>> ctx = PipelineContext(
+        ...     media_info=MediaInfo(title="Song"),
+        ...     downloaded_file=DownloadedFile(path="/tmp/song.mp3"),
+        ...     target_dir="/tmp",
+        ... )
+        >>> result = step(ctx)
+        """
+        if ctx.media_info is None or ctx.downloaded_file is None:
+            return ctx
+
+        if ctx.config.no_cover_mode or ctx.media_type != "audio":
+            return ctx
+
+        if ctx.config.audio_quality == "opus":
+            console.warn(Keys.download.youtube.skip_cover_opus)
+            return ctx
+
+        if not (ctx.is_youtube_music or ctx.config.smart_cover_mode):
+            console.warn(Keys.download.youtube.skip_cover)
+            return ctx
+
+        console.proc(Keys.download.youtube.processing_cover)
+
+        info = ctx.media_info
+        target_dir = ctx.target_dir
         is_art = self._is_art_track(info)
         path = None
         fetched = None
 
-        if self._config.smart_mode:
-            path, fetched = self._smart_download(info, target_dir)
+        if ctx.config.smart_cover_mode:
+            with traced('trying smart download (iTunes/Genius)'):
+                path, fetched = self._smart_download(info, target_dir)
 
         if path is None:
-            path = self._youtube_fallback(info, target_dir, is_art, self._config.force_crop)
+            with traced('falling back to YouTube thumbnail'):
+                path = self._youtube_fallback(info, target_dir, is_art, ctx.config.force_crop)
 
         if path is None or not os.path.exists(path):
-            console.err(Keys.download.youtube.cover_process_failed)
-            return None
+            with traced('no cover art obtained'):
+                console.err(Keys.download.youtube.cover_process_failed)
+                return ctx
 
         console.proc(Keys.download.youtube.embedding_cover)
         meta = self._build_metadata(info, fetched, is_art)
 
-        if embed_metadata(downloaded.path, path, self._audio_format, meta):
+        if embed_metadata(ctx.downloaded_file.path, path, ctx.config.audio_quality, meta):
             console.ok(Keys.download.youtube.cover_success)
         else:
             console.err(Keys.download.youtube.cover_failed)
 
         clean_temp_files(target_dir, info.id)
-        cropped = is_art or self._config.force_crop
-        return CoverResult(
+        cropped = is_art or ctx.config.force_crop
+        ctx.cover_result = CoverResult(
             thumbnail_path=path,
             metadata=self._to_lyrics_metadata(fetched),
-            source=(
-                "smart" if fetched else "youtube"
-            ),
+            source="smart" if fetched else "youtube",
             cropped=cropped,
         )
+        return ctx
 
     # ------------------------------------------------------------------
-    # Internal helpers
+    # Internal helpers — unchanged from original
     # ------------------------------------------------------------------
 
     @staticmethod
     def _is_art_track(info: MediaInfo) -> bool:
-        """Check whether the source is an auto-generated YouTube Music track.
-
-        Heuristics: has explicit track / artist, uploader ends with
-        " - Topic", or description contains auto-generation markers.
-        """
+        """Determine if the media is an art-track (auto-generated by YouTube)."""
         desc = (info.description or "").lower()
         is_topic = info.uploader.endswith(" - Topic")
         is_auto = "auto-generated by youtube" in desc or "provided to youtube by" in desc
@@ -149,7 +177,21 @@ class CoverStep(PipelineStep):
         info: MediaInfo,
         target_dir: str,
     ) -> tuple[Optional[str], Optional[dict]]:
-        """Try to fetch cover art from iTunes / Genius."""
+        """Query iTunes / Genius for high-quality cover artwork.
+
+        Parameters
+        ----------
+        info : MediaInfo
+            Media metadata for artist and title resolution.
+        target_dir : str
+            Directory to save the downloaded thumbnail.
+
+        Returns
+        -------
+        tuple[Optional[str], Optional[dict]]
+            ``(file_path, metadata_dict)`` on success, ``(None, None)``
+            on failure.
+        """
         artist = info.artist or info.uploader.replace(" - Topic", "")
         title = info.track or info.title
 
@@ -185,7 +227,28 @@ class CoverStep(PipelineStep):
         is_art: bool,
         force_crop: bool = False,
     ) -> Optional[str]:
-        """Download the best available YouTube thumbnail."""
+        """Download the best available YouTube thumbnail as cover art.
+
+        Iterates through ``info.thumbnail`` and ``info.thumbnails``
+        (largest first), downloads the first reachable image, and
+        optionally crops it to a square.
+
+        Parameters
+        ----------
+        info : MediaInfo
+            Media metadata with thumbnail URLs.
+        target_dir : str
+            Directory to save the downloaded thumbnail.
+        is_art : bool
+            Whether this is an art-track (forces square crop).
+        force_crop : bool
+            Always crop to square when ``True``.
+
+        Returns
+        -------
+        Optional[str]
+            Path to the downloaded and processed thumbnail, or ``None``.
+        """
         candidates: list[str] = []
         if info.thumbnail:
             candidates.append(info.thumbnail)
@@ -214,9 +277,9 @@ class CoverStep(PipelineStep):
 
         perform_crop = is_art or force_crop
         if perform_crop:
-            CoverStep._crop_to_square(thumb_path)
+            crop_thumbnail_to_square(thumb_path)
         else:
-            converted = CoverStep._convert_format(thumb_path, "jpg")
+            converted = convert_thumbnail_format(thumb_path, "jpg")
             if converted:
                 thumb_path = converted
 
@@ -228,6 +291,22 @@ class CoverStep(PipelineStep):
         fetched: Optional[dict],
         is_art_track: bool,
     ) -> dict:
+        """Build a metadata dict for embedding, preferring smart-fetch data.
+
+        Parameters
+        ----------
+        info : MediaInfo
+            Media metadata as fallback.
+        fetched : Optional[dict]
+            Data from smart cover fetch (iTunes/Genius).
+        is_art_track : bool
+            Whether the track is an auto-generated art track.
+
+        Returns
+        -------
+        dict
+            Metadata with ``artist``, ``album``, ``title`` keys.
+        """
         if fetched:
             return fetched
         if is_art_track or info.artist:
@@ -240,7 +319,18 @@ class CoverStep(PipelineStep):
 
     @staticmethod
     def _to_lyrics_metadata(fetched: Optional[dict]) -> Optional[LyricsMetadata]:
-        """Convert a raw iTunes / Genius dict into a typed ``LyricsMetadata``."""
+        """Convert a smart-fetch metadata dict to a :class:`LyricsMetadata`.
+
+        Parameters
+        ----------
+        fetched : Optional[dict]
+            Raw metadata from smart cover fetch.
+
+        Returns
+        -------
+        Optional[LyricsMetadata]
+            Structured :class:`LyricsMetadata` or ``None``.
+        """
         if not fetched:
             return None
         year_raw: str | int | None = fetched.get("year") or fetched.get("date")
@@ -262,41 +352,4 @@ class CoverStep(PipelineStep):
             cover_url=fetched.get("url"),
         )
 
-    @staticmethod
-    def _crop_to_square(thumbnail_path: str) -> bool:
-        """Crop a landscape thumbnail to 1:1 square via FFmpeg."""
-        output = thumbnail_path + ".square.jpg"
-        cmd = [
-            FFMPEG_CMD,
-            "-i", thumbnail_path,
-            "-vf", "crop=min(iw\\,ih):min(iw\\,ih)",
-            "-y",
-            output,
-        ]
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode == 0 and os.path.exists(output):
-                os.remove(thumbnail_path)
-                os.rename(output, thumbnail_path)
-                return True
-            console.err(Keys.media.crop_failed(error=result.stderr))
-            return False
-        except Exception as exc:
-            console.err(Keys.media.crop_error(error=str(exc)))
-            return False
 
-    @staticmethod
-    def _convert_format(thumbnail_path: str, target_format: str) -> Optional[str]:
-        """Convert image to target format via FFmpeg."""
-        ext = target_format.lower().replace("jpeg", "jpg")
-        root, _ = os.path.splitext(thumbnail_path)
-        output = f"{root}.converted.{ext}"
-        cmd = [FFMPEG_CMD, "-i", thumbnail_path, "-y", output]
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            if result.returncode == 0 and os.path.exists(output):
-                os.remove(thumbnail_path)
-                return output
-            return None
-        except Exception:
-            return None

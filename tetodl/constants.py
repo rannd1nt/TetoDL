@@ -167,58 +167,6 @@ AUDIO_QUALITY_OPTIONS = {
     }
 }
 
-# ==== RUNTIME VARIABLES ====
-class RuntimeConfig:
-    """Runtime configuration that can be modified"""
-    MUSIC_ROOT = DEFAULT_MUSIC_ROOT
-    VIDEO_ROOT = DEFAULT_VIDEO_ROOT
-    THUMBNAIL_ROOT = DEFAULT_THUMBNAIL_ROOT
-    
-
-    DOWNLOAD_HISTORY = []
-    USER_SUBFOLDERS = {}
-    
-    SIMPLE_MODE = False
-    ASYNC_MODE = False
-    QUIET = False
-    SMART_COVER_MODE = True
-    THUMBNAIL_FORMAT = "jpg"
-    NO_COVER_MODE = False
-    FORCE_CROP = False
-    GROUP_MODE = False
-    FORCE_GROUPING_ON_SHARE = False
-    LYRICS_MODE = False
-    ROMAJI_MODE = False
-    ZIP_MODE = False
-    CREATE_M3U = False
-    SKIP_EXISTING_FILES = True
-    MAX_VIDEO_RESOLUTION = "720p"
-    AUDIO_QUALITY = "m4a"
-    VIDEO_CONTAINER = "mp4"
-    VIDEO_CODEC = "default"
-
-    HEADER_STYLE = "default"
-    PROGRESS_STYLE = "minimal"
-    
-    MEDIA_SCANNER_ENABLED = False
-    DOWNLOAD_DELAY = 2
-    MAX_RETRIES = 3
-    RETRY_DELAY = 2
-    ASYNC_WORKERS = 3
-    DAEMON_DEFAULT_TEMP = True
-    DAEMON_CLEANUP_INTERVAL = 3600
-
-    # Dependency verification
-    VERIFIED_DEPENDENCIES = False
-    SPOTIFY_AVAILABLE = False
-    
-    # Spotify Credentials
-    SPOTIFY_CLIENT_ID = None
-    SPOTIFY_CLIENT_SECRET = None
-
-    # Language
-    LANGUAGE = "en"
-
 # ==== INITIALIZATION ====
 try:
     if not IS_WINDOWS: 

@@ -6,86 +6,122 @@ import os
 import re
 from typing import Optional
 
-from ...core.models import CoverResult, LyricsConfig, MediaInfo
+from ...core.models import CoverResult, MediaInfo, PipelineContext
 from ...core.step import PipelineStep
 from ...core.tagger import embed_lyrics
 from ...utils.i18n_keys import Keys
 from ...utils.console import console
+from tetodl.utils.tracer import trace, traced
 from ...core.metadata_fetcher import fetcher
 
 
-class LyricsStep(PipelineStep):
+class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
     """Fetch lyrics from Genius and embed them into a downloaded audio file.
 
-    When a preceding :class:`CoverStep` has retrieved metadata from
-    iTunes / Genius (available via ``cover_result.metadata``) that data
-    is used for a more accurate artist/title search.  Otherwise the
-    video title is parsed with the same heuristic used in the original
-    ``audio.py``::
+    Reads ``ctx.media_info``, ``ctx.downloaded_file``, ``ctx.cover_result``,
+    and ``ctx.config``.  Writes ``ctx.lyrics_embedded``.
 
-        "Artist - Title (extra info)"  →  artist="Artist", title="Title"
+    The step is skipped entirely for video media types or when
+    ``lyrics_mode`` is disabled in the configuration.
+
+    See Also
+    --------
+    :class:`CoverResult` : Provides alternative artist/title for search.
+    :func:`embed_lyrics` : Lyrics embedding into the audio file.
+    :func:`fetcher.fetch_lyrics_genius` : Genius API lyrics fetch.
+
+    Example
+    -------
+    >>> step = LyricsStep()
+    >>> ctx = PipelineContext(
+    ...     downloaded_file=DownloadedFile(path="/tmp/song.mp3"),
+    ...     config=AppConfig(lyrics_mode=True),
+    ... )
+    >>> result = step(ctx)
     """
 
-    def __init__(self, config: Optional[LyricsConfig] = None) -> None:
-        """Configure the lyrics step.
+    @trace
+    def __call__(self, ctx: PipelineContext) -> PipelineContext:
+        """Fetch and embed lyrics via the Genius API.
+
+        Skips if ``lyrics_mode`` is disabled or the media type is not
+        audio.  Uses :meth:`_resolve_search_terms` to determine the
+        artist and title (preferring smart-cover metadata when
+        available), then fetches lyrics via
+        :func:`fetcher.fetch_lyrics_genius`.  On success embeds the
+        lyrics into the audio file via :func:`embed_lyrics`.
 
         Parameters
         ----------
-        config : LyricsConfig | None
-            Lyrics options (enabled, romaji).  When ``None`` defaults
-            are used (``enabled=False``, ``romaji=False``).
-        """
-        self._config = config or LyricsConfig()
-
-    def __call__(
-        self,
-        info: MediaInfo,
-        audio_path: str,
-        cover_result: Optional[CoverResult] = None,
-    ) -> bool:
-        """Fetch and embed lyrics.
-
-        Parameters
-        ----------
-        info : MediaInfo
-            Extracted media metadata (used as fallback for artist/title).
-        audio_path : str
-            Path to the downloaded audio file.
-        cover_result : CoverResult | None
-            Result from a preceding ``CoverStep``.  When present and
-            ``cover_result.metadata`` is set, its artist/title values
-            are used for the Genius search instead of parsing the video
-            title.
+        ctx : PipelineContext
+            Context with ``media_info``, ``downloaded_file``, and
+            ``cover_result`` populated.
 
         Returns
         -------
-        bool
-            ``True`` when lyrics were successfully fetched and embedded.
-        """
-        if not self._config.enabled:
-            return False
-        if not audio_path or not os.path.exists(audio_path):
-            return False
+        PipelineContext
+            Context with ``lyrics_embedded`` set to ``True`` on success,
+            or unchanged on failure / skip.
 
-        artist, title = self._resolve_search_terms(info, cover_result)
+        Raises
+        ------
+        None
+            All outcomes are communicated through the context or logged.
+
+        See Also
+        --------
+        :meth:`_resolve_search_terms` : Artist/title resolution.
+        :func:`embed_lyrics` : Embedding lyrics into the file.
+        :func:`fetcher.fetch_lyrics_genius` : Genius API lookup.
+
+        Example
+        -------
+        >>> step = LyricsStep()
+        >>> ctx = PipelineContext(
+        ...     media_info=MediaInfo(title="Artist - Song"),
+        ...     downloaded_file=DownloadedFile(path="/tmp/song.mp3"),
+        ...     config=AppConfig(lyrics_mode=True),
+        ... )
+        >>> result = step(ctx)
+        """
+        if not ctx.config.lyrics_mode or ctx.media_type != "audio":
+            return ctx
+
+        if ctx.downloaded_file is None:
+            return ctx
+
+        audio_path = ctx.downloaded_file.path
+        if not audio_path or not os.path.exists(audio_path):
+            return ctx
+
+        info = ctx.media_info
+        if info is None:
+            return ctx
+
+        artist, title = self._resolve_search_terms(info, ctx.cover_result)
 
         console.proc(Keys.media.searching_lyrics_for(artist=artist, title=title))
-        lyrics = fetcher.fetch_lyrics_genius(
-            artist,
-            title,
-            romaji=self._config.romaji,
-        )
+        with traced(f'fetching from Genius (romaji={ctx.config.romaji_mode})'):
+            lyrics = fetcher.fetch_lyrics_genius(
+                artist,
+                title,
+                romaji=ctx.config.romaji_mode,
+            )
 
         if not lyrics:
-            console.warn(Keys.media.lyrics_not_found_genius)
-            return False
+            with traced('no lyrics returned from Genius'):
+                console.warn(Keys.media.lyrics_not_found_genius)
+                return ctx
 
         if embed_lyrics(audio_path, lyrics):
-            console.ok(Keys.media.lyrics_embedded_success)
-            return True
+            with traced('embed successful'):
+                console.ok(Keys.media.lyrics_embedded_success)
+                ctx.lyrics_embedded = True
+                return ctx
 
-        console.err(Keys.media.failed_to_embed_lyrics)
-        return False
+        with traced('embed failed'):
+            console.err(Keys.media.failed_to_embed_lyrics)
+            return ctx
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -96,12 +132,23 @@ class LyricsStep(PipelineStep):
         info: MediaInfo,
         cover_result: Optional[CoverResult],
     ) -> tuple[str, str]:
-        """Determine the best artist/title pair for the Genius search.
+        """Extract artist and title for the Genius lyrics search.
 
-        Priority:
-        1. ``cover_result.metadata`` (iTunes / Genius fetched data).
-        2. Parse ``title`` as ``"Artist - Title (extra)"``.
-        3. Fall back to ``info.artist`` / ``info.track``.
+        Prefers :class:`LyricsMetadata` from the cover step, falls
+        back to parsing the title for a ``"Artist - Title"`` pattern,
+        and finally uses ``info.artist`` / ``info.track``.
+
+        Parameters
+        ----------
+        info : MediaInfo
+            Media metadata with artist, track, uploader fields.
+        cover_result : Optional[CoverResult]
+            Result from the cover step with optional metadata.
+
+        Returns
+        -------
+        tuple[str, str]
+            ``(artist, title)`` for the lyrics API lookup.
         """
         if cover_result and cover_result.metadata:
             return cover_result.metadata.artist, cover_result.metadata.title

@@ -14,15 +14,14 @@ from typing import Optional
 
 from yt_dlp.utils import sanitize_filename
 
-from ..constants import IS_TERMUX, RuntimeConfig
-from ..core.cache import cache_metadata
+from ..constants import IS_TERMUX
 from ..core.config import add_user_subfolder
-from ..core.history import add_to_history
-from ..core.models import AppConfig, DownloadedFile, DownloadResult, DownloadSession
+from ..core.models import AppConfig, DownloadResult, DownloadSession
 from ..core.registry import registry
 from ..ui.provider import UIProvider, NullUI
 from ..utils.console import console
 from ..utils.files import create_zip_archive, remove_nomedia_file
+from ..utils.tracer import trace, traced
 from ..utils.formatters import color
 from ..utils.i18n_keys import Keys
 from ..utils.network import (
@@ -41,22 +40,53 @@ def download_audio_youtube(
     config: AppConfig,
     ui: UIProvider = NullUI(),
 ) -> DownloadResult:
-    """Download audio from a YouTube URL.
+    """Download audio from a YouTube or YouTube Music URL.
+
+    This is the main entry point for audio downloads.  Delegates to
+    :func:`_execute` with ``target_root=config.music_root`` and
+    ``media_type="audio"``.  Automatically detects YouTube Music URLs
+    for enhanced metadata handling.
 
     Parameters
     ----------
     url : str
         YouTube or YouTube Music URL.
     session : DownloadSession
-        CLI / daemon session parameters.
+        CLI / daemon session parameters (cut range, playlist items,
+        group folder, share mode, etc.).
     config : AppConfig
         Resolved application configuration.
     ui : UIProvider
-        User interface abstraction.
+        User interface abstraction.  Defaults to :class:`NullUI`.
 
     Returns
     -------
     DownloadResult
+        Result with ``success``, ``file_path``, ``title``, and optional
+        playlist fields.
+
+    Raises
+    ------
+    None
+        Errors are captured in the returned :class:`DownloadResult`.
+
+    See Also
+    --------
+    :func:`download_video_youtube` : Video download equivalent.
+    :func:`_execute` : Unified execution logic.
+    :class:`MediaPipeline` : Per-item pipeline orchestrator.
+
+    Example
+    -------
+    >>> from tetodl.core.models import AppConfig, DownloadSession
+    >>> config = AppConfig()
+    >>> session = DownloadSession()
+    >>> result = download_audio_youtube(
+    ...     "https://music.youtube.com/watch?v=dQw4w9WgXcQ",
+    ...     session, config,
+    ... )
+    >>> isinstance(result, DownloadResult)
+    True
     """
     return _execute(
         url=url,
@@ -78,20 +108,51 @@ def download_video_youtube(
 ) -> DownloadResult:
     """Download video from a YouTube URL.
 
+    This is the main entry point for video downloads.  Delegates to
+    :func:`_execute` with ``target_root=config.video_root`` and
+    ``media_type="video"``.  YouTube Music detection is disabled for
+    video downloads.
+
     Parameters
     ----------
     url : str
         YouTube URL.
     session : DownloadSession
-        CLI / daemon session parameters.
+        CLI / daemon session parameters (cut range, playlist items,
+        group folder, share mode, etc.).
     config : AppConfig
         Resolved application configuration.
     ui : UIProvider
-        User interface abstraction.
+        User interface abstraction.  Defaults to :class:`NullUI`.
 
     Returns
     -------
     DownloadResult
+        Result with ``success``, ``file_path``, ``title``, and optional
+        playlist fields.
+
+    Raises
+    ------
+    None
+        Errors are captured in the returned :class:`DownloadResult`.
+
+    See Also
+    --------
+    :func:`download_audio_youtube` : Audio download equivalent.
+    :func:`_execute` : Unified execution logic.
+    :class:`MediaPipeline` : Per-item pipeline orchestrator.
+
+    Example
+    -------
+    >>> from tetodl.core.models import AppConfig, DownloadSession
+    >>> config = AppConfig()
+    >>> session = DownloadSession()
+    >>> result = download_video_youtube(
+    ...     "https://youtube.com/watch?v=dQw4w9WgXcQ",
+    ...     session, config,
+    ... )
+    >>> isinstance(result, DownloadResult)
+    True
     """
     return _execute(
         url=url,
@@ -110,6 +171,7 @@ def download_video_youtube(
 # ==============================================================================
 
 
+@trace
 def _execute(
     url: str,
     session: DownloadSession,
@@ -120,13 +182,40 @@ def _execute(
     registry_media_type: str,
     check_youtube_music: bool,
 ) -> DownloadResult:
-    """Unified download execution for both audio and video modes."""
+    """Unified download execution for both audio and video modes.
+
+    Validates the URL, selects the target directory, checks the registry,
+    verifies internet connectivity, expands playlist URLs, and dispatches
+    to :func:`_handle_single` or :func:`_handle_playlist`.
+
+    Parameters
+    ----------
+    url : str
+        YouTube or YouTube Music URL.
+    session : DownloadSession
+        Session parameters.
+    config : AppConfig
+        Application configuration.
+    ui : UIProvider
+        User interface abstraction.
+    target_root : str
+        Root directory for the media type.
+    media_type : str
+        ``"audio"`` or ``"video"``.
+    registry_media_type : str
+        Media type for registry lookups.
+    check_youtube_music : bool
+        Whether to detect YouTube Music URLs.
+
+    Returns
+    -------
+    DownloadResult
+    """
     cut_range = session.cut_range
     playlist_items = session.playlist_items
     group_folder = session.group_folder
     share_mode = session.share_after_download
     simple = config.simple_mode
-    skip = config.skip_existing_files
     zip_mode = config.zip_mode
     is_youtube_music = is_youtube_music_url(url) if check_youtube_music and url else False
 
@@ -134,9 +223,10 @@ def _execute(
 
     # --- URL validation ---
     if not is_valid_youtube_url(url):
-        console.err(Keys.download.youtube.invalid_url)
-        ui.wait_and_clear_prompt()
-        return DownloadResult(success=False, reason="invalid_url")
+        with traced('invalid URL'):
+            console.err(Keys.download.youtube.invalid_url)
+            ui.wait_and_clear_prompt()
+            return DownloadResult(success=False, reason="invalid_url")
 
     # --- Target directory ---
     if simple:
@@ -145,21 +235,26 @@ def _execute(
         from ..ui.navigation import select_download_folder as _nav
         target_dir = _nav(target_root, media_type)
         if not target_dir:
-            return DownloadResult(success=False, reason="cancel")
+            with traced('user cancelled folder selection'):
+                return DownloadResult(success=False, reason="cancel")
 
     ui.clear()
     ui.header()
 
-    # --- Registry check (single only) ---
-    existing = _check_exists(url, registry_media_type, target_dir, ui)
+    # --- Registry check (instant — no network) ---
+    skip = config.skip_existing_files
+    existing = _check_exists(url, media_type, target_dir)
     if existing and (media_type == "audio" or skip):
-        return existing
+        with traced('file exists in registry (pre-check)'):
+            ui.wait_and_clear_prompt()
+            return existing
 
     # --- Internet check ---
     if not check_internet():
-        console.err(Keys.download.youtube.no_internet)
-        ui.wait_and_clear_prompt()
-        return DownloadResult(success=False, reason="no_internet")
+        with traced('no internet'):
+            console.err(Keys.download.youtube.no_internet)
+            ui.wait_and_clear_prompt()
+            return DownloadResult(success=False, reason="no_internet")
 
     if config.smart_cover_mode and media_type == "audio":
         console.warn(Keys.download.youtube.smart_cover_info)
@@ -168,8 +263,9 @@ def _execute(
         remove_nomedia_file(target_dir)
 
     # --- URL expansion (playlist / single) ---
-    with console.spin(Keys.download.youtube.extracting):
-        urls, content_title, total_items = extract_all_urls_from_content(url)
+    with traced('expanding URLs'):
+        with console.spin(Keys.download.youtube.extracting):
+            urls, content_title, total_items = extract_all_urls_from_content(url)
     console.ok(Keys.download.youtube.extracted(count=total_items, type=extracted_label))
 
     if total_items > 1:
@@ -210,6 +306,7 @@ def _execute(
 # ---------------------------------------------------------------------------
 
 
+@trace
 def _handle_single(
     url: str,
     target_dir: str,
@@ -221,108 +318,65 @@ def _handle_single(
     cut_range: Optional[tuple[float, float]] = None,
     simple: bool = False,
 ) -> DownloadResult:
-    """Download a single video / audio item via MediaPipeline."""
-    pipeline = MediaPipeline(
-        config=config,
+    """Download a single video or audio item via :class:`MediaPipeline`.
+
+    Parameters
+    ----------
+    url : str
+        Media URL.
+    target_dir : str
+        Output directory.
+    config : AppConfig
+        Application configuration.
+    media_type : str
+        ``"audio"`` or ``"video"``.
+    registry_media_type : str
+        Media type for registry lookups.
+    is_youtube_music : bool
+        Whether the URL is from YouTube Music.
+    ui : UIProvider
+        User interface abstraction.
+    cut_range : tuple[float, float] or None
+        Optional (start, end) cut range in seconds.
+    simple : bool
+        When ``True``, use simplified output mode.
+
+    Returns
+    -------
+    DownloadResult
+    """
+    pipeline = MediaPipeline(config=config)
+
+    result = pipeline.run(
+        url, target_dir,
         media_type=media_type,
         is_youtube_music=is_youtube_music,
         cut_range=cut_range,
     )
 
-    downloaded = pipeline.run(url, target_dir)
-    if downloaded is None:
+    # Existing file found in registry
+    if result.classification and result.classification.existing_result:
         ui.wait_and_clear_prompt()
-        return DownloadResult(success=False)
+        return result.classification.existing_result
 
-    # --- Post-processing ---
-    _cache_metadata(url, downloaded)
-    _add_to_history(url, downloaded, media_type, is_youtube_music, registry_media_type)
-    _run_scanner(downloaded.path)
+    if result.downloaded_file is None:
+        with traced('pipeline returned no file'):
+            ui.wait_and_clear_prompt()
+            return DownloadResult(success=False)
 
     if media_type == "audio" and is_youtube_music:
-        console.ok(Keys.download.youtube.complete_metadata(title=downloaded.title))
+        console.ok(Keys.download.youtube.complete_metadata(title=result.downloaded_file.title))
     else:
-        console.ok(Keys.download.youtube.complete(title=downloaded.title))
-    ui.wait_and_clear_prompt()
-    return DownloadResult(success=True, file_path=downloaded.path, title=downloaded.title)
-
-
-def _check_exists(
-    url: str,
-    registry_media_type: str,
-    target_dir: str,
-    ui: UIProvider,
-) -> Optional[DownloadResult]:
-    """Return a positive result when the file is already in the registry."""
-    if "list=" in url:
-        return None
-    video_id = extract_video_id(url)
-    if not video_id:
-        return None
-    exists, metadata = registry.check_existing(video_id, registry_media_type, target_dir)
-    if not exists:
-        return None
-    console.ok(Keys.download.youtube.file_exists)
-    console.warn(Keys.download.youtube.exists_title(title=metadata.get("title")))
-    console.warn(Keys.download.youtube.exists_path(path=metadata.get("file_path")))
+        console.ok(Keys.download.youtube.complete(title=result.downloaded_file.title))
     ui.wait_and_clear_prompt()
     return DownloadResult(
         success=True,
-        file_path=metadata.get("file_path"),
-        skipped=True,
+        file_path=result.downloaded_file.path,
+        title=result.downloaded_file.title,
     )
 
 
-def _cache_metadata(url: str, downloaded: DownloadedFile) -> None:
-    """Store metadata in the cache for future runs."""
-    info = downloaded.info
-    if not info:
-        return
-    cache_metadata(url, {
-        "title": downloaded.title,
-        "duration": downloaded.duration,
-        "uploader": info.uploader,
-        "artist": info.artist or "",
-        "album": info.album or "",
-        "track": info.track or "",
-        "thumbnails": info.thumbnails,
-    })
 
-
-def _add_to_history(
-    url: str,
-    downloaded: DownloadedFile,
-    media_type: str,
-    is_youtube_music: bool,
-    registry_media_type: str,
-) -> None:
-    """Register the download in history and registry."""
-    info = downloaded.info
-    video_id = info.id if info else extract_video_id(url)
-    artist = info.artist or info.uploader or "Unknown Artist" if info else "Unknown Artist"
-    album = info.album if info else None
-
-    platform = "YouTube Music" if is_youtube_music else "YouTube Audio"
-    history_title = f"{artist} - {downloaded.title}" if is_youtube_music else downloaded.title
-
-    add_to_history(
-        id=video_id,
-        file_path=downloaded.path,
-        success=True,
-        title=history_title,
-        content_type=registry_media_type,
-        platform=platform,
-        download_type="Single Track" if media_type == "audio" else "Single Video",
-        duration=downloaded.duration,
-        metadata={"artist": artist, "album": album, "title": downloaded.title},
-    )
-
-
-def _run_scanner(file_path: str) -> None:
-    if not RuntimeConfig.MEDIA_SCANNER_ENABLED:
-        return
-    from ..media.scanner import scan_media_files
-    scan_media_files(os.path.abspath(file_path))
 
 
 # ---------------------------------------------------------------------------
@@ -348,7 +402,50 @@ def _handle_playlist(
     simple: bool = False,
     zip_mode: bool = False,
 ) -> DownloadResult:
-    """Handle playlist / multi-item download."""
+    """Handle a playlist or multi-item download.
+
+    Supports sequential and concurrent (async) download modes, optional
+    sub-folder grouping, share-mode staging, and ZIP archive creation.
+
+    Parameters
+    ----------
+    urls : list[str]
+        Expanded list of individual media URLs.
+    content_title : str
+        Original playlist or content title.
+    total_items : int
+        Total number of items.
+    target_dir : str
+        Base output directory.
+    config : AppConfig
+        Application configuration.
+    session : DownloadSession
+        Session parameters (async mode, etc.).
+    media_type : str
+        ``"audio"`` or ``"video"``.
+    registry_media_type : str
+        Media type for registry lookups.
+    is_youtube_music : bool
+        Whether URLs are from YouTube Music.
+    ui : UIProvider
+        User interface abstraction.
+    cut_range : tuple[float, float] or None
+        Cut range (ignored for playlists with a warning).
+    playlist_items : str or None
+        Playlist item range spec (e.g. ``"1,2,5-7"``).
+    group_folder : str, bool, or None
+        Custom sub-folder name or ``True`` to auto-generate.
+    share_mode : bool
+        When ``True`` items are downloaded to a staging directory.
+    simple : bool
+        Simplified output mode.
+    zip_mode : bool
+        When ``True`` the output folder is archived to a ZIP file.
+
+    Returns
+    -------
+    DownloadResult
+    """
     if cut_range:
         console.warn(color("Warning: '--cut' flag is ignored for playlists.", "y"))
         cut_range = None
@@ -473,7 +570,42 @@ def _playlist_sequential(
     alt_dirs: Optional[list[str]] = None,
     m3u_name: str = "Playlist",
 ) -> tuple[int, int, int]:
-    """Download playlist items sequentially."""
+    """Download playlist items one at a time.
+
+    Supports item range filtering via ``playlist_items``, registry
+    skip checks, configurable inter-item delay, and M3U playlist
+    generation.
+
+    Parameters
+    ----------
+    urls : list[str]
+        Individual item URLs.
+    target_dir : str
+        Output directory.
+    config : AppConfig
+        Application configuration.
+    media_type : str
+        ``"audio"`` or ``"video"``.
+    registry_media_type : str
+        Registry media type.
+    is_youtube_music : bool
+        YouTube Music flag.
+    ui : UIProvider
+        User interface.
+    cut_range : tuple[float, float] or None
+        Optional cut range.
+    playlist_items : str or None
+        Range spec string.
+    alt_dirs : list[str] or None
+        Additional directories for registry checks.
+    m3u_name : str
+        Name for the generated M3U file.
+
+    Returns
+    -------
+    tuple[int, int, int]
+        ``(success_count, skipped_count, failed_count)``.
+    """
     total = len(urls)
     success_count = 0
     failed_count = 0
@@ -527,11 +659,11 @@ def _playlist_sequential(
                 ordered_files.append(os.path.basename(fpath))
 
         if i < total:
-            delay = RuntimeConfig.DOWNLOAD_DELAY
+            delay = config.download_delay
             console.proc(Keys.download.youtube.wait_delay(delay=delay))
             time.sleep(delay)
 
-    if RuntimeConfig.CREATE_M3U and ordered_files:
+    if config.create_m3u and ordered_files:
         from ..utils.files import create_m3u8_playlist
         create_m3u8_playlist(target_dir, m3u_name, ordered_files)
 
@@ -553,8 +685,40 @@ def _playlist_concurrent(
     ui: UIProvider,
     cut_range: Optional[tuple[float, float]] = None,
 ) -> tuple[int, int, int]:
-    """Download playlist items concurrently via a thread pool."""
-    max_workers = getattr(RuntimeConfig, "ASYNC_WORKERS", 3)
+    """Download playlist items concurrently via a thread pool.
+
+    Uses :class:`~concurrent.futures.ThreadPoolExecutor` with
+    ``config.async_workers`` workers.  Registry skip checks are
+    performed per item.  Handles :exc:`KeyboardInterrupt` with
+    immediate executor shutdown.
+
+    Parameters
+    ----------
+    urls : list[str]
+        Individual item URLs.
+    target_dir : str
+        Output directory.
+    alt_dirs : list[str]
+        Additional directories for registry checks.
+    config : AppConfig
+        Application configuration.
+    media_type : str
+        ``"audio"`` or ``"video"``.
+    registry_media_type : str
+        Registry media type.
+    is_youtube_music : bool
+        YouTube Music flag.
+    ui : UIProvider
+        User interface.
+    cut_range : tuple[float, float] or None
+        Optional cut range.
+
+    Returns
+    -------
+    tuple[int, int, int]
+        ``(success_count, skipped_count, failed_count)``.
+    """
+    max_workers = config.async_workers
     if max_workers > 5:
         console.warn(color("Warning: High concurrency (>5) increases risk of IP Ban.", "y"))
 
@@ -611,7 +775,7 @@ def _playlist_concurrent(
             raise
 
     ordered = [f for f in results_store if f is not None]
-    if RuntimeConfig.CREATE_M3U and ordered:
+    if config.create_m3u and ordered:
         from ..utils.files import create_m3u8_playlist
         create_m3u8_playlist(target_dir, "Playlist", ordered)
 
@@ -638,21 +802,45 @@ def _pipeline_item(
     cut_range: Optional[tuple[float, float]] = None,
     download_type: str = "Single Track",
 ) -> Optional[dict]:
-    """Run MediaPipeline for one playlist item and return a result dict.
+    """Run :class:`MediaPipeline` for one playlist item.
 
-    Returns ``None`` on failure, or a dict with ``title``, ``file_path``,
-    ``skipped`` on success.
+    Parameters
+    ----------
+    url : str
+        Item URL.
+    target_dir : str
+        Output directory.
+    config : AppConfig
+        Application configuration.
+    media_type : str
+        ``"audio"`` or ``"video"``.
+    registry_media_type : str
+        Registry media type (unused, kept for API consistency).
+    is_youtube_music : bool
+        YouTube Music flag.
+    ui : UIProvider
+        User interface.
+    cut_range : tuple[float, float] or None
+        Optional cut range.
+    download_type : str
+        Label for the download type (e.g. ``"Playlist Track"``).
+
+    Returns
+    -------
+    dict or None
+        Dict with ``title``, ``file_path``, ``skipped`` keys on success,
+        or ``None`` on failure.
     """
-    pipeline = MediaPipeline(
-        config=config,
-        media_type=media_type,
-        is_youtube_music=is_youtube_music,
-        download_type_label=download_type,
-        cut_range=cut_range,
-    )
+    pipeline = MediaPipeline(config=config)
 
     try:
-        downloaded = pipeline.run(url, target_dir)
+        result = pipeline.run(
+            url, target_dir,
+            media_type=media_type,
+            is_youtube_music=is_youtube_music,
+            cut_range=cut_range,
+            download_type_label=download_type,
+        )
     except KeyboardInterrupt:
         raise
     except Exception as exc:
@@ -661,18 +849,45 @@ def _pipeline_item(
         ))
         return None
 
-    if downloaded is None:
+    if result.downloaded_file is None:
         return None
 
-    _cache_metadata(url, downloaded)
-    _add_to_history(url, downloaded, media_type, is_youtube_music, registry_media_type)
-    _run_scanner(downloaded.path)
-
     return {
-        "title": downloaded.title,
-        "file_path": downloaded.path,
+        "title": result.downloaded_file.title,
+        "file_path": result.downloaded_file.path,
         "skipped": False,
     }
+
+
+def _check_exists(
+    url: str,
+    media_type: str,
+    target_dir: str,
+) -> Optional[DownloadResult]:
+    """Quick no-network registry check using URL-based video ID."""
+    if "list=" in url:
+        return None
+    video_id = extract_video_id(url)
+    if not video_id:
+        return None
+    exists, metadata = registry.check_existing(video_id, media_type, target_dir)
+    if not exists:
+        with traced('not in registry (pre-check)'):
+            return None
+    with traced('found in registry (pre-check)'):
+        console.ok(Keys.download.youtube.file_exists)
+        if metadata:
+            console.warn(Keys.download.youtube.exists_title(
+                title=metadata.get("title", ""),
+            ))
+            console.warn(Keys.download.youtube.exists_path(
+                path=metadata.get("file_path", ""),
+            ))
+        return DownloadResult(
+            success=True,
+            file_path=metadata.get("file_path") if metadata else None,
+            skipped=True,
+        )
 
 
 def _skip_registry_check(
@@ -681,7 +896,7 @@ def _skip_registry_check(
     dirs_to_check: list[str],
     ordered_files: Optional[list[str]] = None,
 ) -> bool:
-    """Check the registry and return ``True`` if this URL can be skipped."""
+    """Check the registry across directories and return ``True`` if the item exists."""
     video_id = extract_video_id(url)
     if not video_id:
         return False
@@ -695,7 +910,7 @@ def _skip_registry_check(
 
 
 def _parse_playlist_indices(items: str, total: int) -> set[int]:
-    """Parse a playlist-range string (``'1,2,5-7'``) into a set of indices."""
+    """Parse a playlist-range string like ``'1,2,5-7'`` into a set of 1-based indices."""
     selected: set[int] = set()
     parts = items.split(",")
     for part in parts:

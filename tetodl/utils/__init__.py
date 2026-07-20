@@ -20,8 +20,10 @@ from .network import (
     is_valid_youtube_url,
     is_youtube_music_url,
     classify_youtube_url,
-    is_valid_spotify_url,
-    classify_spotify_url
+)
+
+from .media_scanner import (
+    scan_media_files,
 )
 
 from .files import (
@@ -65,8 +67,6 @@ __all__ = [
     'is_valid_youtube_url',
     'is_youtube_music_url',
     'classify_youtube_url',
-    'is_valid_spotify_url',
-    'classify_spotify_url',
     'remove_nomedia_file',
     'clean_temp_files',
     'fetch_cover',
@@ -77,5 +77,6 @@ __all__ = [
     'set_language',
     'get_available_languages',
     'get_language_display_name',
-    'get_current_language'
+    'get_current_language',
+    'scan_media_files',
 ]

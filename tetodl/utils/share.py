@@ -9,7 +9,6 @@ import urllib.parse
 from pathlib import Path
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 
 _STATIC_DIR = Path(__file__).parent / "share_static"
 

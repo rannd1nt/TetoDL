@@ -8,7 +8,6 @@ from ..constants import DATA_DIR, CACHE_DIR, CONFIG_DIR, HISTORY_PATH, CONFIG_PA
 from ..core.registry import registry
 from ..core.history import reset_history
 from ..core.config import reset_config
-from ..core.cache import reset_cache
 from ..utils.files import TempManager
 from ..utils.console import console
 from ..utils.i18n_keys import Keys

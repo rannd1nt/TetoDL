@@ -4,8 +4,9 @@ Absorbs logic from old 'yt_helpers' and 'extract_video_id'.
 """
 import re
 
-from ..constants import RuntimeConfig
+from ..core import config as cfg
 from ..utils.network import is_youtube_music_url
+from tetodl.utils.tracer import trace, traced
 
 try:
     import yt_dlp as yt
@@ -30,7 +31,7 @@ def extract_video_id(url):
 
 # --- FORMAT STRING BUILDERS ---
 def get_audio_extension():
-    return RuntimeConfig.AUDIO_QUALITY
+    return cfg.audio_quality
 
 def get_audio_format_string(audio_format):
     if audio_format == "m4a":
@@ -59,6 +60,7 @@ def build_audio_postprocessors(audio_format, is_youtube_music=False):
     return postprocessors
 
 # --- URL EXTRACTION ---
+@trace
 def extract_all_urls_from_content(url):
     """Extract URLs from Playlist/Album/Single"""
     is_yt_music = is_youtube_music_url(url)
@@ -77,15 +79,18 @@ def extract_all_urls_from_content(url):
                         vid = entry['id']
                         base = "https://music.youtube.com/watch?v=" if is_yt_music else "https://www.youtube.com/watch?v="
                         urls.append(f"{base}{vid}")
-                
+
                 title = info.get('title', 'Unknown Playlist')
-                return urls, title, len(urls)
+                with traced(f'playlist — {title}, {len(urls)} items'):
+                    return urls, title, len(urls)
             else:
                 target_url = info.get('webpage_url') or info.get('url') or url
                 title = info.get('title', 'Single Track')
-                return [target_url], title, 1
-    except Exception:
-        return [url], 'Unknown', 1
+                with traced(f'single — {title}'):
+                    return [target_url], title, 1
+    except Exception as exc:
+        with traced(f'failed — {exc}'):
+            return [url], 'Unknown', 1
 
 
 def get_platform_badge(platform: str, download_type: str = None) -> str:

@@ -1,87 +1,80 @@
 """
-ExtractStep — fetch media metadata from YouTube via yt-dlp.
+ExtractStep — fetch media metadata using the registered extractor.
 """
 
-try:
-    import yt_dlp as yt
-except ImportError:
-    yt = None
+import tetodl.extractors  # noqa: F401 — auto-registers extractors
 
-from ...core.models import MediaInfo
+from ...core.extractor import resolve_extractor
+from ...core.models import PipelineContext
 from ...core.step import PipelineStep, PipelineError
+from tetodl.utils.tracer import trace, traced
 
 
-class ExtractStep(PipelineStep[str, MediaInfo]):
-    """Extract video/playlist metadata from a YouTube URL using yt-dlp.
+class ExtractStep(PipelineStep[PipelineContext, PipelineContext]):
+    """Extract metadata from a URL using the registered extractor plugin.
 
-    Calls ``yt_dlp.YoutubeDL.extract_info(url, download=False)`` and maps
-    the result into a :class:`MediaInfo` instance.  If the URL points
-    to a playlist the ``entries`` field will contain the individual items.
+    Uses :func:`resolve_extractor` to find a matching extractor for
+    ``ctx.url``, then calls ``extractor.extract()`` to produce a
+    :class:`MediaInfo`.
 
-    Raises :class:`PipelineError` if yt-dlp is unavailable or the
-    extraction fails.
+    See Also
+    --------
+    :func:`resolve_extractor` : Extractor resolution logic.
+    :class:`MediaInfo` : Extracted metadata model.
+    :class:`ClassifyStep` : Next step in the pipeline.
+
+    Example
+    -------
+    >>> from tetodl.core.models import PipelineContext
+    >>> step = ExtractStep()
+    >>> ctx = PipelineContext(url="https://youtube.com/watch?v=example")
+    >>> result = step(ctx)
     """
 
-    def __call__(self, url: str) -> MediaInfo:
-        """Extract metadata for the given URL.
+    @trace
+    def __call__(self, ctx: PipelineContext) -> PipelineContext:
+        """Extract metadata for the URL in the pipeline context.
 
         Parameters
         ----------
-        url : str
-            YouTube URL (video or playlist).
+        ctx : PipelineContext
+            Pipeline context with ``url`` set.
 
         Returns
         -------
-        MediaInfo
-            Structured metadata from yt-dlp.
+        PipelineContext
+            Context with ``media_info`` set, or ``error`` set on failure.
 
         Raises
         ------
         PipelineError
-            If yt-dlp is not installed or the extraction request fails.
+            Propagated from :func:`resolve_extractor` when no matching
+            extractor is found, or from the extractor plugin when the
+            extraction request fails.
+
+        See Also
+        --------
+        :func:`resolve_extractor` : Extractor resolution.
+        :class:`PipelineError` : Error model for pipeline failures.
+
+        Example
+        -------
+        >>> step = ExtractStep()
+        >>> ctx = PipelineContext(url="https://youtube.com/watch?v=example")
+        >>> result = step(ctx)
+        >>> result.media_info is not None or result.error is not None
+        True
         """
-        if yt is None:
-            raise PipelineError("yt-dlp is not available", "extract")
+        try:
+            extractor = resolve_extractor(ctx.url)
+        except PipelineError as exc:
+            ctx.error = str(exc)
+            return ctx
 
         try:
-            with yt.YoutubeDL({"quiet": True, "no_warnings": True, "extract_flat": False}) as ydl:
-                raw = ydl.extract_info(url, download=False)
-        except Exception as exc:
-            raise PipelineError(f"Failed to extract info: {exc}", "extract") from exc
+            ctx.media_info = extractor.extract(ctx.url)
+        except PipelineError as exc:
+            with traced(f'extract failed — {exc}'):
+                ctx.error = str(exc)
 
-        entries = None
-        if raw.get("entries"):
-            entries = [
-                MediaInfo(
-                    id=e.get("id", ""),
-                    title=e.get("title", ""),
-                    url=e.get("webpage_url", ""),
-                    duration=e.get("duration", 0),
-                    uploader=e.get("uploader", ""),
-                    artist=e.get("artist"),
-                    track=e.get("track"),
-                    album=e.get("album"),
-                    description=e.get("description", ""),
-                    thumbnail=e.get("thumbnail"),
-                    thumbnails=e.get("thumbnails", []),
-                )
-                for e in raw["entries"]
-                if e
-            ]
-
-        return MediaInfo(
-            id=raw.get("id", ""),
-            title=raw.get("title", ""),
-            url=raw.get("webpage_url", url),
-            duration=raw.get("duration", 0),
-            uploader=raw.get("uploader", ""),
-            artist=raw.get("artist"),
-            track=raw.get("track"),
-            album=raw.get("album"),
-            description=raw.get("description", ""),
-            thumbnail=raw.get("thumbnail"),
-            thumbnails=raw.get("thumbnails", []),
-            webpage_url=raw.get("webpage_url", url),
-            is_playlist=raw.get("_type") == "playlist" or bool(raw.get("entries")),
-            entries=entries,
-        )
+        return ctx

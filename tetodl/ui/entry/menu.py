@@ -7,7 +7,8 @@ import subprocess
 import questionary
 from questionary import Choice
 
-from tetodl.constants import RuntimeConfig, IS_TERMUX
+from tetodl.constants import IS_TERMUX
+from tetodl.core import config as cfg
 from tetodl.utils.i18n import get_text as _
 from tetodl.utils.console import console
 from tetodl.utils.i18n_keys import Keys
@@ -20,8 +21,7 @@ def get_menu_labels():
     audio_info = get_audio_quality_info()
     return {
         "yt_audio": f"- {_('menu.main.youtube_audio', format=audio_info['ext'].upper(), bitrate=audio_info['bitrate'])}",
-        "yt_video": f"- {_('menu.main.youtube_video', container=RuntimeConfig.VIDEO_CONTAINER.upper(), resolution=RuntimeConfig.MAX_VIDEO_RESOLUTION)}",
-        "spotify": f"- {_('menu.main.spotify')}" if RuntimeConfig.SPOTIFY_AVAILABLE else f"{_('menu.main.spotify_unavailable')}",
+        "yt_video": f"- {_('menu.main.youtube_video', container=cfg.video_container.upper(), resolution=cfg.max_video_resolution)}",
         "folder": f"- {_('menu.main.root_folder')}",
         "settings": f"- {_('menu.main.settings')}",
         "history": f"- {_('menu.settings.history')}",
@@ -35,19 +35,17 @@ def show_main_menu():
     header()
     
     lbl = get_menu_labels()
-    is_spotify_disabled = not RuntimeConfig.SPOTIFY_AVAILABLE
 
     # --- LINUX / WINDOWS / MACOS ---
     if not IS_TERMUX:
         choices = [
             Choice(title=lbl["yt_audio"], value="1"),
             Choice(title=lbl["yt_video"], value="2"),
-            Choice(title=lbl["spotify"], value="3", disabled=is_spotify_disabled),
-            Choice(title=lbl["folder"], value="4"),
-            Choice(title=lbl["settings"], value="5"),
-            Choice(title=lbl["history"], value="6"),
-            Choice(title=lbl["about"], value="7"),
-            Choice(title=lbl["exit"], value="8"),
+            Choice(title=lbl["folder"], value="3"),
+            Choice(title=lbl["settings"], value="4"),
+            Choice(title=lbl["history"], value="5"),
+            Choice(title=lbl["about"], value="6"),
+            Choice(title=lbl["exit"], value="7"),
         ]
         
         selection = questionary.select(
@@ -61,7 +59,7 @@ def show_main_menu():
     # --- TERMUX (Simple Input) ---
     else:
         print(color(f"{_('menu.main.choose')}", "c"))
-        for key in ["yt_audio", "yt_video", "spotify", "folder", "settings", "history", "about", "exit"]:
+        for key in ["yt_audio", "yt_video", "folder", "settings", "history", "about", "exit"]:
             print(lbl[key])
         print()
 

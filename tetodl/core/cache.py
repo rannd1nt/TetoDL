@@ -8,6 +8,7 @@ import hashlib
 from ..constants import CACHE_PATH
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
+from tetodl.utils.tracer import trace
 
 
 def load_cache():
@@ -67,6 +68,7 @@ def get_cache_size():
     except Exception:
         return "Unknown"
 
+@trace
 def cache_metadata(url, metadata):
     """Save metadata to cache"""
     cache = load_cache()

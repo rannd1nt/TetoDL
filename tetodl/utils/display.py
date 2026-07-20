@@ -7,7 +7,8 @@ from rich.text import Text
 from rich.table import Table
 from rich import box
 
-from ..constants import RuntimeConfig, APP_VERSION, CONFIG_PATH, DATA_DIR
+from ..constants import APP_VERSION, CONFIG_PATH, DATA_DIR
+from ..core import config as cfg
 from ..core import cache
 from ..utils.files import get_free_space
 from ..utils.network import open_url
@@ -83,24 +84,24 @@ def show_app_info() -> None:
     # --- SECTION 2: STORAGE & PATHS ---
     table.add_section()
     table.add_row("[bold]> Storage & Paths[/]", "")
-    music_space = get_free_space(RuntimeConfig.MUSIC_ROOT)
-    music_val = f"{RuntimeConfig.MUSIC_ROOT}\n[cyan]({music_space})[/]" 
+    music_space = get_free_space(cfg.music_root)
+    music_val = f"{cfg.music_root}\n[cyan]({music_space})[/]" 
     table.add_row("Music Location", music_val)
 
-    video_space = get_free_space(RuntimeConfig.VIDEO_ROOT)
-    video_val = f"{RuntimeConfig.VIDEO_ROOT}\n[cyan]({video_space})[/]"
+    video_space = get_free_space(cfg.video_root)
+    video_val = f"{cfg.video_root}\n[cyan]({video_space})[/]"
     table.add_row("Video Location", video_val)
 
     # --- SECTION 3: CONFIGURATION ---
     table.add_section()
     table.add_row("[bold]> User Configuration[/]", "")
 
-    header_val = getattr(RuntimeConfig, 'HEADER_STYLE', 'default')
-    p_style = getattr(RuntimeConfig, 'PROGRESS_STYLE', 'minimal')
-    lang = getattr(RuntimeConfig, 'LANGUAGE', 'en')
-    delay = getattr(RuntimeConfig, 'DOWNLOAD_DELAY', 2)
-    retries = getattr(RuntimeConfig, 'MAX_RETRIES', 3)
-    scanner = getattr(RuntimeConfig, 'MEDIA_SCANNER_ENABLED', False)
+    header_val = getattr(cfg, 'header_style', 'default')
+    p_style = getattr(cfg, 'progress_style', 'minimal')
+    lang = getattr(cfg, 'language', 'en')
+    delay = getattr(cfg, 'download_delay', 2)
+    retries = getattr(cfg, 'max_retries', 3)
+    scanner = getattr(cfg, 'media_scanner_enabled', False)
 
     scanner_str = "[green]Enabled[/]" if scanner else "[dim]Disabled[/]"
 
@@ -111,9 +112,9 @@ def show_app_info() -> None:
     table.add_row("Media Scanner", scanner_str)
 
     # Video Prefs
-    codec = getattr(RuntimeConfig, 'VIDEO_CODEC', 'default')
-    res = getattr(RuntimeConfig, 'MAX_VIDEO_RESOLUTION', '720p')
-    container = getattr(RuntimeConfig, 'VIDEO_CONTAINER', 'mp4')
+    codec = getattr(cfg, 'video_codec', 'default')
+    res = getattr(cfg, 'max_video_resolution', '720p')
+    container = getattr(cfg, 'video_container', 'mp4')
 
     table.add_row("Video Settings", f"{container.upper()} | {res} | {codec.upper()}")
 

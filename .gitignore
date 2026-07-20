@@ -40,7 +40,7 @@ pip-delete-this-directory.txt
 htmlcov/
 .tox/
 .nox/
-tests/
+# tests/
 .coverage
 .coverage.*
 .cache
@@ -88,14 +88,15 @@ videos/
 *.backup
 
 # Test files
-test/
-test_*.py
-*_test.py
+# test/
+# test_*.py
+# *_test.py
 
-# Development
+# Development Notes
 *.D.md
 *ANALYSIS.md
 *URL.md
+refactor/
 BIG_REFACTOR.md
 
 # ==== System Files ====

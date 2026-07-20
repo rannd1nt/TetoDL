@@ -5,23 +5,22 @@ import subprocess
 import questionary
 from questionary import Style
 from ..core.dependency import (
-    verify_core_dependencies, verify_spotify_dependency, verify_platform_compatibility,
+    verify_core_dependencies, verify_platform_compatibility,
     get_ytdlp_version_info
 )
 from ..core.config import save_config, update_language
 from ..ui.navigation import navigate_folders
 from ..constants import (
-    RuntimeConfig,
     DEFAULT_MUSIC_ROOT, DEFAULT_VIDEO_ROOT,
     IS_WSL, IS_TERMUX, 
-    WSL_MUSIC_OVERRIDE, WSL_VIDEO_OVERRIDE
 )
+from ..core import config as cfg
 from ..utils.display import wait_and_clear_prompt
 from ..ui.components import verification_header
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
 from ..utils.formatters import (
-    clear, color, menu_style, search_style
+    clear, color, menu_style
 )
 from ..utils.i18n import (
     set_language, detect_system_language, get_language_display_name,
@@ -102,19 +101,12 @@ def verify_dependencies(header_title=None):
     print()
     
     if not core_ok:
-        RuntimeConfig.VERIFIED_DEPENDENCIES = False
+        cfg.verified_dependencies = False
         save_config()
         console.err(Keys.dependency.verification_failed)
         console.warn(Keys.dependency.install_and_retry)
         input("Press enter to exit...")
         return False
-
-    # ============================================================
-
-    spotify_ok = verify_spotify_dependency()
-    RuntimeConfig.SPOTIFY_AVAILABLE = spotify_ok 
-    
-    print()
 
     console.warn(Keys.ui.checking_core_engine)
     try:
@@ -134,13 +126,8 @@ def verify_dependencies(header_title=None):
     except Exception as e:
         console.err(Keys.ui.failed_check_engine_version(error=e))
 
-    RuntimeConfig.VERIFIED_DEPENDENCIES = True 
+    cfg.verified_dependencies = True 
     save_config()
-    
-    # console.ok(Keys.dependency.verification_complete)
-    
-    if not spotify_ok:
-        console.warn(Keys.dependency.spotify_hidden)
     
     print()
 
@@ -171,7 +158,7 @@ def verify_dependencies(header_title=None):
 
         if confirm_lang:
             set_language(detected_code)
-            RuntimeConfig.LANGUAGE = detected_code
+            cfg.language = detected_code
             clear()
             verification_header()
             console.ok(Keys.ui.language_set_to(name=display_name))
@@ -234,8 +221,8 @@ def verify_dependencies(header_title=None):
             except KeyboardInterrupt: use_default = True
 
         if use_default:
-            RuntimeConfig.MUSIC_ROOT = proposed_music
-            RuntimeConfig.VIDEO_ROOT = proposed_video
+            cfg.music_root = proposed_music
+            cfg.video_root = proposed_video
             clear()
             verification_header()
             console.ok(Keys.ui.default_paths_applied)
@@ -246,12 +233,12 @@ def verify_dependencies(header_title=None):
 
             custom_music = navigate_folders(start_nav_music, "Select Music Folder", False)
             if custom_music:
-                RuntimeConfig.MUSIC_ROOT = custom_music
+                cfg.music_root = custom_music
                 clear()
                 verification_header()
                 console.ok(Keys.ui.music_path_set_to(path=custom_music))
             else:
-                RuntimeConfig.MUSIC_ROOT = DEFAULT_MUSIC_ROOT
+                cfg.music_root = DEFAULT_MUSIC_ROOT
                 clear()
                 verification_header()
                 console.warn(Keys.ui.cancelled_default_music_path)
@@ -262,12 +249,12 @@ def verify_dependencies(header_title=None):
             if not os.path.exists(start_nav_vid): start_nav_vid = os.path.expanduser("~")
             custom_video = navigate_folders(start_nav_vid, "Select Video Folder", False)
             if custom_video:
-                RuntimeConfig.VIDEO_ROOT = custom_video
+                cfg.video_root = custom_video
                 clear()
                 verification_header()
                 console.ok(Keys.ui.video_path_set_to(path=custom_video))
             else:
-                RuntimeConfig.VIDEO_ROOT = DEFAULT_VIDEO_ROOT
+                cfg.video_root = DEFAULT_VIDEO_ROOT
                 clear()
                 verification_header()
                 console.warn(Keys.ui.cancelled_default_video_path)

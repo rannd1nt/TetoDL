@@ -3,10 +3,11 @@ Audio metadata tagging utilities using Mutagen.
 Handles embedding of Lyrics, Cover Art, and ID3/MP4 tags.
 """
 import os
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any
 
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
+from tetodl.utils.tracer import trace, traced
 
 try:
     # Import MP3 & ID3 Handlers
@@ -25,6 +26,7 @@ try:
 except ImportError:
     HAS_MUTAGEN = False
 
+@trace
 def embed_lyrics(file_path: str, lyrics_text: str) -> bool:
     """
     Embeds lyrics into the audio file based on its format.
@@ -41,9 +43,9 @@ def embed_lyrics(file_path: str, lyrics_text: str) -> bool:
     if not os.path.exists(file_path):
         console.err(Keys.tagger.file_not_found(path=file_path))
         return False
-        
+
     ext = os.path.splitext(file_path)[1].lower()
-    
+
     try:
         # === MP3 (USLT Frame) ===
         if ext == '.mp3':
@@ -78,6 +80,7 @@ def embed_lyrics(file_path: str, lyrics_text: str) -> bool:
         
     return False
 
+@trace
 def embed_metadata(
     audio_path: str, 
     thumbnail_path: str, 
@@ -96,7 +99,8 @@ def embed_metadata(
         return False
 
     if not os.path.exists(audio_path):
-        return False
+        with traced('audio not found'):
+            return False
 
     has_cover = thumbnail_path and os.path.exists(thumbnail_path)
 

@@ -9,6 +9,7 @@ from ..constants import TEMP_DIR
 from ..utils.console import console
 
 from ..utils.i18n_keys import Keys
+from tetodl.utils.tracer import trace, traced
 
 class TempManager:
     """Singleton helper for managing temporary files."""
@@ -125,12 +126,14 @@ def create_zip_archive(source_dir_path):
         console.err(Keys.files.failed_create_zip(error=e))
         return None
 
+@trace
 def create_m3u8_playlist(target_dir, playlist_name, file_list):
     """
     Create an .m3u8 playlist file containing a list of file_lists.
     """
     if not file_list:
-        return None
+        with traced('empty file list'):
+            return None
         
     safe_name = "".join([c for c in playlist_name if c.isalpha() or c.isdigit() or c in " ._-"]).strip()
     if not safe_name: safe_name = "Playlist"
@@ -162,6 +165,7 @@ def remove_nomedia_file(folder_path):
             console.err(Keys.files.failed_delete_nomedia(error=e))
 
 
+@trace
 def clean_temp_files(download_folder, video_id):
     """
     Clean temporary files after processing (thumbnails, temp files, etc.)

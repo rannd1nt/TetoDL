@@ -1,6 +1,5 @@
 """
-DownloadStep — download media via yt-dlp with the same options as the
-original ``audio.py`` / ``video.py``.
+DownloadStep — download media via yt-dlp.
 """
 
 import glob
@@ -12,11 +11,12 @@ try:
 except ImportError:
     yt = None
 
-from ...constants import FFMPEG_CMD, RuntimeConfig
-from ...core.models import DownloadedFile, MediaInfo
-from ...core.step import PipelineStep, PipelineError
+from ...constants import FFMPEG_CMD
+from ...core.models import DownloadedFile, MediaInfo, PipelineContext
+from ...core.step import PipelineStep
 from ...utils.console import console
 from ...utils.hooks import QuietLogger, get_progress_hook, get_postprocessor_hook
+from tetodl.utils.tracer import trace
 from ...utils.i18n_keys import Keys
 from ...utils.processing import (
     get_audio_format_string,
@@ -24,103 +24,133 @@ from ...utils.processing import (
 )
 
 
-class DownloadStep(PipelineStep):
+class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
     """Download a single media file via yt-dlp.
 
-    Supports both audio-only and video downloads with the same format
-    strings, postprocessors, and FFmpeg options as the original code.
-    Callers must set ``media_type`` to ``'audio'`` or ``'video'``.
+    Reads ``ctx.media_info``, ``ctx.target_dir``, and ``ctx.config``,
+    then writes ``ctx.downloaded_file``.  Builds media-type-specific
+    yt-dlp options (audio or video) and handles partial-file cleanup
+    on failure.
+
+    See Also
+    --------
+    :class:`MediaInfo` : Input metadata for download.
+    :class:`DownloadedFile` : Output model with file path and metadata.
+    :class:`CoverStep` : Next step in the pipeline (audio only).
+
+    Example
+    -------
+    >>> step = DownloadStep()
+    >>> ctx = PipelineContext(media_info=some_info, target_dir="/tmp")
+    >>> result = step(ctx)
+    >>> result.downloaded_file is not None or result.error is not None
+    True
     """
 
-    def __init__(
-        self,
-        media_type: str = "audio",
-        audio_quality: str = "m4a",
-        video_container: str = "mp4",
-        video_codec: str = "h264",
-        max_resolution: str = "720p",
-        quiet: bool = False,
-        progress_style: str = "minimal",
-        cut_range: Optional[tuple[float, float]] = None,
-        skip_metadata: bool = False,
-    ) -> None:
-        """Configure the download step.
-
-        Parameters
-        ----------
-        media_type : str
-            ``'audio'`` or ``'video'``.
-        audio_quality : str
-            Target audio format (e.g. ``'m4a'``, ``'opus'``, ``'mp3'``).
-        video_container : str
-            Target video container (e.g. ``'mp4'``, ``'mkv'``).
-        video_codec : str
-            Target video codec (e.g. ``'h264'``, ``'h265'``).
-        max_resolution : str
-            Maximum video resolution (e.g. ``'720p'``, ``'1080p'``).
-        quiet : bool
-            Suppress non-essential output.
-        progress_style : str
-            Progress bar style (``'minimal'``, ``'detailed'``).
-        cut_range : tuple[float, float] | None
-            Start and end time in seconds for trimming.
-        skip_metadata : bool
-            When ``True``, remove the ``FFmpegMetadata`` post-processor
-            (equivalent to the ``--no-cover`` / ``NO_COVER_MODE`` flag).
-        """
-        self._media_type = media_type
-        self._audio_quality = audio_quality
-        self._video_container = video_container
-        self._video_codec = video_codec
-        self._max_resolution = max_resolution
-        self._quiet = quiet
-        self._progress_style = progress_style
-        self._cut_range = cut_range
-        self._skip_metadata = skip_metadata
-
-    def __call__(self, info: MediaInfo, target_dir: str) -> DownloadedFile:
-        """Download the media file.
-
-        Parameters
-        ----------
-        info : MediaInfo
-            Extracted media metadata (used for title, id, url).
-        target_dir : str
-            Output directory for the downloaded file.
+    def __init__(self) -> None:
+        """Initialize the download step.
 
         Returns
         -------
-        DownloadedFile
-            Path and metadata of the completed download.
+        None
+        """
+        pass
+
+    @trace
+    def __call__(self, ctx: PipelineContext) -> PipelineContext:
+        """Download the media file described by the pipeline context.
+
+        Validates that ``ctx.media_info`` and ``yt-dlp`` are available,
+        then delegates to :meth:`_download`.  On :exc:`KeyboardInterrupt`
+        or generic exception, partial files are cleaned up via
+        :meth:`_cleanup_partial`.
+
+        Parameters
+        ----------
+        ctx : PipelineContext
+            Context with ``media_info`` and ``target_dir`` set.
+
+        Returns
+        -------
+        PipelineContext
+            Context with ``downloaded_file`` set, or ``error`` set on
+            failure.
 
         Raises
         ------
-        PipelineError
-            If yt-dlp is unavailable or the download fails.
         KeyboardInterrupt
-            Propagated from the download hook (user cancellation).
+            Re-raised after partial file cleanup so the caller can handle
+            user interruption.
+
+        See Also
+        --------
+        :meth:`_download` : Core download logic.
+        :meth:`_cleanup_partial` : Partial file removal on failure.
+
+        Example
+        -------
+        >>> from tetodl.core.models import PipelineContext, MediaInfo
+        >>> info = MediaInfo(title="Test", url="https://...")
+        >>> ctx = PipelineContext(media_info=info, target_dir="/tmp")
+        >>> step = DownloadStep()
+        >>> ctx = step(ctx)
         """
+        if ctx.media_info is None:
+            ctx.error = "No media info available for download"
+            return ctx
         if yt is None:
-            raise PipelineError("yt-dlp is not available", "download")
+            ctx.error = "yt-dlp is not available"
+            return ctx
+
+        info = ctx.media_info
+        target_dir = ctx.target_dir
 
         try:
-            return self._download(info, target_dir)
+            result = self._download(info, target_dir, ctx)
+            ctx.downloaded_file = result
+            return ctx
         except KeyboardInterrupt:
             self._cleanup_partial(target_dir, info)
             raise
         except Exception as exc:
             self._cleanup_partial(target_dir, info)
-            raise PipelineError(str(exc), "download") from exc
+            ctx.error = str(exc)
+            return ctx
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _download(self, info: MediaInfo, target_dir: str) -> DownloadedFile:
-        opts = self._build_ydl_opts(info, target_dir)
+    def _download(
+        self,
+        info: MediaInfo,
+        target_dir: str,
+        ctx: PipelineContext,
+    ) -> DownloadedFile:
+        """Execute the yt-dlp download and return a :class:`DownloadedFile`.
 
-        if self._cut_range:
-            start, end = self._cut_range
+        Builds yt-dlp options via :meth:`_build_ydl_opts`, handles
+        cut-range trimming, runs the download, and resolves the final
+        file path (accounting for yt-dlp extensions).
+
+        Parameters
+        ----------
+        info : MediaInfo
+            Media metadata (title, url, artist, etc.).
+        target_dir : str
+            Output directory for the downloaded file.
+        ctx : PipelineContext
+            Full pipeline context with config and media type.
+
+        Returns
+        -------
+        DownloadedFile
+            Descriptor of the successfully downloaded file.
+        """
+        opts = self._build_ydl_opts(ctx)
+
+        if ctx.cut_range:
+            start, end = ctx.cut_range
             console.warn(Keys.media.trimming_audio(start=start, end=end))
             opts["download_ranges"] = lambda info, ydl: [{"start_time": start, "end_time": end}]
             opts["force_keyframes_at_cuts"] = True
@@ -129,7 +159,7 @@ class DownloadStep(PipelineStep):
         with yt.YoutubeDL(opts) as ydl:
             ydl.download([info.url])
 
-        container = self._audio_quality if self._media_type == "audio" else self._video_container
+        container = ctx.config.audio_quality if ctx.media_type == "audio" else ctx.config.video_container
         path = os.path.join(target_dir, f"{info.title}.{container}")
         if not os.path.exists(path):
             guessed = self._find_file(target_dir, info)
@@ -144,37 +174,78 @@ class DownloadStep(PipelineStep):
             info=info,
         )
 
-    def _build_ydl_opts(self, info: MediaInfo, target_dir: str) -> dict:
-        if self._media_type == "video":
-            return self._video_opts(target_dir)
-        return self._audio_opts(target_dir)
+    def _build_ydl_opts(self, ctx: PipelineContext) -> dict:
+        """Build yt-dlp options dict for the current media type.
 
-    def _audio_opts(self, target_dir: str) -> dict:
-        fmt = get_audio_format_string(self._audio_quality)
-        pps = build_audio_postprocessors(self._audio_quality)
-        if self._skip_metadata:
+        Delegates to :meth:`_video_opts` or :meth:`_audio_opts`
+        based on ``ctx.media_type``.
+
+        Parameters
+        ----------
+        ctx : PipelineContext
+            Pipeline context with config and media type.
+
+        Returns
+        -------
+        dict
+            yt-dlp options dictionary.
+        """
+        if ctx.media_type == "video":
+            return self._video_opts(ctx)
+        return self._audio_opts(ctx)
+
+    def _audio_opts(self, ctx: PipelineContext) -> dict:
+        """Build yt-dlp options for audio download and conversion.
+
+        Parameters
+        ----------
+        ctx : PipelineContext
+            Pipeline context with audio quality config.
+
+        Returns
+        -------
+        dict
+            yt-dlp options with postprocessor config for audio.
+        """
+        config = ctx.config
+        fmt = get_audio_format_string(config.audio_quality)
+        pps = build_audio_postprocessors(config.audio_quality)
+        if config.no_cover_mode:
             pps = [pp for pp in pps if pp.get("key") != "FFmpegMetadata"]
 
         return {
             "format": fmt,
-            "outtmpl": os.path.join(target_dir, "%(title)s.%(ext)s"),
+            "outtmpl": os.path.join(ctx.target_dir, "%(title)s.%(ext)s"),
             "postprocessors": pps,
             "ffmpeg_location": FFMPEG_CMD,
             "quiet": True,
             "no_warnings": True,
             "writethumbnail": False,
             "logger": QuietLogger(),
-            "progress_hooks": [get_progress_hook(self._progress_style)],
+            "progress_hooks": [get_progress_hook(config.progress_style)],
             "noprogress": False,
-            "retries": RuntimeConfig.MAX_RETRIES,
-            "fragment_retries": RuntimeConfig.MAX_RETRIES,
-            "file_access_retries": RuntimeConfig.MAX_RETRIES,
+            "retries": config.max_retries,
+            "fragment_retries": config.max_retries,
+            "file_access_retries": config.max_retries,
             "extractor_retries": 3,
         }
 
-    def _video_opts(self, target_dir: str) -> dict:
+    def _video_opts(self, ctx: PipelineContext) -> dict:
+        """Build yt-dlp options for video download and encoding.
+
+        Parameters
+        ----------
+        ctx : PipelineContext
+            Pipeline context with video codec and resolution config.
+
+        Returns
+        -------
+        dict
+            yt-dlp options with merge and postprocessor args for video.
+        """
+        config = ctx.config
         pp_args: list[str] = []
-        if self._video_codec == "h264":
+        if config.video_codec == "h264":
             pp_args = [
                 "-c:v", "libx264",
                 "-profile:v", "main",
@@ -182,20 +253,20 @@ class DownloadStep(PipelineStep):
                 "-c:a", "aac",
                 "-movflags", "+faststart",
             ]
-        elif self._video_codec == "h265":
+        elif config.video_codec == "h265":
             pp_args = ["-c:v", "libx265", "-c:a", "aac"]
 
-        max_h = self._max_resolution.replace("p", "")
+        max_h = config.max_video_resolution.replace("p", "")
         video_fmt = f"bestvideo[height<={max_h}]+bestaudio/best[height<={max_h}]"
-        progress = get_progress_hook(self._progress_style)
+        progress = get_progress_hook(config.progress_style)
         pp_hook = [get_postprocessor_hook(
-            Keys.media.encoding(codec=self._video_codec.upper())
+            Keys.media.encoding(codec=config.video_codec.upper())
         )]
 
         return {
             "format": video_fmt,
-            "merge_output_format": self._video_container,
-            "outtmpl": os.path.join(target_dir, "%(title)s.%(ext)s"),
+            "merge_output_format": config.video_container,
+            "outtmpl": os.path.join(ctx.target_dir, "%(title)s.%(ext)s"),
             "ffmpeg_location": FFMPEG_CMD,
             "quiet": True,
             "no_warnings": True,
@@ -203,15 +274,15 @@ class DownloadStep(PipelineStep):
             "progress_hooks": [progress],
             "postprocessor_hooks": pp_hook,
             "postprocessor_args": pp_args if pp_args else None,
-            "retries": RuntimeConfig.MAX_RETRIES,
-            "fragment_retries": RuntimeConfig.MAX_RETRIES,
-            "file_access_retries": RuntimeConfig.MAX_RETRIES,
+            "retries": config.max_retries,
+            "fragment_retries": config.max_retries,
+            "file_access_retries": config.max_retries,
             "extractor_retries": 3,
         }
 
     @staticmethod
     def _cleanup_partial(target_dir: str, info: MediaInfo) -> None:
-        """Remove partial (.part, .ytdl) files left by a failed download."""
+        """Remove partial (``.part``, ``.ytdl``) files left by a failed download."""
         base = os.path.join(target_dir, info.title)
         for pattern in (f"{base}.*.part", f"{base}.part", f"{base}.ytdl"):
             for f in glob.glob(pattern):

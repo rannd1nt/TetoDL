@@ -5,8 +5,9 @@ from typing import Tuple, Optional, Literal
 
 from ..constants import (
     APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS,
-    IS_TERMUX, RuntimeConfig, VALID_THUMBNAIL_FORMATS
+    IS_TERMUX, VALID_THUMBNAIL_FORMATS
 )
+from ..core import config as cfg
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
 from ..utils.formatters import color
@@ -17,6 +18,8 @@ from ..utils.network import start_share_server
 from ..utils.display import show_app_info
 from ..core import maintenance
 
+_DEBUG_MODES = frozenset({'all', 'errors', 'concise'})
+
 class CLIHandler:
     """
     Handles Command Line Interface argument parsing and validation.
@@ -26,8 +29,9 @@ class CLIHandler:
             prog="tetodl",
             description=color("TetoDL - Hybrid CLI/TUI Media Suite\n\n", 'c') +
                         "Commands:\n" +
-                        "  [URL]           Download media\n" +
-                        "  daemon          Manage Background API Server (Run 'tetodl daemon --help')",
+                        "  [URL]              Download media\n" +
+                        "  debug (all|errors|concise)  Run with tracing\n" +
+                        "  daemon             Manage Background API Server (Run 'tetodl daemon --help')",
             formatter_class=argparse.RawTextHelpFormatter
         )
         self._setup_args()
@@ -36,6 +40,9 @@ class CLIHandler:
         """Define all CLI arguments and groups."""
         # --- GLOBAL FLAGS ---
         self.parser.add_argument('--version', action='store_true', help="Show version")
+        self.parser.add_argument('--debug', action='store_true',
+            help="Enable debugging & tracing output (equivalent to 'tetodl debug all').\n"
+                 "Combine with --quiet for trace-only output.")
 
         # --- 1. DOWNLOAD GROUP ---
         dl_group = self.parser.add_argument_group('Download Options')
@@ -241,9 +248,9 @@ class CLIHandler:
         # 1. Root Path Determination
         root_path = None
         if args.audio: 
-            root_path = RuntimeConfig.MUSIC_ROOT
+            root_path = cfg.music_root
         elif args.video: 
-            root_path = RuntimeConfig.VIDEO_ROOT
+            root_path = cfg.video_root
         
         # 2. Target Path
         target_path = args.share
@@ -277,13 +284,12 @@ class CLIHandler:
 
         if target_path == 'LATEST':
             config_mgr.load_config()
-            from ..core.history import load_history
+            from ..core.history import load_history, _download_history
             load_history()
-            history = RuntimeConfig.DOWNLOAD_HISTORY
-            if not history:
+            if not _download_history:
                 console.err(Keys.cli.no_download_history)
                 return
-            last = next((x for x in reversed(history) if x['success']), None)
+            last = next((x for x in reversed(_download_history) if x['success']), None)
             if last and os.path.exists(last['file_path']):
                 target_path = last['file_path']
             else:
@@ -531,7 +537,31 @@ class CLIHandler:
             self._handle_daemon_subcommand()
             return True, CliExit()
 
+        # --- debug subcommand: tetodl debug {all|errors|concise} [options...] ---
+        if len(sys.argv) > 2 and sys.argv[1].lower() == 'debug':
+            mode = sys.argv[2].lower()
+            if mode not in _DEBUG_MODES:
+                self.parser.error(
+                    f"Usage: tetodl debug {', '.join(sorted(_DEBUG_MODES))} [options...]\n"
+                    f"  all       — all traces\n"
+                    f"  errors    — exceptions only\n"
+                    f"  concise   — entry/exit only\n"
+                    f"Got: {mode!r}"
+                )
+            from ..utils.logger import set_debug
+            set_debug(mode)
+            from ..utils.tracer import set_dump_path
+            set_dump_path()
+            del sys.argv[1:3]
+
         args = self.parser.parse_args()
+
+        # --debug flag: equivalent to 'tetodl debug all'
+        if args.debug:
+            from ..utils.logger import set_debug
+            set_debug('all')
+            from ..utils.tracer import set_dump_path
+            set_dump_path()
 
         if self._handle_early_dispatch(args):
             return True, CliExit()

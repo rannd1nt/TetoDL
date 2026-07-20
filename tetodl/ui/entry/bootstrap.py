@@ -3,7 +3,7 @@ Bootstrap: Handles initialization, dependency verification, and update checks.
 """
 import sys
 import threading
-from tetodl.constants import RuntimeConfig
+from tetodl.core import config as cfg
 from tetodl.core.config import initialize_config
 from tetodl.core.history import load_history
 from tetodl.core.dependency import get_ytdlp_version_info
@@ -13,7 +13,7 @@ def setup_application(force_recheck=False):
     initialize_config()
     load_history()
 
-    if force_recheck or not RuntimeConfig.VERIFIED_DEPENDENCIES:
+    if force_recheck or not cfg.verified_dependencies:
         from ..verifier import verify_dependencies
 
         header_title = "System Integrity Check" if force_recheck else None

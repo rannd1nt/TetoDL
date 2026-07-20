@@ -34,7 +34,6 @@ from .history import (
 )
 
 from .dependency import (
-    verify_spotify_dependency,
     verify_core_dependencies,
     reset_verification
 )
@@ -70,7 +69,6 @@ __all__ = [
     'add_to_history',
     'get_history_stats',
     'verify_core_dependencies',
-    'verify_spotify_dependency',
     'reset_verification',
     'RegistryManager',
     'registry'

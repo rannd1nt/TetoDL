@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.pytest.ini_options]
+testpaths = ["tetodl/tests"]
+pythonpath = ["tetodl"]
+filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "network: marks tests that require network access (deselect with '-m \"not network\"')",
+    "daemon: marks tests requiring FastAPI daemon",
+    "tui: marks tests requiring questionary TUI",
+]
+
+[tool.coverage.run]
+source = ["tetodl"]
+omit = ["tetodl/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "except ImportError",
+    "if __name__ == .__main__.:",
+]
