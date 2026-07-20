@@ -182,9 +182,10 @@ jobs:
       - name: Error handling (invalid flag -> non-zero)
         run: |
           $output = tetodl --this-flag-does-not-exist 2>&1
+          $outputText = "$output"
           $code = $LASTEXITCODE
-          if ($code -eq 0) { throw "Expected non-zero exit (got $code): $output" }
-          if ($output -notmatch "unrecognized arguments") { throw "No 'unrecognized arguments' in: $output" }
+          if ($code -eq 0) { throw "Expected non-zero exit (got $code): $outputText" }
+          if ($outputText -notmatch "unrecognized arguments") { throw "No 'unrecognized arguments' in: $outputText" }
 
   verify-installer-windows:
     name: Install Script (Windows)
