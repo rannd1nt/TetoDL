@@ -1,6 +1,4 @@
-from unittest.mock import MagicMock, patch
 
-import pytest
 
 from tetodl.core.models import DownloadResult, DownloadSession
 
@@ -89,7 +87,7 @@ class TestDispatch:
 
     def test_execute_download_cancelled(self, mocker):
         """Handles KeyboardInterrupt gracefully."""
-        mock_dl = mocker.patch(
+        mocker.patch(
             "tetodl.cli.dispatch.download_audio_youtube",
             side_effect=KeyboardInterrupt(),
         )

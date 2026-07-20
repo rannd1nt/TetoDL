@@ -91,9 +91,9 @@ def perform_youtube_search(query, limit=5):
 
             if idx == 'c' or not idx.isdigit():
                 return "CANCEL"
-            idx = int(idx) - 1
-            if 0 <= idx < len(videos):
-                selection = videos[idx]['url']
+            chosen = int(idx) - 1
+            if 0 <= chosen < len(videos):
+                selection = videos[chosen]['url']
             else:
                 selection = "CANCEL"
 

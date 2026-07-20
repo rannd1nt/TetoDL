@@ -87,11 +87,12 @@ class Console:
         """Resolve an i18n key into a display string, substituting
         highlighted keyword arguments into the template."""
         hl_kwargs = {}
-        target_key = message
         
         if isinstance(message, tuple):
             target_key, dynamic_kwargs = message
             kwargs = {**dynamic_kwargs, **kwargs}
+        else:
+            target_key = message
 
         for k, v in kwargs.items():
             hl_kwargs[k] = f"{self.theme.accent_color}{v}{self.theme.reset_color}{self.theme.text_color}"
@@ -113,7 +114,7 @@ class Console:
         print(final_output)
 
 
-    def context(self, **overrides: ConsoleState) -> ConsoleStateContext:
+    def context(self, **overrides: bool | str) -> ConsoleStateContext:
         """Return a context manager that temporarily overrides
         :class:`ConsoleState` attributes.
 

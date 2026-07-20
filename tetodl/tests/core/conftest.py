@@ -38,7 +38,7 @@ def config_file(tmp_path: Path, sample_config_dict: dict[str, Any]) -> Path:
 
 
 @pytest.fixture
-def mock_shutil_which(mocker: pytest.FixtureRequest) -> Any:
+def mock_shutil_which(mocker: Any) -> Any:
     """Mock ``shutil.which`` so it returns a fake path by default.
 
     Tests that verify missing dependencies can override the return value::

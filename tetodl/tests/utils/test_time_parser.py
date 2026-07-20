@@ -75,7 +75,7 @@ class TestGetCutSeconds:
 
     def test_get_cut_none_on_empty_input(self):
         assert get_cut_seconds("") is None
-        assert get_cut_seconds(None) is None
+        assert get_cut_seconds(None) is None  # type: ignore[arg-type]
 
     def test_start_after_end_raises_value_error(self):
         with pytest.raises(ValueError, match="Start time"):

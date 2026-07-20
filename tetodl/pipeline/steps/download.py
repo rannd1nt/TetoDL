@@ -151,7 +151,7 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
 
         if ctx.cut_range:
             start, end = ctx.cut_range
-            console.warn(Keys.media.trimming_audio(start=start, end=end))
+            console.warn(Keys.media.trimming_audio(start=str(start), end=str(end)))
             opts["download_ranges"] = lambda info, ydl: [{"start_time": start, "end_time": end}]
             opts["force_keyframes_at_cuts"] = True
 
@@ -260,7 +260,7 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
         video_fmt = f"bestvideo[height<={max_h}]+bestaudio/best[height<={max_h}]"
         progress = get_progress_hook(config.progress_style)
         pp_hook = [get_postprocessor_hook(
-            Keys.media.encoding(codec=config.video_codec.upper())
+            f"Re-encoding video to {config.video_codec.upper()}..."
         )]
 
         return {

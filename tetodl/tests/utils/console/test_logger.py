@@ -1,6 +1,5 @@
 """Tests for tetodl.utils.console.logger."""
 
-import sys
 
 import pytest
 

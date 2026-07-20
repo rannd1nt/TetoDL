@@ -1,4 +1,3 @@
-import pytest
 
 from tetodl.daemon.models import DownloadRequest, PreviewRequest
 
@@ -8,7 +7,7 @@ class TestDownloadRequest:
 
     def test_download_request_defaults(self):
         """All optional fields default to None or their documented defaults."""
-        req = DownloadRequest()
+        req = DownloadRequest()  # type: ignore[call-arg]
         assert req.url is None
         assert req.search_query is None
         assert req.search_limit == 5

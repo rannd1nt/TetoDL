@@ -29,14 +29,12 @@ Usage
 from __future__ import annotations
 
 import datetime
-import os
 from pathlib import Path
 
 import pytest
 
-from tetodl.utils.console import console
 from tetodl.utils.logger import set_debug
-from tetodl.utils.tracer import get_trace_store, traced
+from tetodl.utils.tracer import get_trace_store
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -74,7 +72,7 @@ def pytest_configure(config: pytest.Config) -> None:
         set_debug(False)
 
     # Store for use in hooks
-    config._tetodl_trace_enabled = trace_enabled
+    config._tetodl_trace_enabled = trace_enabled  # type: ignore[attr-defined]
 
 
 def pytest_report_header(config: pytest.Config) -> list[str] | None:
@@ -116,6 +114,8 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo) -> None:
             return
 
         store = get_trace_store()
+        if store is None:
+            return
         if not store.entries:
             return
 
@@ -129,7 +129,7 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo) -> None:
         try:
             store.dump(str(dump_path))
             # Attach a user-facing message
-            item.config._tetodl_trace_dump = str(dump_path)
+            item.config._tetodl_trace_dump = str(dump_path)  # type: ignore[attr-defined]
         except Exception:
             pass
 

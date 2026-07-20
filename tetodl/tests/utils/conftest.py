@@ -4,7 +4,6 @@ Utils sub-package fixtures — mock network, temp media files, i18n helpers.
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +25,7 @@ def sample_video_urls() -> dict[str, str]:
 
 
 @pytest.fixture
-def mock_console_debug(mocker: pytest.FixtureRequest) -> Any:
+def mock_console_debug(mocker: Any) -> Any:
     """Mock ``tetodl.utils.console.console.debug`` so tests can verify calls.
 
     Usage::

@@ -10,7 +10,7 @@ import pytest
 
 
 @pytest.fixture
-def mock_questionary_select(mocker: pytest.FixtureRequest) -> Any:
+def mock_questionary_select(mocker: Any) -> Any:
     """Mock ``questionary.select`` to return a canned choice.
 
     Usage::
@@ -21,7 +21,7 @@ def mock_questionary_select(mocker: pytest.FixtureRequest) -> Any:
 
 
 @pytest.fixture
-def mock_questionary_path(mocker: pytest.FixtureRequest) -> Any:
+def mock_questionary_path(mocker: Any) -> Any:
     """Mock ``questionary.path`` for folder-selection prompts.
 
     Usage::

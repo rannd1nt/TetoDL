@@ -46,7 +46,7 @@ class TestAppConfig:
         """AppConfig raises ValidationError for unknown fields."""
         from tetodl.core.models import AppConfig
         with pytest.raises(ValidationError):
-            AppConfig(nonexistent_field=True)
+            AppConfig(nonexistent_field=True)  # type: ignore[call-arg]
 
     def test_sub_config_audio(self):
         """AppConfig.audio returns AudioConfig with quality from audio_quality."""
@@ -226,7 +226,7 @@ class TestDownloadSession:
 
     def test_merged_overrides_preserves_all_fields(self):
         """merged_overrides preserves all SessionOverrides fields."""
-        from tetodl.core.models import DownloadSession, SessionOverrides
+        from tetodl.core.models import DownloadSession
         session = DownloadSession(
             url="https://example.com",
             output_path="/out",

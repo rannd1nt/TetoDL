@@ -1,6 +1,4 @@
-from unittest.mock import MagicMock, patch
 
-import pytest
 
 from tetodl.core.models import (
     AppConfig,

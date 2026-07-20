@@ -396,7 +396,7 @@ def _handle_playlist(
     is_youtube_music: bool,
     ui: UIProvider,
     cut_range: Optional[tuple[float, float]] = None,
-    playlist_items: Optional[str] = None,
+    playlist_items: set[int] | None = None,
     group_folder: Optional[str | bool] = None,
     share_mode: bool = False,
     simple: bool = False,
@@ -532,7 +532,7 @@ def _handle_playlist(
                 pass
             return DownloadResult(
                 success=False, is_playlist=True, file_path=None,
-                is_staging=False, parent_dir=None, skipped=skipped,
+                is_staging=False, parent_dir=None,                 skipped=bool(skipped),
                 suppress_error=True,
             )
 
@@ -553,7 +553,7 @@ def _handle_playlist(
         file_path=final_path,
         is_staging=is_staging,
         parent_dir=parent_if_staging,
-        skipped=skipped,
+        skipped=bool(skipped),
     )
 
 
@@ -566,7 +566,7 @@ def _playlist_sequential(
     is_youtube_music: bool,
     ui: UIProvider,
     cut_range: Optional[tuple[float, float]] = None,
-    playlist_items: Optional[str] = None,
+    playlist_items: set[int] | None = None,
     alt_dirs: Optional[list[str]] = None,
     m3u_name: str = "Playlist",
 ) -> tuple[int, int, int]:
@@ -612,7 +612,7 @@ def _playlist_sequential(
     skipped_count = 0
     ordered_files: list[str] = []
 
-    allowed = _parse_playlist_indices(playlist_items, total) if playlist_items else None
+    allowed = playlist_items
 
     dirs_to_check = [target_dir]
     if alt_dirs:
@@ -649,7 +649,7 @@ def _playlist_sequential(
         if result is None:
             failed_count += 1
         elif result.get("skipped"):
-            console.warn(Keys.download.youtube.file_exists(title=result.get("title", "")))
+            console.warn(Keys.download.youtube.file_exists_playlist(title=result.get("title", "")))
             skipped_count += 1
         else:
             console.ok(Keys.download.youtube.success(title=result.get("title", "")))

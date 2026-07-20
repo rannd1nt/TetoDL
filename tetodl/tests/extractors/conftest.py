@@ -31,7 +31,7 @@ def mock_extractor_result() -> dict[str, Any]:
 
 
 @pytest.fixture
-def mock_ytdlp_extract_info(mocker: pytest.FixtureRequest) -> Any:
+def mock_ytdlp_extract_info(mocker: Any) -> Any:
     """Mock ``yt_dlp.YoutubeDL`` to return a controlled extractor result.
 
     The returned mock can be configured per-test::

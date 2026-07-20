@@ -1,9 +1,6 @@
 """Tests for tetodl.utils.i18n."""
 
-import json
-from pathlib import Path
 
-import pytest
 
 from tetodl.utils.i18n import (
     get_text,

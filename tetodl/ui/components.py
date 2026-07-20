@@ -34,7 +34,7 @@ def verification_header(title=None):
     print(f"{Colors.CYAN}╚════════════════════════════════════════╝{Colors.WHITE}")
     print()
 
-def thread_cancel_handle(t: Thread) -> SystemExit:
+def thread_cancel_handle(t: Thread):
     try:
         t.join()
     except KeyboardInterrupt:

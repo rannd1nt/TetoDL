@@ -3,6 +3,7 @@ Download history tracking system
 """
 import os
 import json
+from typing import Any
 from collections import Counter
 from datetime import datetime
 
@@ -82,7 +83,8 @@ def add_to_history(
     save_history()
 
     if success and id and file_path:
-        if metadata is None: metadata = {}
+        if metadata is None:
+            metadata = {}
 
         registry.register_download(
             video_id=id,
@@ -99,7 +101,7 @@ def add_to_history(
     
 def calculate_stats():
     """Mengolah raw data dari registry.json menjadi statistik."""
-    stats = {
+    stats: dict[str, Any] = {
         'total_files': 0,
         'total_audio': 0,
         'total_video': 0,
@@ -146,10 +148,14 @@ def get_history_stats():
     for entry in _download_history:
         if entry.get('success', True): 
             p = entry.get('platform', '')
-            if 'Video' in p: stats['yt_video'] += 1
-            elif 'Audio' in p: stats['yt_audio'] += 1
-            elif 'Music' in p: stats['yt_music'] += 1
-            elif 'Spotify' in p: stats['spotify'] += 1
+            if 'Video' in p:
+                stats['yt_video'] += 1
+            elif 'Audio' in p:
+                stats['yt_audio'] += 1
+            elif 'Music' in p:
+                stats['yt_music'] += 1
+            elif 'Spotify' in p:
+                stats['spotify'] += 1
             
             stats['total_duration'] += entry.get('duration', 0)
     

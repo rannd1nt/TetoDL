@@ -47,6 +47,7 @@ def embed_lyrics(file_path: str, lyrics_text: str) -> bool:
     ext = os.path.splitext(file_path)[1].lower()
 
     try:
+        audio: ID3 | MP4 | FLAC
         # === MP3 (USLT Frame) ===
         if ext == '.mp3':
             try:
@@ -109,49 +110,57 @@ def embed_metadata(
         # FORMAT MP3 (ID3v2.4)
         # ==================================================
         if audio_format == 'mp3':
+            audio: MP3 | ID3
             try:
                 audio = MP3(audio_path, ID3=ID3)
             except Exception:
                 audio = ID3(audio_path)
             
-            try:
-                audio.add_tags()
-            except ID3NoHeaderError:
-                pass
+            if isinstance(audio, MP3):
+                try:
+                    audio.add_tags()
+                except ID3NoHeaderError:
+                    pass
             
+            tag_container: ID3 | None = audio.tags if isinstance(audio, MP3) else audio
+
             # 1. Embed Cover Art (APIC)
             if has_cover:
                 with open(thumbnail_path, 'rb') as albumart:
-                    audio.tags.add(
-                        APIC(
-                            encoding=3,        # 3 is UTF-8
-                            mime='image/jpeg', # Default yt-dlp thumb is jpg
-                            type=3,            # 3 is Cover (front)
-                            desc=u'Cover',
-                            data=albumart.read()
+                    if tag_container is not None:
+                        tag_container.add(
+                            APIC(
+                                encoding=3,        # 3 is UTF-8
+                                mime='image/jpeg', # Default yt-dlp thumb is jpg
+                                type=3,            # 3 is Cover (front)
+                                desc=u'Cover',
+                                data=albumart.read()
+                            )
                         )
-                    )
 
             # 2. Embed Rich Metadata
-            if metadata:
+            if metadata and tag_container is not None:
                 # Basic Tags
-                if metadata.get('title'): audio.tags.add(TIT2(encoding=3, text=metadata['title']))
-                if metadata.get('artist'): audio.tags.add(TPE1(encoding=3, text=metadata['artist']))
-                if metadata.get('album'): audio.tags.add(TALB(encoding=3, text=metadata['album']))
+                if metadata.get('title'):
+                    tag_container.add(TIT2(encoding=3, text=metadata['title']))
+                if metadata.get('artist'):
+                    tag_container.add(TPE1(encoding=3, text=metadata['artist']))
+                if metadata.get('album'):
+                    tag_container.add(TALB(encoding=3, text=metadata['album']))
                 
                 # Extended Tags
                 if metadata.get('album_artist'): 
-                    audio.tags.add(TPE2(encoding=3, text=metadata['album_artist'])) # Album Artist
+                    tag_container.add(TPE2(encoding=3, text=metadata['album_artist'])) # Album Artist
                 if metadata.get('composer'): 
-                    audio.tags.add(TCOM(encoding=3, text=metadata['composer']))     # Composer
+                    tag_container.add(TCOM(encoding=3, text=metadata['composer']))     # Composer
                 if metadata.get('genre'): 
-                    audio.tags.add(TCON(encoding=3, text=metadata['genre']))        # Genre
+                    tag_container.add(TCON(encoding=3, text=metadata['genre']))        # Genre
                 if metadata.get('date'): 
-                    audio.tags.add(TDRC(encoding=3, text=metadata['date']))         # Recording Date (YYYY)
+                    tag_container.add(TDRC(encoding=3, text=metadata['date']))         # Recording Date (YYYY)
                 if metadata.get('track_num'):
-                    audio.tags.add(TRCK(encoding=3, text=str(metadata['track_num']))) # Track Num
+                    tag_container.add(TRCK(encoding=3, text=str(metadata['track_num']))) # Track Num
                 if metadata.get('disc_num'):
-                    audio.tags.add(TPOS(encoding=3, text=str(metadata['disc_num'])))  # Disc Num
+                    tag_container.add(TPOS(encoding=3, text=str(metadata['disc_num'])))  # Disc Num
 
             audio.save()
             return True
@@ -160,30 +169,33 @@ def embed_metadata(
         # FORMAT M4A (MP4 Atoms)
         # ==================================================
         elif audio_format == 'm4a':
-            audio = MP4(audio_path)
+            audio_m4a: MP4 = MP4(audio_path)
             
             # 1. Embed Cover Art (covr)
             if has_cover:
                 with open(thumbnail_path, 'rb') as f:
                     # M4A requires MP4Cover wrapper for images
-                    audio['covr'] = [MP4Cover(f.read(), imageformat=MP4Cover.FORMAT_JPEG)]
+                    audio_m4a['covr'] = [MP4Cover(f.read(), imageformat=MP4Cover.FORMAT_JPEG)]
 
             # 2. Embed Rich Metadata
             if metadata:
                 # Basic Atoms
-                if metadata.get('title'): audio['\xa9nam'] = metadata['title']
-                if metadata.get('artist'): audio['\xa9ART'] = metadata['artist']
-                if metadata.get('album'): audio['\xa9alb'] = metadata['album']
+                if metadata.get('title'):
+                    audio_m4a['\xa9nam'] = metadata['title']
+                if metadata.get('artist'):
+                    audio_m4a['\xa9ART'] = metadata['artist']
+                if metadata.get('album'):
+                    audio_m4a['\xa9alb'] = metadata['album']
                 
                 # Advanced Atoms
                 if metadata.get('album_artist'): 
-                    audio['aART'] = metadata['album_artist'] # Album Artist
+                    audio_m4a['aART'] = metadata['album_artist'] # Album Artist
                 if metadata.get('composer'): 
-                    audio['\xa9wrt'] = metadata['composer']  # Composer/Writer
+                    audio_m4a['\xa9wrt'] = metadata['composer']  # Composer/Writer
                 if metadata.get('genre'): 
-                    audio['\xa9gen'] = metadata['genre']     # Genre
+                    audio_m4a['\xa9gen'] = metadata['genre']     # Genre
                 if metadata.get('date'): 
-                    audio['\xa9day'] = metadata['date']      # Release Date
+                    audio_m4a['\xa9day'] = metadata['date']      # Release Date
                 
                 # Track & Disc parsing (Converts String '1/12' -> Tuple (1, 12))
                 if metadata.get('track_num'):
@@ -191,18 +203,20 @@ def embed_metadata(
                         tn = str(metadata['track_num']).split('/')
                         current = int(tn[0])
                         total = int(tn[1]) if len(tn) > 1 else 0
-                        audio['trkn'] = [(current, total)]
-                    except: pass
-                
+                        audio_m4a['trkn'] = [(current, total)]
+                    except Exception:
+                        pass
+
                 if metadata.get('disc_num'):
                     try:
                         dn = str(metadata['disc_num']).split('/')
                         current = int(dn[0])
                         total = int(dn[1]) if len(dn) > 1 else 0
-                        audio['disk'] = [(current, total)]
-                    except: pass
+                        audio_m4a['disk'] = [(current, total)]
+                    except Exception:
+                        pass
 
-            audio.save()
+            audio_m4a.save()
             return True
 
     except Exception as e:

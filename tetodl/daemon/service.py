@@ -64,7 +64,7 @@ WantedBy=default.target
                            stdout=subprocess.DEVNULL,
                            stderr=subprocess.DEVNULL)
 
-            console.ok(Keys.daemon.service_file_created(path=service_file))
+            console.ok(Keys.daemon.service_file_created(path=str(service_file)))
             start_cmd = 'systemctl --user start tetodl.service'
             enable_cmd = 'systemctl --user enable tetodl.service'
             linger_cmd = f'sudo loginctl enable-linger {os.getenv("USER")}'
@@ -78,7 +78,7 @@ WantedBy=default.target
                 f"To ensure the daemon starts on boot even before you log in: {color(linger_cmd, 'g', True)}"
             )
         except Exception as e:
-            console.err(Keys.daemon.failed_setup_systemd(error=e))
+            console.err(Keys.daemon.failed_setup_systemd(error=str(e)))
 
     def remove(self):
         console.proc(Keys.daemon.removing_systemd)
@@ -97,7 +97,7 @@ WantedBy=default.target
                            stderr=subprocess.DEVNULL)
             console.ok(Keys.daemon.daemon_removed)
         except Exception as e:
-            console.err(Keys.daemon.failed_remove_systemd(error=e))
+            console.err(Keys.daemon.failed_remove_systemd(error=str(e)))
 
 
 class NullServiceManager(ServiceManager):
@@ -111,7 +111,7 @@ class NullServiceManager(ServiceManager):
         console.warn("Daemon service removal is not yet supported on Windows.")
 
 
-_service_manager = None
+_service_manager: ServiceManager | None = None
 
 
 def get_service_manager() -> ServiceManager:

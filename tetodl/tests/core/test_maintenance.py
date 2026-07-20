@@ -1,4 +1,3 @@
-import pytest
 
 
 class TestMaintenance:
@@ -69,7 +68,7 @@ class TestMaintenance:
         mocker.patch("tetodl.core.maintenance.os.path.exists", return_value=True)
         mocker.patch("tetodl.core.maintenance.console.warn")
         mocker.patch("tetodl.core.maintenance.console.ok")
-        mock_input = mocker.patch("builtins.input", return_value="y")
+        mocker.patch("builtins.input", return_value="y")
         mock_reset_history = mocker.patch("tetodl.core.maintenance.reset_history")
 
         from tetodl.core.maintenance import reset_data
@@ -92,8 +91,8 @@ class TestMaintenance:
         mocker.patch("tetodl.core.maintenance.console.warn")
         mocker.patch("tetodl.core.maintenance.console.ok")
         mock_cleanup = mocker.patch("tetodl.core.maintenance.TempManager.cleanup")
-        mock_rmtree = mocker.patch("tetodl.core.maintenance.shutil.rmtree")
-        mock_remove = mocker.patch("tetodl.core.maintenance.os.remove")
+        mocker.patch("tetodl.core.maintenance.shutil.rmtree")
+        mocker.patch("tetodl.core.maintenance.os.remove")
 
         from tetodl.core.maintenance import reset_data
         reset_data(targets=["cache"])

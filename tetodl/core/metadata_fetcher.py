@@ -29,7 +29,8 @@ class MetadataFetcher:
         Removes brackets, official video tags, feature credits, and other 
         common YouTube title clutter to improve search accuracy.
         """
-        if not title: return ""
+        if not title:
+            return ""
         
         # Remove brackets and enclosed content
         title = re.sub(r'【.*?】', '', title)
@@ -100,7 +101,8 @@ class MetadataFetcher:
         s1 = normalize(search_title)
         s2 = normalize(result_title)
         
-        if not s1 or not s2: return False
+        if not s1 or not s2:
+            return False
         
         title_match = False
         if s1 in s2 or s2 in s1:
@@ -115,7 +117,8 @@ class MetadataFetcher:
             a1 = normalize(search_artist)
             a2 = normalize(result_artist)
             
-            if len(a1) < 2 or len(a2) < 2: return True
+            if len(a1) < 2 or len(a2) < 2:
+                return True
             
             is_artist_match = False
             if a1 in a2 or a2 in a1:
@@ -135,7 +138,8 @@ class MetadataFetcher:
         Cleans raw lyrics text scraped from Genius HTML.
         Removes headers, contributors, embeddings, and ad text.
         """
-        if not lyrics_text: return ""
+        if not lyrics_text:
+            return ""
         
         match = re.search(r'\[', lyrics_text)
         if match:
@@ -160,7 +164,8 @@ class MetadataFetcher:
         try:
             clean_artist = artist.replace(' - Topic', '').strip()
             clean_title = self._clean_title(title, artist=clean_artist)
-            if not clean_title: clean_title = title
+            if not clean_title:
+                clean_title = title
 
             target_compare_title = clean_title
             term = f"{clean_artist} {clean_title}"
@@ -224,7 +229,8 @@ class MetadataFetcher:
                         if section['type'] == 'song':
                             hits = section['hits']
                             break
-                if not hits: continue
+                if not hits:
+                    continue
 
                 best_hit_summary = None
                 for hit in hits:
@@ -243,7 +249,8 @@ class MetadataFetcher:
                     ):
                         best_hit_summary = hit_result
                         break
-                if not best_hit_summary: continue
+                if not best_hit_summary:
+                    continue
 
                 # --- FETCH DETAILS ---
                 song_id = best_hit_summary['id']
@@ -258,7 +265,8 @@ class MetadataFetcher:
 
                 # --- EXTRACT FULL METADATA ---
                 artwork_url = song_details.get('song_art_image_url') or best_hit_summary.get('song_art_image_url')
-                if not artwork_url: continue
+                if not artwork_url:
+                    continue
 
                 album_name = "Single"
                 album_artist = None
@@ -366,8 +374,9 @@ class MetadataFetcher:
                             hits = section['hits']
                             break
                 
-                if not hits: continue
-                
+                if not hits:
+                    continue
+
                 valid_hits = []
                 
                 for h in hits:
@@ -409,7 +418,8 @@ class MetadataFetcher:
                 if lyrics_divs:
                     lyrics_text = ""
                     for div in lyrics_divs:
-                        for br in div.find_all("br"): br.replace_with("\n")
+                        for br in div.find_all("br"):
+                            br.replace_with("\n")
                         lyrics_text += div.get_text() + "\n\n"
 
                     cleaned = self._clean_genius_lyrics(lyrics_text)

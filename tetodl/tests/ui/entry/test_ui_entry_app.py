@@ -1,6 +1,5 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import pytest
 
 from tetodl.core.models import CliDownload, CliExit, CliMenu, DownloadSession
 from tetodl.ui.entry.app import App

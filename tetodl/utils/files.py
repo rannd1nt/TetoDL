@@ -31,7 +31,7 @@ class TempManager:
                         shutil.rmtree(item)
                     else:
                         item.unlink()
-            except Exception as e:
+            except Exception:
                 pass
 
 atexit.register(TempManager.cleanup)
@@ -40,8 +40,10 @@ def move_contents_and_cleanup(source_dir, target_dir):
     """
     Move all contents of source_dir to target_dir, then delete source_dir.
     """
-    if not os.path.exists(source_dir): return []
-    if not os.path.exists(target_dir): os.makedirs(target_dir, exist_ok=True)
+    if not os.path.exists(source_dir):
+        return []
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir, exist_ok=True)
 
     moved_files = []
     
@@ -60,7 +62,7 @@ def move_contents_and_cleanup(source_dir, target_dir):
                 shutil.move(s, d)
                 moved_files.append(d)
             except Exception as e:
-                console.err(Keys.files.failed_to_move(item=item, error=e))
+                console.err(Keys.files.failed_to_move(item=item, error=str(e)))
 
     try:
         os.rmdir(source_dir) 
@@ -68,26 +70,6 @@ def move_contents_and_cleanup(source_dir, target_dir):
         pass
         
     return moved_files
-
-def create_zip_archive(source_dir_path):
-    """
-    Compress folder into a .zip file.
-    Returns the absolute path to the generated zip file.
-    """
-    if not os.path.exists(source_dir_path):
-        return None
-
-    base_name = source_dir_path 
-    
-    try:
-        parent_dir = os.path.dirname(source_dir_path)
-        base_dir = os.path.basename(source_dir_path)
-        
-        zip_path = shutil.make_archive(base_name, 'zip', root_dir=parent_dir, base_dir=base_dir)
-        return zip_path
-    except Exception as e:
-        console.err(Keys.files.failed_create_zip(error=e))
-        return None
 
 def create_zip_archive(source_dir_path):
     """
@@ -123,7 +105,7 @@ def create_zip_archive(source_dir_path):
             return None
 
     except Exception as e:
-        console.err(Keys.files.failed_create_zip(error=e))
+        console.err(Keys.files.failed_create_zip(error=str(e)))
         return None
 
 @trace
@@ -136,7 +118,8 @@ def create_m3u8_playlist(target_dir, playlist_name, file_list):
             return None
         
     safe_name = "".join([c for c in playlist_name if c.isalpha() or c.isdigit() or c in " ._-"]).strip()
-    if not safe_name: safe_name = "Playlist"
+    if not safe_name:
+        safe_name = "Playlist"
     
     m3u_path = os.path.join(target_dir, f"{safe_name}.m3u8")
     
@@ -150,7 +133,7 @@ def create_m3u8_playlist(target_dir, playlist_name, file_list):
         console.ok(Keys.files.playlist_generated(name=os.path.basename(m3u_path)))
         return m3u_path
     except Exception as e:
-        console.err(Keys.files.failed_create_playlist(error=e))
+        console.err(Keys.files.failed_create_playlist(error=str(e)))
         return None
 
 def remove_nomedia_file(folder_path):
@@ -162,7 +145,7 @@ def remove_nomedia_file(folder_path):
         try:
             os.remove(nomedia_path)
         except Exception as e:
-            console.err(Keys.files.failed_delete_nomedia(error=e))
+            console.err(Keys.files.failed_delete_nomedia(error=str(e)))
 
 
 @trace
@@ -210,5 +193,5 @@ def get_free_space(path):
             
         _, _, free = shutil.disk_usage(check_path)
         return f"{free / (2**30):.1f} GB free"
-    except:
+    except Exception:
         return "N/A"

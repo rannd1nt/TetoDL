@@ -1,6 +1,4 @@
-from unittest.mock import MagicMock, patch
 
-import pytest
 
 from tetodl.core.models import (
     AppConfig,
@@ -84,7 +82,7 @@ class TestLyricsStep:
         self, app_config: AppConfig,
     ):
         """Uses cover_result.metadata for artist/title when available."""
-        config = app_config.model_copy(update={"lyrics_mode": True})
+        app_config.model_copy(update={"lyrics_mode": True})
         step = LyricsStep()
         info = MediaInfo(
             id="abc123",

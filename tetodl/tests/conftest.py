@@ -12,7 +12,6 @@ into pytest — see ``--tetodl-trace`` CLI flag.
 from __future__ import annotations
 
 import json
-import os
 import tempfile
 from pathlib import Path
 from typing import Any, Iterator
@@ -218,10 +217,15 @@ def tetodl_debug(request: pytest.FixtureRequest):
         yield
         return
 
-    from tetodl.utils.logger import set_debug
+    from tetodl.utils.logger import set_debug, is_debug, get_debug_mode
 
-    prev = set_debug("all")
+    prev_enabled = is_debug()
+    prev_mode = get_debug_mode()
+    set_debug("all")
     try:
         yield
     finally:
-        set_debug(prev)
+        if prev_enabled:
+            set_debug(prev_mode)
+        else:
+            set_debug(False)

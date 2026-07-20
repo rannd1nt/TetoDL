@@ -741,9 +741,9 @@ def set_network_config(delay=None, retries=None):
     :data:`max_retries` : Module-level state variable.
     """
     if delay is not None:
-        download_delay = float(delay)
+        float(delay)
     if retries is not None:
-        max_retries = int(retries)
+        int(retries)
     save_config()
     return True
 
@@ -774,7 +774,6 @@ def set_media_scanner(enable: bool):
     :data:`media_scanner_enabled` : Module-level state variable.
     :mod:`tetodl.utils.media_scanner` : Scanner implementation.
     """
-    media_scanner_enabled = enable
     save_config()
     return True
     

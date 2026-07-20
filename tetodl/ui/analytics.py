@@ -238,9 +238,13 @@ def display_history():
             instruction=" "
         ).ask()
 
-        if choice == "back" or choice is None: break
-        elif choice == "analytics": show_analytics()
-        elif choice == "refresh": load_history(); continue
+        if choice == "back" or choice is None:
+            break
+        elif choice == "analytics":
+            show_analytics()
+        elif choice == "refresh":
+            load_history()
+            continue
         elif choice == "clear":
             if questionary.confirm("Clear history logs?", style=menu_style(), qmark=' ').ask():
                 reset_history()

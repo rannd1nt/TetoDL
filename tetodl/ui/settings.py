@@ -192,7 +192,7 @@ def menu_video_codec():
                 selected_codec = VALID_CODECS[choice_int - 1]
                 set_video_codec(selected_codec)
                 
-                console.ok(Keys.config.codec_changed(codec=color(formatted_video_codec(selected_codec), 'lgrn')))
+                console.ok(Keys.config.codec_changed(codec=color(formatted_video_codec(selected_codec) or "", 'lgrn')))
                 time.sleep(1)
             elif choice_int == back_idx:
                 return
@@ -212,7 +212,7 @@ def prompt_language_selection(force_selection=False):
         force_selection (bool): If True, 'Back' option will be hidden.
     """
     available_codes = get_available_languages()
-    choices = []
+    choices: list[Choice | Separator] = []
 
     choices.append(Separator())
     for code in available_codes:
@@ -307,7 +307,8 @@ def menu_folder():
             instruction=' ',
         ).ask()
 
-        if selection is None: return
+        if selection is None:
+            return
         choice = selection
 
         if choice == "1":
@@ -373,8 +374,7 @@ def menu_settings():
         print(f"{_('menu.settings.video_container_desc')}\n")
 
         # Video Codec
-        print(color(f"6) {_('menu.settings.video_codec',
-                codec=color(formatted_video_codec(current_codec), 'g'))}", "c"))
+        print(color(f"6) {_('menu.settings.video_codec', codec=color(formatted_video_codec(current_codec) or '', 'g'))}", "c"))
         print(f"{_('menu.settings.video_codec_desc')}\n")
 
         # Audio Quality

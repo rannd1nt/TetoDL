@@ -50,10 +50,10 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
             time.sleep(1)
             continue
         except Exception as e:
-            console.err(Keys.ui.error_reading_folder(error=e))
+            console.err(Keys.ui.error_reading_folder(error=str(e)))
             return None
 
-        choices = []
+        choices: list[Choice | Separator] = []
 
         can_go_up = True
         if restrict_to_start:
@@ -77,7 +77,7 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
         choices.append(Separator("-" * 30))
 
         if not folders:
-            choices.append(Choice(title="   (Empty Folder)", value="__NONE__", disabled=True))
+            choices.append(Choice(title="   (Empty Folder)", value="__NONE__", disabled="—"))
         else:
             for folder in folders:
                 choices.append(Choice(
@@ -147,9 +147,9 @@ def select_download_folder(root_dir, type_key='Unknown'):
         path_info()
         current_subfolders = cfg.user_subfolders.get(root_key, [])
         
-        choices = []
+        choices: list[Choice | Separator] = []
 
-        choices.append(Separator(f"--- TetoDL Subfolders ---"))
+        choices.append(Separator("--- TetoDL Subfolders ---"))
         if current_subfolders:
             for folder in current_subfolders:
                 choices.append(Choice(
@@ -160,10 +160,10 @@ def select_download_folder(root_dir, type_key='Unknown'):
         else:
             choices.append(Choice(
                 title=_('download.folder.no_subfolder'), 
-                disabled=True
+                disabled="—"
             ))
         
-        choices.append(Separator(f"-------- Action ---------"))
+        choices.append(Separator("-------- Action ---------"))
         choices.append(Choice(
             title=f"- {_('download.folder.save_to_root')}", 
             value="__ROOT__"
@@ -236,7 +236,7 @@ def select_download_folder(root_dir, type_key='Unknown'):
                 return new_path
 
             except Exception as e:
-                console.err(Keys.download.folder.create_failed(error=e))
+                console.err(Keys.download.folder.create_failed(error=str(e)))
                 time.sleep(1.5)
                 continue
 

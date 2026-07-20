@@ -74,4 +74,4 @@ def scan_media_files(target_path):
                     console.err(Keys.media.termux_tools_missing)
 
     except Exception as e:
-        console.err(Keys.media.scan_error(error=e))
+        console.err(Keys.media.scan_error(error=str(e)))

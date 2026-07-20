@@ -66,7 +66,7 @@ def show_ascii(filename=None, str_only=False) -> str | None:
 
     except Exception as e:
         if not str_only:
-            console.err(Keys.ui.unexpected_error(error=e))
+            console.err(Keys.ui.unexpected_error(error=str(e)))
         return None
 
 def show_app_info() -> None:
@@ -146,7 +146,7 @@ def visit_github():
         console.err(Keys.ui.failed_load_content(url=url))
 
 
-def wait_and_clear_prompt(msg: str = None):
+def wait_and_clear_prompt(msg: str | None = None):
     """Wait for user input and clear screen"""
     try:
         if msg:

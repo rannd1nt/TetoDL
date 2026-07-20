@@ -7,10 +7,6 @@ from questionary import Style
 from typing import Literal
 console = Console()
 
-from prompt_toolkit.styles import Style
-
-# ... (kode lain) ...
-
 def search_style():
     """
     Style khusus untuk Search Menu.
@@ -58,10 +54,11 @@ def truncate_title(title, max_words=None, max_chars=50):
 
 def format_duration(seconds):
     """Format duration"""
-    if not seconds: return "0s"
+    if not seconds:
+        return "0s"
     try:
         seconds = int(seconds)
-    except:
+    except Exception:
         return "0s"
         
     hours = seconds // 3600
@@ -69,19 +66,23 @@ def format_duration(seconds):
     secs = seconds % 60
     
     parts = []
-    if hours > 0: parts.append(f"{hours}h")
-    if minutes > 0: parts.append(f"{minutes}m")
+    if hours > 0:
+        parts.append(f"{hours}h")
+    if minutes > 0:
+        parts.append(f"{minutes}m")
     parts.append(f"{secs}s")
     
-    if not parts: return f"{secs}s"
+    if not parts:
+        return f"{secs}s"
     return " ".join(parts)
 
 def format_duration_digital(seconds):
     """Format duration digital (misal: 04:20 atau 1:02:12) - Untuk Tabel"""
-    if not seconds: return "--:--"
+    if not seconds:
+        return "--:--"
     try:
         seconds = int(seconds)
-    except:
+    except Exception:
         return "--:--"
 
     hours = seconds // 3600

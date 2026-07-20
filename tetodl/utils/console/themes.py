@@ -76,7 +76,13 @@ class LogTheme:
     :data:`PlainTheme`
     :func:`detect_terminal_theme`
     """
-    ok: str; warn: str; proc: str; err: str; exit: str; panic: str; debug: str
+    ok: str
+    warn: str
+    proc: str
+    err: str
+    exit: str
+    panic: str
+    debug: str
     
     ok_color: str = Fore.GREEN
     warn_color: str = Fore.YELLOW

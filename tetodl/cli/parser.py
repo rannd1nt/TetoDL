@@ -1,7 +1,7 @@
 import argparse
 import sys
 import os
-from typing import Tuple, Optional, Literal
+from typing import Tuple, Optional, Literal, cast
 
 from ..constants import (
     APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS,
@@ -227,8 +227,10 @@ class CLIHandler:
             
         if args.delay is not None or args.retries is not None:
             config_mgr.set_network_config(delay=args.delay, retries=args.retries)
-            if args.delay: console.ok(Keys.cli.delay_set(delay=args.delay))
-            if args.retries: console.ok(Keys.cli.retries_set(retries=args.retries))
+            if args.delay:
+                console.ok(Keys.cli.delay_set(delay=args.delay))
+            if args.retries:
+                console.ok(Keys.cli.retries_set(retries=args.retries))
             changed = True
 
         if args.media_scanner:
@@ -339,7 +341,7 @@ class CLIHandler:
                 print()
                 pass
         else:
-            console.err(f"Cannot share: Path not found.")
+            console.err("Cannot share: Path not found.")
             if target_path:
                 console.warn(f"Path: {target_path}")
             else:
@@ -384,8 +386,10 @@ class CLIHandler:
 
         # RULE 4: Feature Constraints
         if args.thumbnail_only:
-            if args.cut: self.parser.error("Invalid flag: --cut cannot be used with --thumbnail-only.")
-            if args.resolution or args.codec: self.parser.error("Invalid flag: Video settings cannot be used with --thumbnail-only.")
+            if args.cut:
+                self.parser.error("Invalid flag: --cut cannot be used with --thumbnail-only.")
+            if args.resolution or args.codec:
+                self.parser.error("Invalid flag: Video settings cannot be used with --thumbnail-only.")
         
         if args.audio and (args.resolution or args.codec):
             console.warn(Keys.cli.audio_mode_note)
@@ -529,7 +533,7 @@ class CLIHandler:
                     self.parser.error(f"Invalid video format '{fmt}'.")
             validated_format = fmt
 
-        return detected_type, validated_format
+        return cast(Literal['audio', 'video', 'thumbnail'], detected_type), validated_format
 
     def parse(self) -> Tuple[bool, CliResult]:
         """Returns: (handled, result)"""

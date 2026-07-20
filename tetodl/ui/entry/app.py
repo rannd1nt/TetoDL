@@ -91,19 +91,27 @@ class App:
 
         elif choice == "3":
             from tetodl.ui.settings import menu_folder
-            clear(); header(); menu_folder()
+            clear()
+            header()
+            menu_folder()
 
         elif choice == "4":
             from tetodl.ui.settings import menu_settings
-            clear(); header(); menu_settings()
+            clear()
+            header()
+            menu_settings()
 
         elif choice == "5":
             from tetodl.ui.analytics import display_history
-            clear(); header(); display_history()
+            clear()
+            header()
+            display_history()
 
         elif choice == "6":
             from tetodl.ui.about import menu_about
-            clear(); header(); menu_about()
+            clear()
+            header()
+            menu_about()
 
         elif choice == "7":
             self._exit_app()

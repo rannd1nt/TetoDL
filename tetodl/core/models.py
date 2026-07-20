@@ -1390,7 +1390,7 @@ class Classification:
     :class:`PipelineContext` : Pipeline context that holds this.
     """
     is_playlist: bool = False
-    existing_result: Optional[DownloadResult] = None
+    existing_result: Optional["DownloadResult"] = None
 
 
 @dataclass

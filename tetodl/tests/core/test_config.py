@@ -1,6 +1,5 @@
 import json
 
-import pytest
 
 
 class TestConfigLoad:
@@ -247,7 +246,6 @@ class TestConfigToggles:
         config_file.write_text("{}")
         monkeypatch.setattr(cfg, "CONFIG_PATH", str(config_file))
 
-        orig_delay = cfg.download_delay
         result = cfg.set_network_config(delay=5.0, retries=7)
         assert result is True
 

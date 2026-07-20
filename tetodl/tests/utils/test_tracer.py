@@ -1,8 +1,6 @@
 """Tests for tetodl.utils.tracer."""
 
 import json
-import threading
-from pathlib import Path
 
 import pytest
 
@@ -221,6 +219,7 @@ class TestTraceDecorator:
 
         add(1, 2)
         store = get_trace_store()
+        assert store is not None
         returns = store.filter(kind="RETURN")
         assert len(returns) >= 1
 
@@ -235,8 +234,10 @@ class TestTraceDecorator:
             crash()
 
         store = get_trace_store()
+        assert store is not None
         excs = store.filter(kind="EXCEPTION")
         assert len(excs) >= 1
+        assert excs[-1].exception is not None
         assert "boom" in excs[-1].exception
 
 
@@ -248,6 +249,7 @@ class TestTracedContextManager:
             pass
 
         store = get_trace_store()
+        assert store is not None
         contexts = store.filter(kind="CONTEXT")
         assert len(contexts) >= 1
         assert contexts[-1].context_msg == "hello context"
@@ -256,7 +258,7 @@ class TestTracedContextManager:
 class TestGetTraceStore:
     def test_get_trace_store_returns_singleton_after_trace(self):
         set_debug(True)
-        store_before = get_trace_store()
+        get_trace_store()
 
         @trace
         def f():

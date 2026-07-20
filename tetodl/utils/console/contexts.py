@@ -17,6 +17,7 @@ See Also
 import sys
 import time
 import threading
+from typing import Any
 from contextlib import AbstractContextManager
 
 class ConsoleStateContext(AbstractContextManager):
@@ -60,7 +61,7 @@ class ConsoleStateContext(AbstractContextManager):
     def __init__(self, console, overrides: dict):
         self.console = console
         self.overrides = overrides
-        self._backup_state = {}
+        self._backup_state: dict[str, Any] = {}
 
     def __enter__(self):
         for key, new_val in self.overrides.items():
@@ -113,7 +114,7 @@ class ConsoleSpinnerContext(AbstractContextManager):
         self.delay = delay
         self.chars = ["⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"]
         self.running = False
-        self.thread = None
+        self.thread: threading.Thread | None = None
 
     def _spin_loop(self):
         """Daemon thread target; writes animation frames to stdout."""
@@ -134,8 +135,9 @@ class ConsoleSpinnerContext(AbstractContextManager):
             return self
 
         self.running = True
-        self.thread = threading.Thread(target=self._spin_loop, daemon=True)
-        self.thread.start()
+        t = threading.Thread(target=self._spin_loop, daemon=True)
+        self.thread = t
+        t.start()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

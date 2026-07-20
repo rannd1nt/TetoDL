@@ -27,11 +27,12 @@ from ..utils.share import list_entries, stream_file, create_share_router, SVG as
 from ..utils.time_parser import get_cut_seconds
 from ..utils.processing import parse_playlist_items
 from ..utils.network import find_free_port, get_best_ip
+from typing import Any, Literal
 from ..utils.formatters import console as rich_console
 
-share_launchers = {}
+share_launchers: dict[str, Any] = {}
 
-active_tasks = {}
+active_tasks: dict[str, Any] = {}
 broadcaster = None
 
 # --- BACKGROUND WORKERS ---
@@ -143,7 +144,7 @@ def background_task_runner(task_id: str, session: DownloadSession, mode: str = '
 
     sys.stdout = tee
     try:
-        rich_console.file = tee
+        rich_console.file = tee  # type: ignore[assignment]
     except Exception:
         pass
 
@@ -212,12 +213,18 @@ async def update_config(request: Request):
     config_mgr.load_config()
     
     # Petakan request JSON ke objek konfigurasi
-    if "daemon_default_temp" in data: cfg.daemon_default_temp = data["daemon_default_temp"]
-    if "daemon_cleanup_interval" in data: cfg.daemon_cleanup_interval = data["daemon_cleanup_interval"]
-    if "audio_quality" in data: cfg.audio_quality = data["audio_quality"]
-    if "max_resolution" in data: cfg.max_video_resolution = data["max_resolution"]
-    if "smart_cover_mode" in data: cfg.smart_cover_mode = data["smart_cover_mode"]
-    if "lyrics_mode" in data: cfg.lyrics_mode = data["lyrics_mode"]
+    if "daemon_default_temp" in data:
+        cfg.daemon_default_temp = data["daemon_default_temp"]
+    if "daemon_cleanup_interval" in data:
+        cfg.daemon_cleanup_interval = data["daemon_cleanup_interval"]
+    if "audio_quality" in data:
+        cfg.audio_quality = data["audio_quality"]
+    if "max_resolution" in data:
+        cfg.max_video_resolution = data["max_resolution"]
+    if "smart_cover_mode" in data:
+        cfg.smart_cover_mode = data["smart_cover_mode"]
+    if "lyrics_mode" in data:
+        cfg.lyrics_mode = data["lyrics_mode"]
     
     config_mgr.save_config() # Simpan ke disk
     return {"status": "success", "message": "Configuration updated persistently."}
@@ -245,7 +252,7 @@ async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
         task_dir.mkdir(parents=True, exist_ok=True)
         output_path = str(task_dir)
 
-    media_type: str = 'audio'
+    media_type: Literal['audio', 'video', 'thumbnail'] = 'audio'
     if req.video_only:
         media_type = 'video'
     elif req.thumbnail_only:
@@ -420,7 +427,7 @@ async def share_stream(request: Request):
     if not os.path.isfile(real):
         raise HTTPException(404, "File not found")
     range_header = request.headers.get("range")
-    return await stream_file(real, range_header)
+    return await stream_file(real, range_header or "")
 
 
 # --- 5B. SHARE DOWNLOAD (dedicated endpoint, always attachment, no Range interference) ---
@@ -447,17 +454,25 @@ async def share_download(request: Request):
 # --- 6. SHARE BROWSER HTML (dir listing, same glassmorphism as TetoDL Share) ---
 
 def _icon(ext: str):
-    if ext in ('.mp3','.m4a','.wav','.flac','.opus'): return _SHARE_SVG['audio']
-    if ext in ('.mp4','.mkv','.webm','.avi','.mov'): return _SHARE_SVG['video']
-    if ext in ('.jpg','.jpeg','.png','.webp','.gif','.svg'): return _SHARE_SVG['image']
-    if ext in ('.zip','.rar','.7z','.tar','.gz'): return _SHARE_SVG['archive']
-    if ext in ('.py','.js','.html','.css','.json','.c'): return _SHARE_SVG['code']
-    if ext in ('.pdf','.txt','.md'): return _SHARE_SVG['doc']
+    if ext in ('.mp3','.m4a','.wav','.flac','.opus'):
+        return _SHARE_SVG['audio']
+    if ext in ('.mp4','.mkv','.webm','.avi','.mov'):
+        return _SHARE_SVG['video']
+    if ext in ('.jpg','.jpeg','.png','.webp','.gif','.svg'):
+        return _SHARE_SVG['image']
+    if ext in ('.zip','.rar','.7z','.tar','.gz'):
+        return _SHARE_SVG['archive']
+    if ext in ('.py','.js','.html','.css','.json','.c'):
+        return _SHARE_SVG['code']
+    if ext in ('.pdf','.txt','.md'):
+        return _SHARE_SVG['doc']
     return _SHARE_SVG['file']
 
 def _size_str(size: int) -> str:
-    if size < 1024: return f"{size} B"
-    if size < 1024**2: return f"{size/1024:.1f} KB"
+    if size < 1024:
+        return f"{size} B"
+    if size < 1024**2:
+        return f"{size/1024:.1f} KB"
     return f"{size/(1024**2):.1f} MB"
 
 @app.get("/api/v1/share/browse_html")
@@ -484,8 +499,10 @@ async def share_browse_html(request: Request):
             link = f"/api/v1/share/browse_html?path={urllib.parse.quote(os.path.abspath(full))}&root={urllib.parse.quote(root_abs)}"
         else:
             sz = 0
-            try: sz = os.path.getsize(full)
-            except: pass
+            try:
+                sz = os.path.getsize(full)
+            except Exception:
+                pass
             meta = _size_str(sz)
             icon = _icon(ext)
             link = f"/api/v1/share/player?path={urllib.parse.quote(os.path.abspath(full))}"
@@ -553,15 +570,15 @@ def _get_meta(path: str) -> dict:
         if ext == ".mp3":
             from mutagen.mp3 import MP3
             from mutagen.id3 import APIC
-            a = MP3(path)
+            a: Any = MP3(path)
             meta["title"] = str(a.tags.get("TIT2", "")) if a.tags else ""
             meta["artist"] = str(a.tags.get("TPE1", "")) if a.tags else ""
             meta["album"] = str(a.tags.get("TALB", "")) if a.tags else ""
             if a.tags:
                 for t in a.tags.values():
                     if isinstance(t, APIC):
-                        meta["cover_b64"] = base64.b64encode(t.data).decode()
-                        meta["cover_mime"] = t.mime
+                        meta["cover_b64"] = base64.b64encode(t.data).decode()  # type: ignore[attr-defined]
+                        meta["cover_mime"] = t.mime  # type: ignore[attr-defined]
                         break
         elif ext == ".m4a":
             from mutagen.mp4 import MP4
@@ -747,7 +764,8 @@ async def share_launch(request: Request):
     url = f"http://{ip}:{port}/{urllib.parse.quote(serve_file)}" if serve_file else f"http://{ip}:{port}/"
 
     # Tunggu server siap (max 5 detik)
-    import urllib.request as _ureq, urllib.error as _uerr
+    import urllib.request as _ureq
+    import urllib.error as _uerr
     import time as _time
     deadline = _time.time() + 5
     ready = False

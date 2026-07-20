@@ -5,7 +5,7 @@ See ``refactor/ADV_LOGGING.md`` for the full architecture specification.
 """
 
 import functools
-from typing import Callable, ParamSpec, TypeVar
+from typing import Callable, ParamSpec, TypeVar, cast
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -133,5 +133,5 @@ def debug(
         return wrapper
 
     if func is not None:
-        return decorator(func)
-    return decorator
+        return cast(Callable[..., R], decorator(func))
+    return cast(Callable[..., R], decorator)

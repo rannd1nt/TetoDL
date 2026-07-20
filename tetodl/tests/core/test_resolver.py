@@ -1,4 +1,3 @@
-import pytest
 
 
 class TestConfigResolver:
@@ -6,7 +5,7 @@ class TestConfigResolver:
 
     def test_merge_overrides_overrides_fields(self):
         """Session overrides take effect on the resolved config."""
-        from tetodl.core.models import AppConfig, DownloadSession, SessionOverrides
+        from tetodl.core.models import AppConfig, DownloadSession
         from tetodl.core.resolver import ConfigResolver
 
         base = AppConfig(music_root="/base/music", video_root="/base/video")

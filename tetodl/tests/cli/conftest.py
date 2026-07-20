@@ -10,7 +10,7 @@ import pytest
 
 
 @pytest.fixture
-def mock_argv(mocker: pytest.FixtureRequest) -> Any:
+def mock_argv(mocker: Any) -> Any:
     """Mock ``sys.argv`` for CLI parser tests.
 
     Usage::

@@ -119,11 +119,11 @@ def check_firewall_status(port):
         return
 
     if shutil.which("ufw"):
-        rich_console.print(f"\n[dim][Tip] If connection fails, allow port in UFW:[/dim]")
+        rich_console.print("\n[dim][Tip] If connection fails, allow port in UFW:[/dim]")
         rich_console.print(f"[dim cyan]  sudo ufw allow {port}/tcp[/dim cyan]")
     
     elif shutil.which("firewall-cmd"):
-        rich_console.print(f"\n[dim][Tip] If connection fails, allow port in FirewallD:[/dim]")
+        rich_console.print("\n[dim][Tip] If connection fails, allow port in FirewallD:[/dim]")
         rich_console.print(f"[dim cyan]  sudo firewall-cmd --add-port={port}/tcp --temporary[/dim cyan]")
 
 
@@ -133,7 +133,7 @@ def start_share_server(file_path_str: str, start_port=8989):
     path = Path(file_path_str).resolve()
     
     if not path.exists():
-        console.err(Keys.net.file_dir_not_found(path=path))
+        console.err(Keys.net.file_dir_not_found(path=str(path)))
         return
 
     port = find_free_port(start_port)
@@ -147,7 +147,7 @@ def start_share_server(file_path_str: str, start_port=8989):
         ip_address = get_best_ip()
 
     if IS_WSL:
-        rich_console.print(f"\n[bold yellow][!] WSL Environment Detected[/bold yellow]")
+        rich_console.print("\n[bold yellow][!] WSL Environment Detected[/bold yellow]")
         console.warn(Keys.net.wsl_nat_warning)
         console.warn(Keys.net.wsl_share_tip)
 

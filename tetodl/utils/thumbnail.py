@@ -311,7 +311,7 @@ def download_thumbnail_task(url, target_format='jpg', ui=None):
         try:
             os.makedirs(target_dir, exist_ok=True)
         except OSError as e:
-            console.err(Keys.media.cannot_create_thumb_dir(error=e))
+            console.err(Keys.media.cannot_create_thumb_dir(error=str(e)))
             return DownloadResult(success=False)
 
     ui.clear()
@@ -326,7 +326,7 @@ def download_thumbnail_task(url, target_format='jpg', ui=None):
             with yt.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
                 info = ydl.extract_info(url, download=False)
     except Exception as e:
-        console.err(Keys.media.extraction_failed(error=e))
+        console.err(Keys.media.extraction_failed(error=str(e)))
         return DownloadResult(success=False)
 
     if 'entries' in info:

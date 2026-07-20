@@ -115,7 +115,7 @@ def verify_dependencies(header_title=None):
                 console.warn(Keys.ui.core_engine_installed(version=current))
                 
     except Exception as e:
-        console.err(Keys.ui.failed_check_engine_version(error=e))
+        console.err(Keys.ui.failed_check_engine_version(error=str(e)))
 
     cfg.verified_dependencies = True 
     save_config()
@@ -178,8 +178,10 @@ def verify_dependencies(header_title=None):
         
         # 2. Environment & Path Setup
         env_display = "LINUX"
-        if IS_TERMUX: env_display = "TERMUX (Android)"
-        elif IS_WSL: env_display = "WSL (Windows)"
+        if IS_TERMUX:
+            env_display = "TERMUX (Android)"
+        elif IS_WSL:
+            env_display = "WSL (Windows)"
         
         console.warn(f"Environment Detected: {color(env_display, 'c')}")
         print()
@@ -209,7 +211,8 @@ def verify_dependencies(header_title=None):
             try:
                 res = input(f"{color('Use default paths? (Configurable later) (Y/n) > ', 'c')}").strip().lower()
                 use_default = res in ['', 'y', 'yes']
-            except KeyboardInterrupt: use_default = True
+            except KeyboardInterrupt:
+                use_default = True
 
         if use_default:
             cfg.music_root = proposed_music
@@ -220,7 +223,8 @@ def verify_dependencies(header_title=None):
         else:
             console.warn(Keys.ui.select_custom_music_folder)
             start_nav_music = os.path.dirname(DEFAULT_MUSIC_ROOT)
-            if not os.path.exists(start_nav_music): start_nav_music = os.path.expanduser("~")
+            if not os.path.exists(start_nav_music):
+                start_nav_music = os.path.expanduser("~")
 
             custom_music = navigate_folders(start_nav_music, "Select Music Folder", False)
             if custom_music:
@@ -237,7 +241,8 @@ def verify_dependencies(header_title=None):
             
             console.warn(Keys.ui.select_custom_video_folder)
             start_nav_vid = os.path.dirname(DEFAULT_VIDEO_ROOT)
-            if not os.path.exists(start_nav_vid): start_nav_vid = os.path.expanduser("~")
+            if not os.path.exists(start_nav_vid):
+                start_nav_vid = os.path.expanduser("~")
             custom_video = navigate_folders(start_nav_vid, "Select Video Folder", False)
             if custom_video:
                 cfg.video_root = custom_video

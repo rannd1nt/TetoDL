@@ -15,7 +15,7 @@ import traceback as tbmod
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterator, Literal, ParamSpec, TypeVar
+from typing import Any, Callable, Iterator, Literal, ParamSpec, TypeVar, cast
 
 from .logger import get_debug_mode, is_debug
 
@@ -449,7 +449,6 @@ class TraceStore:
         >>> store.dump_json("/tmp/trace.json")  # doctest: +SKIP
         """
         import json
-        import datetime as dt
 
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -706,12 +705,12 @@ def trace(
     function is called normally.
     """
     if func is not None:
-        return _make_trace_wrapper(func, show_args, show_result, max_len)
+        return cast(Callable[..., R], _make_trace_wrapper(func, show_args, show_result, max_len))
 
     def decorator(f: Callable[P, R]) -> Callable[P, R]:
         return _make_trace_wrapper(f, show_args, show_result, max_len)
 
-    return decorator
+    return cast(Callable[..., R], decorator)
 
 
 def _make_trace_wrapper(

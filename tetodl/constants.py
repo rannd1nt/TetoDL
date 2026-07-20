@@ -31,6 +31,7 @@ APP_NAME = "TetoDL"
 APP_VERSION = "1.4.0"
 
 # ==== BINARY ROOT (PyInstaller) ====
+_BINARY_DIR: Path | None
 if IS_BINARY:
     _BINARY_DIR = Path(sys.executable).parent
 else:
@@ -57,6 +58,7 @@ elif IS_WINDOWS:
 
     # FFmpeg — bundled binary first, fallback to PATH
     if IS_BINARY:
+        assert _BINARY_DIR is not None
         bundled_ffmpeg = _BINARY_DIR / "ffmpeg.exe"
         FFMPEG_CMD = str(bundled_ffmpeg) if bundled_ffmpeg.exists() else "ffmpeg"
     else:
@@ -76,6 +78,9 @@ else:
     CACHE_DIR = (Path(xdg_cache) if xdg_cache else home / ".cache") / APP_NAME
 
     TEMP_DIR = CACHE_DIR / "temp"
+
+    WSL_MUSIC_OVERRIDE: Path | None
+    WSL_VIDEO_OVERRIDE: Path | None
 
     if IS_WSL:
         try:

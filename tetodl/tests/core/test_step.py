@@ -12,7 +12,7 @@ class TestPipelineStep:
             pass
 
         with pytest.raises(TypeError):
-            IncompleteStep()
+            IncompleteStep()  # type: ignore[abstract]
 
     def test_pipeline_step_proper_subclass(self):
         """A subclass that implements __call__ can be instantiated and invoked."""

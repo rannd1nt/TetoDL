@@ -1,6 +1,5 @@
 import hashlib
 
-import pytest
 
 
 class TestCache:

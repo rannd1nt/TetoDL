@@ -1,5 +1,6 @@
 """AUTO-GENERATED FILE. DO NOT EDIT."""
 from typing import TypeAlias, Tuple, Dict, Any, Union
+from pathlib import Path
 
 I18nKey: TypeAlias = Union[str, Tuple[str, Dict[str, Any]]]
 
@@ -1138,7 +1139,7 @@ class _TaggerFailedEmbedLyricsCallable:
     
     Original template: "Failed to embed lyrics: {error}"
     """
-    def __call__(self, *, error: str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         
@@ -1156,7 +1157,7 @@ class _TaggerMetadataEmbeddingErrorCallable:
     
     Original template: "Metadata embedding error: {error}"
     """
-    def __call__(self, *, error: str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         
@@ -1248,7 +1249,7 @@ class _CoreFailedDeleteCacheCallable:
     
     Original template: "Failed to delete cache: {error}"
     """
-    def __call__(self, *, error: str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         
@@ -1266,7 +1267,7 @@ class _CoreFailedSaveHistoryCallable:
     
     Original template: "Failed to save history: {error}"
     """
-    def __call__(self, *, error: str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         
@@ -1284,7 +1285,7 @@ class _CoreFailedDeleteHistoryCallable:
     
     Original template: "Failed to delete history: {error}"
     """
-    def __call__(self, *, error: str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         
@@ -1347,7 +1348,7 @@ class _SearchSearchErrorCallable:
     
     Original template: "Search error: {error}"
     """
-    def __call__(self, *, error: str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         
@@ -1406,7 +1407,7 @@ class _MaintUpdateFailedCallable:
     
     Original template: "Update failed: {error}"
     """
-    def __call__(self, *, error: str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         
@@ -1424,7 +1425,7 @@ class _MaintUninstallerScriptNotFoundCallable:
     
     Original template: "Uninstaller script not found at: {path}"
     """
-    def __call__(self, *, path: str | int) -> tuple[str, dict]:
+    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
         """
         Formats the translation string.
         
@@ -1442,7 +1443,7 @@ class _MaintFailedCleanDataCallable:
     
     Original template: "Failed to clean some data: {error}"
     """
-    def __call__(self, *, error: str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         
@@ -1460,7 +1461,7 @@ class _MaintErrorExecutingUninstallerCallable:
     
     Original template: "Error executing uninstaller: {error}"
     """
-    def __call__(self, *, error: str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         
@@ -1860,7 +1861,7 @@ class _CliFailedRemoveTempZipCallable:
     
     Original template: "Failed to remove temp zip: {error}"
     """
-    def __call__(self, *, error: str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         

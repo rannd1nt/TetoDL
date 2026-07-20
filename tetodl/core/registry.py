@@ -25,7 +25,8 @@ class RegistryManager:
             pass
 
     def register_download(self, video_id, file_path, content_type, metadata):
-        if not video_id or not content_type: return
+        if not video_id or not content_type:
+            return
 
         c_type = 'audio' if 'audio' in content_type.lower() or 'music' in content_type.lower() else 'video'
         

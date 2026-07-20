@@ -87,12 +87,15 @@ class FinalizeStep(PipelineStep[PipelineContext, PipelineContext]):
     @staticmethod
     def _cache(ctx: PipelineContext) -> None:
         """Store downloaded-file metadata in the local cache for future runs."""
-        info = ctx.downloaded_file.info
+        downloaded = ctx.downloaded_file
+        if downloaded is None:
+            return
+        info = downloaded.info
         if not info:
             return
         cache_metadata(ctx.url, {
-            "title": ctx.downloaded_file.title,
-            "duration": ctx.downloaded_file.duration,
+            "title": downloaded.title,
+            "duration": downloaded.duration,
             "uploader": info.uploader,
             "artist": info.artist or "",
             "album": info.album or "",
@@ -103,27 +106,29 @@ class FinalizeStep(PipelineStep[PipelineContext, PipelineContext]):
     @staticmethod
     def _add_to_history(ctx: PipelineContext) -> None:
         """Register the completed download in history and the file registry."""
-        info = ctx.downloaded_file.info
+        downloaded = ctx.downloaded_file
+        assert downloaded is not None
+        info = downloaded.info
         video_id = info.id if info else extract_video_id(ctx.url)
         artist = (info.artist or info.uploader or "Unknown Artist") if info else "Unknown Artist"
         album = info.album if info else None
 
         platform = "YouTube Music" if ctx.is_youtube_music else "YouTube Audio"
-        history_title = f"{artist} - {ctx.downloaded_file.title}" if ctx.is_youtube_music else ctx.downloaded_file.title
+        history_title = f"{artist} - {downloaded.title}" if ctx.is_youtube_music else downloaded.title
         download_type = "Playlist Track" if "Playlist" in ctx.download_type_label else "Single Track"
         if ctx.media_type == "video":
             download_type = download_type.replace("Track", "Video")
 
         add_to_history(
             id=video_id,
-            file_path=ctx.downloaded_file.path,
+            file_path=downloaded.path,
             success=True,
             title=history_title,
             content_type=ctx.media_type,
             platform=platform,
             download_type=download_type,
-            duration=ctx.downloaded_file.duration,
-            metadata={"artist": artist, "album": album, "title": ctx.downloaded_file.title},
+            duration=downloaded.duration,
+            metadata={"artist": artist, "album": album, "title": downloaded.title},
         )
 
     @staticmethod
@@ -131,5 +136,7 @@ class FinalizeStep(PipelineStep[PipelineContext, PipelineContext]):
         """Notify the media scanner of the new file if the feature is enabled."""
         if not ctx.config.media_scanner_enabled:
             return
+        downloaded = ctx.downloaded_file
+        assert downloaded is not None
         from ...utils.media_scanner import scan_media_files
-        scan_media_files(os.path.abspath(ctx.downloaded_file.path))
+        scan_media_files(os.path.abspath(downloaded.path))

@@ -1,4 +1,3 @@
-from unittest.mock import MagicMock, patch
 
 from tetodl.core.models import AppConfig, DownloadResult, DownloadSession
 

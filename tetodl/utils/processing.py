@@ -40,7 +40,7 @@ def get_audio_format_string(audio_format):
 
 def build_audio_postprocessors(audio_format, is_youtube_music=False):
     """Build postprocessors list based on audio format"""
-    postprocessors = []
+    postprocessors: list[dict[str, str | bool]] = []
     if audio_format == "mp3":
         postprocessors.append({
             'key': 'FFmpegExtractAudio',
@@ -93,7 +93,7 @@ def extract_all_urls_from_content(url):
             return [url], 'Unknown', 1
 
 
-def get_platform_badge(platform: str, download_type: str = None) -> str:
+def get_platform_badge(platform: str, download_type: str | None = None) -> str:
     """
     Generate badge Content Type yang lebih informatif.
     Format: YT-VID, YT-AUD, YT-MSC, SPOTIFY
@@ -141,13 +141,14 @@ def parse_playlist_items(items: str) -> set:
     Raises:
         ValueError: If the input format is invalid (caught by CLI).
     """
-    selected_indices = set()
+    selected_indices: set[int] = set()
     
     parts = items.split(',')
     
     for part in parts:
         part = part.strip()
-        if not part: continue
+        if not part:
+            continue
         
         try:
             if '-' in part:

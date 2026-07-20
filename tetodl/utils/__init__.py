@@ -79,4 +79,6 @@ __all__ = [
     'get_language_display_name',
     'get_current_language',
     'scan_media_files',
+    'extract_all_urls_from_content',
+    'extract_video_id',
 ]

@@ -1,6 +1,5 @@
 """Tests for tetodl.utils.console.contexts."""
 
-import threading
 
 import pytest
 
@@ -65,7 +64,7 @@ class TestConsoleSpinnerContext:
 
     def test_exit_clears_output(self, console, mocker):
         mock_write = mocker.patch("sys.stdout.write")
-        mock_flush = mocker.patch("sys.stdout.flush")
+        mocker.patch("sys.stdout.flush")
         with ConsoleSpinnerContext(console, "working"):
             pass
         mock_write.assert_any_call("\r\033[K")

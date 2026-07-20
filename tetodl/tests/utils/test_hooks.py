@@ -68,7 +68,6 @@ class TestQuietLogger:
             sys.stdout = old
 
     def test_error_403_suppressed(self, logger):
-        import os
         out = StringIO()
         old = sys.stdout
         sys.stdout = out

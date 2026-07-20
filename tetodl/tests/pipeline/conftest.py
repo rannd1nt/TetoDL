@@ -4,14 +4,13 @@ Pipeline sub-package fixtures — step instances, mock handlers, ctx builders.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 import pytest
 
 
 @pytest.fixture
-def mock_download_handler(mocker: pytest.FixtureRequest) -> Any:
+def mock_download_handler(mocker: Any) -> Any:
     """Mock ``pipeline.handlers.download_audio_youtube``.
 
     Returns a coroutine-like mock so the pipeline can call it without
@@ -21,7 +20,7 @@ def mock_download_handler(mocker: pytest.FixtureRequest) -> Any:
 
 
 @pytest.fixture
-def mock_yt_dlp_extract(mocker: pytest.FixtureRequest) -> Any:
+def mock_yt_dlp_extract(mocker: Any) -> Any:
     """Mock ``yt_dlp.YoutubeDL.extract_info`` to return a canned result.
 
     The caller can override ``mock_yt_dlp_extract.return_value`` to

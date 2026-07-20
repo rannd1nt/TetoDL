@@ -27,7 +27,7 @@ def perform_update() -> bool:
     # ── Pip mode ──
     try:
         import subprocess
-        console.proc(Keys.maint.checking_for_updates)
+        console.proc(Keys.cli.checking_for_updates)
         result = subprocess.run(
             [sys.executable, "-m", "pip", "install", "--upgrade", "tetodl"],
             capture_output=True, text=True
@@ -51,7 +51,7 @@ def _perform_binary_update() -> bool:
     current_exe = sys.executable
 
     try:
-        console.proc(Keys.maint.checking_for_updates)
+        console.proc(Keys.cli.checking_for_updates)
         url = f"https://api.github.com/repos/{repo}/releases/latest"
         with urllib.request.urlopen(url, timeout=10) as resp:
             release = json.loads(resp.read())
@@ -76,7 +76,7 @@ def _perform_binary_update() -> bool:
         os.chmod(tmp_bin, 0o755)
 
         console.ok(Keys.maint.update_successful)
-        _spawn_updater(current_exe, tmp_bin)
+        _spawn_updater(current_exe, str(tmp_bin))
         return True
 
     except Exception as e:
@@ -106,7 +106,7 @@ del "%~f0"
 """
         bat_path.write_text(bat_content)
         subprocess.Popen(["cmd.exe", "/c", str(bat_path)],
-                         shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+                         shell=True, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     else:
         updater_script = f"""#!/bin/sh
 sleep 1
@@ -150,8 +150,10 @@ def perform_uninstall():
         return
 
     wipe_mode = "none"
-    if choice == '2': wipe_mode = "partial"
-    elif choice == '3': wipe_mode = "full"
+    if choice == '2':
+        wipe_mode = "partial"
+    elif choice == '3':
+        wipe_mode = "full"
     elif choice != '1':
         console.neutral(Keys.maint.invalid_choice_aborting)
         return
@@ -232,19 +234,23 @@ def reset_data(targets: list[str]):
             try:
                 if len(os.listdir(TEMP_DIR)) > 0:
                     has_garbage = True
-            except OSError: pass
+            except OSError:
+                pass
 
         if not has_garbage and os.path.exists(CACHE_DIR):
             try:
                 for item in os.listdir(CACHE_DIR):
-                    item_path = os.path.join(CACHE_DIR, item)
+                    os.path.join(CACHE_DIR, item)
 
-                    if item == "temp": continue
-                    if item == "cache.json": continue
+                    if item == "temp":
+                        continue
+                    if item == "cache.json":
+                        continue
 
                     has_garbage = True
                     break
-            except OSError: pass
+            except OSError:
+                pass
 
         if not has_garbage:
             console.warn(Keys.maint.cache_nothing_to_clean)
@@ -252,12 +258,16 @@ def reset_data(targets: list[str]):
             TempManager.cleanup()
             
             if os.path.exists(CACHE_PATH):
-                try: os.remove(CACHE_PATH)
-                except OSError: pass
-            
+                try:
+                    os.remove(CACHE_PATH)
+                except OSError:
+                    pass
+
             if os.path.exists(CACHE_DIR):
-                try: shutil.rmtree(CACHE_DIR)
-                except OSError: pass
+                try:
+                    shutil.rmtree(CACHE_DIR)
+                except OSError:
+                    pass
                 
             console.ok(Keys.maint.cache_cleared)
 

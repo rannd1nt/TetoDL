@@ -1,9 +1,7 @@
 """Tests for tetodl.utils.console.themes."""
 
 import sys
-from dataclasses import fields
 
-import pytest
 
 from tetodl.utils.console.themes import (
     LogTheme,
