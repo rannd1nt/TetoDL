@@ -78,32 +78,14 @@ jobs:
           python-version: "3.12"
       - run: pip install pyinstaller
       - run: pip install -e ".[full,windows]"
-      - name: Build all 4 variants (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          foreach ($variant in @('cli', 'tui', 'daemon', 'full')) {
-            $env:BUILD_VARIANT = $variant
-            pyinstaller tetodl.spec --clean
-          }
-      - name: Build all 4 variants (Linux)
-        if: matrix.os != 'windows-latest'
-        run: |
-          for variant in cli tui daemon full; do
-            BUILD_VARIANT=$variant pyinstaller tetodl.spec --clean
-          done
+      - name: Build binary
+        run: pyinstaller tetodl.spec --clean
       - name: Smoke test
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             ./dist/tetodl.exe --version
-            ./dist/tetodl-cli.exe --version
-            ./dist/tetodl-tui.exe --version
-            ./dist/tetodl-daemon.exe --version
           else
             ./dist/tetodl-linux --version
-            ./dist/tetodl-cli-linux --version
-            ./dist/tetodl-tui-linux --version
-            ./dist/tetodl-daemon-linux --version
           fi
       - uses: actions/upload-artifact@v4
         with:
@@ -111,13 +93,9 @@ jobs:
           path: dist/tetodl*
 
   verify-install-windows:
-    name: Win Install (${{ matrix.variant }})
+    name: Installer (Windows)
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: [cli, tui, daemon, full]
     runs-on: windows-latest
     defaults:
       run:
@@ -130,7 +108,7 @@ jobs:
         run: |
           $installDir = "$env:LOCALAPPDATA\TetoDL"
           New-Item -ItemType Directory -Path $installDir -Force | Out-Null
-          Move-Item -Path "tetodl-${{ matrix.variant }}.exe" -Destination "$installDir\tetodl.exe" -Force
+          Move-Item -Path "tetodl.exe" -Destination "$installDir\tetodl.exe" -Force
           echo "$installDir" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
       - name: Smoke test — PowerShell
         run: |
@@ -166,13 +144,11 @@ jobs:
         shell: pwsh
         run: |
           .\tetodl.exe --version
-          .\tetodl-cli.exe --version
       - name: Run binary WITHOUT Python setup (Linux)
         if: matrix.os != 'windows-latest'
         run: |
-          chmod +x tetodl-linux tetodl-cli-linux
+          chmod +x tetodl-linux
           ./tetodl-linux --version
-          ./tetodl-cli-linux --version
       - name: Binary — help + info (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
@@ -186,7 +162,7 @@ jobs:
           ./tetodl-linux --info | grep -q "TetoDL"
 
   verify-installer-windows:
-    name: Installer (Windows)
+    name: Installer Script (Windows)
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
@@ -201,13 +177,12 @@ jobs:
       - name: Run installer script
         run: |
           $env:TETODL_FORCE = "1"
-          $env:TETODL_VARIANT = "full"
           & .\install.ps1 -Force
       - name: Verify installed binary
         run: tetodl --version
 
   verify-installer-linux:
-    name: Installer (Linux-apt)
+    name: Installer Script (Linux-apt)
     needs: [build]
     if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -289,7 +264,7 @@ jobs:
       - name: Test binary — shell compatibility
         run: |
           pip install pyinstaller
-          BUILD_VARIANT=full pyinstaller tetodl.spec --clean
+          pyinstaller tetodl.spec --clean
           ./dist/tetodl-linux --version
           zsh -c './dist/tetodl-linux --version'
           fish -c './dist/tetodl-linux --version'
@@ -300,15 +275,6 @@ jobs:
           bash -c 'tetodl --version'
           zsh -c 'tetodl --version'
           fish -c 'tetodl --version'
-      - name: Binary — all variant smoke test
-        run: |
-          for variant in cli tui daemon full; do
-            BUILD_VARIANT=$variant pyinstaller tetodl.spec --clean --noconfirm
-            ./dist/tetodl${variant:+-$variant}-linux --version
-            ./dist/tetodl${variant:+-$variant}-linux --help 2>&1 | head -5
-            ./dist/tetodl${variant:+-$variant}-linux --info 2>&1 | head -5
-            ./dist/tetodl${variant:+-$variant}-linux --info 2>&1 | grep -i "variant: $variant" || true
-          done
 
   e2e:
     name: E2E (Real URLs)

@@ -1,6 +1,3 @@
-import questionary
-from questionary import Choice
-
 from ..constants import IS_TERMUX
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
@@ -18,10 +15,9 @@ except ImportError:
 
 
 def perform_youtube_search(query, limit=5):
-    """
-    Search YouTube via yt_dlp Python API and return interactive selection.
-    Returns: Selected Video URL or None
-    """
+    import questionary
+    from questionary import Choice
+
     if yt is None:
         console.err(Keys.search.ytdlp_not_found)
         return None

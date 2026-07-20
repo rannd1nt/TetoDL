@@ -37,35 +37,16 @@ echo -e "${CYAN}║         (Linux $ARCH)               ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════╝${NC}"
 echo ""
 
-# ─────────────────────────────────────────────────
-# 2. Choose variant
-# ─────────────────────────────────────────────────
-VARIANT="${TETODL_VARIANT:-}"
-if [ -z "$VARIANT" ] && [ "$TETODL_FORCE" != "1" ]; then
-    echo -e "${YELLOW}  Select variant:${NC}"
-    echo -e "${CYAN}    [1] tetodl (Full) — CLI + TUI + Daemon [~50 MB]${NC}"
-    echo -e "${CYAN}    [2] tetodl-cli   — CLI only             [~20 MB]${NC}"
-    echo -e ""
-    read -r -p "  Choice (1/2): " choice
-    VARIANT="full"
-    [ "$choice" = "2" ] && VARIANT="cli"
-fi
-VARIANT="${VARIANT:-full}"
-
-if [ "$VARIANT" = "cli" ]; then
-    BINARY_NAME="tetodl-cli-linux"
-else
-    BINARY_NAME="tetodl-linux"
-fi
+BINARY_NAME="tetodl-linux"
 
 # ─────────────────────────────────────────────────
-# 3. Install directory
+# 2. Install directory
 # ─────────────────────────────────────────────────
 INSTALL_DIR="${HOME}/.local/bin"
 mkdir -p "$INSTALL_DIR"
 
 # ─────────────────────────────────────────────────
-# 4. Fetch latest release
+# 3. Fetch latest release
 # ─────────────────────────────────────────────────
 REPO="rannd1nt/tetodl"
 API_URL="https://api.github.com/repos/${REPO}/releases/latest"
@@ -89,7 +70,7 @@ fi
 echo -e "${GREEN}  Latest version: $TAG${NC}"
 
 # ─────────────────────────────────────────────────
-# 5. Download binary
+# 4. Download binary
 # ─────────────────────────────────────────────────
 DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/${BINARY_NAME}"
 OUTPUT_PATH="${INSTALL_DIR}/tetodl"
@@ -104,10 +85,9 @@ fi
 chmod +x "$OUTPUT_PATH"
 
 # ─────────────────────────────────────────────────
-# 6. Add to PATH
+# 5. Add to PATH
 # ─────────────────────────────────────────────────
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
-    # Detect shell and add to appropriate rc file
     SHELL_NAME=$(basename "$SHELL")
     case "$SHELL_NAME" in
         bash)
@@ -138,7 +118,7 @@ echo -e "${CYAN}  Run 'tetodl --help' to get started.${NC}"
 echo -e "${CYAN}  (You may need to restart your terminal or run 'source ~/.bashrc')${NC}"
 
 # ─────────────────────────────────────────────────
-# 7. Post-install prompt
+# 6. Post-install prompt
 # ─────────────────────────────────────────────────
 if [ "$TETODL_FORCE" != "1" ] && [ -t 0 ]; then
     echo ""

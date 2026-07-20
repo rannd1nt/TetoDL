@@ -3,15 +3,11 @@ Color codes and colored print functions
 """
 import os
 from rich.console import Console
-from questionary import Style
 from typing import Literal
 console = Console()
 
 def search_style():
-    """
-    Style khusus untuk Search Menu.
-    Menghilangkan 'bold' pada pointer dan highlight agar tidak sakit mata.
-    """
+    from questionary import Style
     return Style([
         ('qmark', 'fg:cyan'),
         ('question', 'fg:white nobold'),
@@ -25,6 +21,7 @@ def search_style():
     ])
 
 def menu_style():
+    from questionary import Style
     return Style([
         ('qmark', 'fg:cyan'),
         ('question', 'fg:cyan'),
@@ -38,18 +35,18 @@ def menu_style():
     ])
 
 def truncate_title(title, max_words=None, max_chars=50):
-    if not title: 
+    if not title:
         return "Unknown Title"
-    
+
     title = str(title).strip()
     title = title.replace('\n', ' ').replace('\r', '')
-    
+
     if len(title) <= max_chars:
         return title
-    
+
     if max_chars <= 3:
         return title[:max_chars]
-        
+
     return title[:max_chars-3] + "..."
 
 def format_duration(seconds):
@@ -60,18 +57,18 @@ def format_duration(seconds):
         seconds = int(seconds)
     except Exception:
         return "0s"
-        
+
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     secs = seconds % 60
-    
+
     parts = []
     if hours > 0:
         parts.append(f"{hours}h")
     if minutes > 0:
         parts.append(f"{minutes}m")
     parts.append(f"{secs}s")
-    
+
     if not parts:
         return f"{secs}s"
     return " ".join(parts)
@@ -131,7 +128,7 @@ def key_color(txt: str, ansi=Colors.YELLOW, bold=False):
         return f'{Colors.BOLD}{ansi}{txt}{Colors.RESET}'
 
 
-def colored_switch(flag: bool, true_txt: str, false_txt: str, 
+def colored_switch(flag: bool, true_txt: str, false_txt: str,
     true_c=Colors.GREEN, false_c=Colors.RED
     ) -> str:
     return f'{true_c}{true_txt}{Colors.RESET}' if flag else f'{false_c}{false_txt}{Colors.RESET}'
@@ -156,5 +153,3 @@ def color(text: str, ansi: CCode | str, bold: bool = False) -> str:
         return f"{Colors.BOLD}{code}{text}{Colors.RESET}"
 
     return f"{code}{text}{Colors.RESET}"
-
-

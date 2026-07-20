@@ -8,9 +8,7 @@
 #>
 
 param(
-    [switch]$Force,
-    [ValidateSet("cli", "full")]
-    [string]$Variant = ""
+    [switch]$Force
 )
 
 $Host.UI.RawUI.WindowTitle = "TetoDL Installer"
@@ -28,22 +26,7 @@ $arch = if ([Environment]::Is64BitOperatingSystem) { "x64" } else { "x86" }
 Write-Host "  Detected: Windows $arch" -ForegroundColor Gray
 
 # ─────────────────────────────────────────────────
-# 2. Choose variant
-# ─────────────────────────────────────────────────
-if (-not $Variant -and -not $Force) {
-    Write-Host "  Select variant:" -ForegroundColor Yellow
-    Write-Host "    [1] tetodl (Full) — CLI + TUI + Daemon [~70 MB]" -ForegroundColor Cyan
-    Write-Host "    [2] tetodl-cli   — CLI only             [~25 MB]" -ForegroundColor Cyan
-    Write-Host ""
-    $choice = Read-Host "  Choice (1/2)"
-    $Variant = if ($choice -eq "2") { "cli" } else { "full" }
-}
-if (-not $Variant) { $Variant = "full" }
-
-$binaryName = if ($Variant -eq "cli") { "tetodl-cli.exe" } else { "tetodl.exe" }
-
-# ─────────────────────────────────────────────────
-# 3. Determine install directory
+# 2. Determine install directory
 # ─────────────────────────────────────────────────
 $installDir = "$env:LOCALAPPDATA\TetoDL"
 if (-not (Test-Path $installDir)) {
@@ -51,7 +34,7 @@ if (-not (Test-Path $installDir)) {
 }
 
 # ─────────────────────────────────────────────────
-# 4. Fetch latest release
+# 3. Fetch latest release
 # ─────────────────────────────────────────────────
 Write-Host ""
 Write-Host "  Fetching latest release..." -ForegroundColor Yellow
@@ -71,13 +54,13 @@ catch {
 }
 
 # ─────────────────────────────────────────────────
-# 5. Download binary
+# 4. Download binary
 # ─────────────────────────────────────────────────
-$downloadUrl = "https://github.com/$repo/releases/download/$tag/$binaryName"
+$downloadUrl = "https://github.com/$repo/releases/download/$tag/tetodl.exe"
 $outputPath = "$installDir\tetodl.exe"
 
 Write-Host ""
-Write-Host "  Downloading $binaryName ..." -ForegroundColor Yellow
+Write-Host "  Downloading tetodl.exe ..." -ForegroundColor Yellow
 
 try {
     Invoke-WebRequest -Uri $downloadUrl -OutFile $outputPath -UseBasicParsing
@@ -88,7 +71,7 @@ catch {
 }
 
 # ─────────────────────────────────────────────────
-# 6. Add to PATH
+# 5. Add to PATH
 # ─────────────────────────────────────────────────
 $currentPath = [Environment]::GetEnvironmentVariable("PATH", "User")
 if ($currentPath -notlike "*$installDir*") {
@@ -96,7 +79,6 @@ if ($currentPath -notlike "*$installDir*") {
     Write-Host "  Added to PATH (user-wide)" -ForegroundColor Green
 }
 
-# Also update current session
 $env:PATH = "$env:PATH;$installDir"
 
 Write-Host ""
@@ -106,7 +88,7 @@ Write-Host ""
 Write-Host "  Run 'tetodl --help' to get started." -ForegroundColor Cyan
 
 # ─────────────────────────────────────────────────
-# 7. Post-install prompt
+# 6. Post-install prompt
 # ─────────────────────────────────────────────────
 if (-not $Force) {
     Write-Host ""

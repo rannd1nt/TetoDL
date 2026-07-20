@@ -1,34 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-Single PyInstaller spec — 8 binary variants (4 variant × 2 platform).
-
-Usage (Windows build machine):
-  set BUILD_VARIANT=full && pyinstaller tetodl.spec   → tetodl.exe
-  set BUILD_VARIANT=cli  && pyinstaller tetodl.spec   → tetodl-cli.exe
-
-Usage (Linux build machine):
-  BUILD_VARIANT=full pyinstaller tetodl.spec           → tetodl-linux
-  BUILD_VARIANT=cli  pyinstaller tetodl.spec           → tetodl-cli-linux
-
-Variants: cli, tui, daemon, full
+PyInstaller spec — single binary with all features.
 """
 
-import os
 import platform
-import sys
 import urllib.request
 import zipfile
 from pathlib import Path
 
 IS_WIN_BUILD = platform.system() == "Windows"
-IS_LINUX_BUILD = not IS_WIN_BUILD
-BUILD_VARIANT = os.environ.get("BUILD_VARIANT", "full").lower()
 
 # ── Binary naming ──────────────────────────────────────────────
 suffix = ".exe" if IS_WIN_BUILD else ""
 platform_tag = "" if IS_WIN_BUILD else "-linux"
-variant_tag = "" if BUILD_VARIANT == "full" else f"-{BUILD_VARIANT}"
-binary_name = f"tetodl{variant_tag}{platform_tag}{suffix}"
+binary_name = f"tetodl{platform_tag}{suffix}"
 
 # ── Platform-specific binaries ─────────────────────────────────
 binaries = []
@@ -47,35 +32,21 @@ if IS_WIN_BUILD:
         Path("ffmpeg.zip").unlink()
     binaries.append(("ffmpeg.exe", "."))
 
-# ── Variant-specific hidden imports ────────────────────────────
-CORE_HIDDEN = [
+# ── Hidden imports (all features) ──────────────────────────────
+HIDDEN = [
     "yt_dlp", "yt_dlp.extractor", "yt_dlp.postprocessor",
     "mutagen", "mutagen.mp3", "mutagen.mp4", "mutagen.flac", "mutagen.id3",
     "pydantic", "requests", "bs4", "colorama", "rich",
+    "questionary", "qrcode",
+    "fastapi", "uvicorn", "zeroconf",
 ]
-TUI_HIDDEN = ["questionary", "qrcode"]
-DAEMON_HIDDEN = ["fastapi", "uvicorn", "zeroconf"]
 
-hidden = list(CORE_HIDDEN)
-if BUILD_VARIANT in ("tui", "full"):
-    hidden += TUI_HIDDEN
-if BUILD_VARIANT in ("daemon", "full"):
-    hidden += DAEMON_HIDDEN
-
-# ── Exclude unused feature libraries ───────────────────────────
+# ── Excludes ───────────────────────────────────────────────────
 EXCLUDES = [
     "tkinter", "unittest", "http.server", "pydoc", "test",
     "venv", "ensurepip",
 ]
-if BUILD_VARIANT == "cli":
-    EXCLUDES += TUI_HIDDEN + DAEMON_HIDDEN
-elif BUILD_VARIANT == "tui":
-    EXCLUDES += DAEMON_HIDDEN
-elif BUILD_VARIANT == "daemon":
-    EXCLUDES += TUI_HIDDEN
-
-# Linux never needs PyAV or Windows-specific DLLs
-if IS_LINUX_BUILD:
+if not IS_WIN_BUILD:
     EXCLUDES += ["av", "win32api", "win32con", "pywin32"]
 
 # ── Data files ─────────────────────────────────────────────────
@@ -91,7 +62,7 @@ a = Analysis(
     ["tetodl/__main__.py"],
     binaries=binaries,
     datas=datas,
-    hiddenimports=hidden,
+    hiddenimports=HIDDEN,
     excludes=EXCLUDES,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
