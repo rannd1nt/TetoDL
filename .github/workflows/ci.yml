@@ -81,12 +81,7 @@ jobs:
       - name: Build binary
         run: pyinstaller tetodl.spec --clean
       - name: Smoke test
-        run: |
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            ./dist/tetodl.exe --version
-          else
-            ./dist/tetodl-linux --version
-          fi
+        run: ./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }} --version
       - uses: actions/upload-artifact@v4
         with:
           name: tetodl-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }}
