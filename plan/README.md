@@ -32,8 +32,8 @@ TetoDL harus bisa:
 - **Dikompilasi jadi binary** via PyInstaller — bundle Python runtime + library + ffmpeg.exe
 - **Binary bisa jalan tanpa Python/Git/ffmpeg** — cocok untuk user awam
 - **Diinstall dengan satu perintah**:
-  - Windows: `iwr "https://install.tetodl.dev" | iex` — download binary
-  - Linux: `bash <(curl -s https://install.tetodl.dev)` — download binary
+  - Windows: `iwr "https://rannd1nt.github.io/TetoDL/install.ps1" | iex`
+  - Linux: `bash <(curl -sL "https://rannd1nt.github.io/TetoDL/install.sh")`
 - **Pip-installable**: `pip install tetodl` → `tetodl` command global (untuk developer)
 - **Bisa di-update** tanpa kehilangan data pengguna
 

@@ -5,7 +5,7 @@
 # No Python, Git, or ffmpeg required.
 #
 # Usage:
-#   bash <(curl -s "https://install.tetodl.dev")
+#   bash <(curl -sL "https://rannd1nt.github.io/TetoDL/install.sh")
 #
 
 set -e

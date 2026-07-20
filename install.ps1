@@ -4,7 +4,7 @@
 .DESCRIPTION
     Downloads pre-compiled TetoDL binary from GitHub Releases.
     No Python, Git, or ffmpeg required.
-    Usage: iwr "https://install.tetodl.dev" | iex
+    Usage: iwr "https://rannd1nt.github.io/TetoDL/install.ps1" | iex
 #>
 
 param(
