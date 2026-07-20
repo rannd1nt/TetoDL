@@ -5,7 +5,7 @@ from pathlib import Path
 def to_pascal(snake_str: str) -> str:
     return "".join(p.capitalize() for p in snake_str.split('_') if p)
 
-def generate_classes(name: str, data: dict, path_parts: list = None) -> list:
+def generate_classes(name: str, data: dict, path_parts: list | None = None) -> list:
     if path_parts is None:
         path_parts = []
         

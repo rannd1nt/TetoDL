@@ -11,11 +11,12 @@ See Also
 :class:`tetodl.core.resolver.ConfigResolver` : Configuration resolution.
 """
 import sys
+import os
+import shutil
 import requests
-import subprocess
 import importlib.util
 import time
-from ..constants import IS_WINDOWS
+from ..constants import IS_WINDOWS, IS_BINARY
 from ..utils.i18n_keys import Keys
 from ..utils.console import console
 from . import config as cfg
@@ -58,9 +59,7 @@ def check_command_exists(command):
     """
     Determine whether an executable is present on ``PATH``.
 
-    Runs ``which <command>`` via :class:`subprocess` and returns
-    ``True`` if the return code is zero.  Exceptions (timeout,
-    ``FileNotFoundError``, etc.) are silently caught.
+    Uses :func:`shutil.which` (pure Python, cross-platform).
 
     Parameters
     ----------
@@ -72,61 +71,39 @@ def check_command_exists(command):
     bool
         ``True`` if the command is found, ``False`` otherwise.
 
-    Examples
-    --------
-    >>> check_command_exists("python3")
-    True
-    >>> check_command_exists("nonexistent")
-    False
-
     See Also
     --------
     :func:`check_ffmpeg` : Check FFmpeg specifically.
-    :func:`python:shutil.which` : Alternative pure-Python lookup.
+    :func:`python:shutil.which` : Cross-platform executable lookup.
     """
-    try:
-        result = subprocess.run(
-            ['which', command],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        return result.returncode == 0
-    except Exception:
-        return False
+    return shutil.which(command) is not None
 
 
 def check_ffmpeg():
     """
-    Verify that FFmpeg is installed and print its version.
+    Verify that FFmpeg is available and print its version.
 
-    Delegates to :func:`check_command_exists` and then runs
-    ``ffmpeg -version`` to extract the version string.  Prints the
-    version or an error message through the console.
+    On Windows the check is optional — if missing, PyAV is used as fallback.
+    Uses :func:`shutil.which` to locate the binary.
 
     Returns
     -------
     bool
-        ``True`` if FFmpeg is available and ran successfully,
-        ``False`` otherwise.
-
-    Examples
-    --------
-    >>> check_ffmpeg()
-    True
-
-    See Also
-    --------
-    :func:`check_command_exists` : Underlying PATH lookup.
-    :func:`check_python_package` : Check Python package imports.
+        ``True`` if FFmpeg is found, ``False`` otherwise.
     """
-    if check_command_exists('ffmpeg'):
+    ffmpeg_path = shutil.which('ffmpeg')
+    if not ffmpeg_path:
+        # Check bundled binary path (Windows)
+        bundled = os.path.join(os.path.dirname(sys.executable), 'ffmpeg.exe')
+        if os.path.exists(bundled):
+            ffmpeg_path = bundled
+
+    if ffmpeg_path:
         try:
+            import subprocess
             result = subprocess.run(
-                ['ffmpeg', '-version'],
-                capture_output=True,
-                text=True,
-                timeout=5
+                [ffmpeg_path, '-version'],
+                capture_output=True, text=True, timeout=5
             )
             if result.returncode == 0:
                 version_line = result.stdout.split('\n')[0]
@@ -135,7 +112,11 @@ def check_ffmpeg():
                 return True
         except Exception:
             pass
-    
+
+    if IS_WINDOWS and IS_BINARY:
+        console.warn(Keys.dependency.ffmpeg_not_found)
+        return True  # non-fatal on Windows binary — PyAV handles thumbnails
+
     console.err(Keys.dependency.ffmpeg_not_found)
     return False
 
@@ -195,36 +176,7 @@ def check_python_package(package_name, import_name=None):
         console.err(Keys.dependency.package_not_found(package=package_name))
         return False
 
-def verify_platform_compatibility():
-    """
-    Verify that the current operating system is supported.
 
-    On Windows the function returns an error; all other platforms
-    are considered compatible.
-
-    Returns
-    -------
-    tuple[bool, str | None]
-        ``(True, None)`` if the platform is supported.
-        ``(False, error_message)`` if unsupported, where
-        ``error_message`` is a localised key from ``Keys``.
-
-    Examples
-    --------
-    >>> ok, err = verify_platform_compatibility()
-    >>> ok
-    True
-    >>> err is None
-    True
-
-    See Also
-    --------
-    :attr:`IS_WINDOWS` : Platform flag from ``constants``.
-    :func:`verify_core_dependencies` : Full dependency check.
-    """
-    if IS_WINDOWS:
-        return False, Keys.error.platform.windows_not_supported
-    return True, None
 
 def get_ytdlp_version_info():
     """

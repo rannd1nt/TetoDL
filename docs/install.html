@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TetoDL Installer</title>
+<script>
+(function() {
+  var ua = navigator.userAgent.toLowerCase();
+  var isWin = /windows/.test(ua);
+  var isLinux = /linux/.test(ua);
+
+  if (isWin) {
+    // Redirect to install.ps1
+    window.location.href = "https://raw.githubusercontent.com/rannd1nt/tetodl/main/install.ps1";
+  } else if (isLinux) {
+    // Redirect to install.sh
+    window.location.href = "https://raw.githubusercontent.com/rannd1nt/tetodl/main/install.sh";
+  } else {
+    document.body.innerHTML = '<p>Unsupported OS. Please visit <a href="https://github.com/rannd1nt/tetodl/releases">GitHub Releases</a>.</p>';
+  }
+})();
+</script>
+</head>
+<body>
+<p>Redirecting to installer...</p>
+</body>
+</html>

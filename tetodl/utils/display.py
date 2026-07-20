@@ -1,13 +1,13 @@
 """
 Display utilities and ASCII art
 """
-import os
 import sys
+from pathlib import Path
 from rich.text import Text
 from rich.table import Table
 from rich import box
 
-from ..constants import APP_VERSION, CONFIG_PATH, DATA_DIR
+from ..constants import APP_VERSION, CONFIG_PATH, DATA_DIR, IS_BINARY
 from ..core import config as cfg
 from ..core import cache
 from ..utils.files import get_free_space
@@ -18,8 +18,21 @@ from ..utils.i18n import get_text as _
 from ..utils.i18n_keys import Keys
 
 
+def _assets_dir() -> Path:
+    """Resolve the assets directory regardless of CWD or binary bundle mode."""
+    if IS_BINARY:
+        meipass = Path(getattr(sys, '_MEIPASS', sys.executable)).parent
+        candidate = meipass / "assets"
+        if candidate.is_dir():
+            return candidate
+    candidate = Path(__file__).resolve().parent.parent.parent / "assets"
+    if candidate.is_dir():
+        return candidate
+    return Path("assets")
+
+
 def show_ascii(filename=None, str_only=False) -> str | None:
-    """Display ASCII art from txt file"""
+    """Display ASCII art — built-in default or from assets/*.txt file."""
     header_raw = r'''
   ______     __        ____  __
  /_  __/__  / /_____  / __ \/ /
@@ -28,32 +41,28 @@ def show_ascii(filename=None, str_only=False) -> str | None:
 /_/  \___/\__/\____/_____/_____/
 
 '''
-    header_text = Text(header_raw, style="bold bright_cyan")
-
-    if not filename or filename == 'classic':
+    if not filename or filename in ('classic', 'default'):
         if str_only:
             return header_raw
         text = Text(header_raw, style="bold bright_cyan")
         rich_console.print(text)
         return None
 
-    target_file = filename if filename else 'default'
+    target_file = filename
+    asset_dir = _assets_dir()
+    asset_path = asset_dir / f"{target_file}.txt"
 
     try:
-        asset_path = os.path.join("assets", f"{target_file}.txt")
-        with open(asset_path, "r", encoding="utf-8") as f:
-            content = f.read()
-            if str_only:
-                return content
-            print(content, flush=True)
+        content = asset_path.read_text(encoding="utf-8")
+        if str_only:
             return content
+        print(content, flush=True)
+        return content
 
     except FileNotFoundError:
-        if target_file != 'classic':
-            if not str_only:
-                console.err(Keys.ui.header_not_found(file=target_file))
-                pass
-            return show_ascii('classic', str_only)
+        if not str_only:
+            console.err(Keys.ui.header_not_found(file=target_file))
+        return show_ascii('classic', str_only)
 
     except Exception as e:
         if not str_only:

@@ -84,10 +84,3 @@ class TestDependency:
         from tetodl.core.dependency import check_python_package
 
         assert check_python_package("_nonexistent_package_xyz_") is False
-
-    def test_verify_platform_compatibility(self):
-        """Returns (True, None) on non-Windows platforms."""
-        from tetodl.core.dependency import verify_platform_compatibility
-        ok, err = verify_platform_compatibility()
-        assert ok is True
-        assert err is None

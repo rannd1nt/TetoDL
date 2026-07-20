@@ -3,8 +3,10 @@ import sys
 import os
 import shutil
 import subprocess
+import json
+import urllib.request
 from pathlib import Path
-from ..constants import DATA_DIR, CACHE_DIR, CONFIG_DIR, HISTORY_PATH, CONFIG_PATH, REGISTRY_PATH, CACHE_PATH, TEMP_DIR
+from ..constants import DATA_DIR, CACHE_DIR, CONFIG_DIR, HISTORY_PATH, CONFIG_PATH, REGISTRY_PATH, CACHE_PATH, TEMP_DIR, IS_BINARY
 from ..core.registry import registry
 from ..core.history import reset_history
 from ..core.config import reset_config
@@ -14,55 +16,111 @@ from ..utils.i18n_keys import Keys
 from ..utils.formatters import color
 
 def get_project_root() -> Path:
-    """
-    Locate project root (where main.py and uninstall.sh reside).
-    Path: teto_dl/core/maintenance.py -> teto_dl/core -> teto_dl -> ROOT
-    """
     return Path(__file__).resolve().parent.parent.parent
 
 def perform_update() -> bool:
-    """Execute git pull to update the application."""
-    root_dir = get_project_root()
-    git_dir = root_dir / ".git"
+    """Update the application — pip mode or binary self-destructive update."""
 
-    if not git_dir.exists():
-        console.err(Keys.maint.not_git_repo)
-        console.warn(Keys.maint.manual_update_required)
-        return False
+    if IS_BINARY:
+        return _perform_binary_update()
 
-    # console.warn(f"Checking for updates in {root_dir}...")
-    
-    git_env = os.environ.copy()
-    git_env["LC_ALL"] = "C"
-
+    # ── Pip mode ──
     try:
-        subprocess.check_call(["git", "fetch"], cwd=root_dir, env=git_env)
-        
-        commits_behind = subprocess.check_output(
-            ["git", "rev-list", "HEAD..origin/main", "--count"], 
-            cwd=root_dir, 
-            env=git_env
-        ).decode().strip()
-
-        if commits_behind == "0":
-            console.ok(Keys.maint.already_up_to_date)
-            return True
-        else:
-            console.warn(Keys.maint.found_new_commits(count=commits_behind))
-            
-            subprocess.check_call(["git", "pull"], cwd=root_dir, env=git_env)
-            
+        import subprocess
+        console.proc(Keys.maint.checking_for_updates)
+        result = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--upgrade", "tetodl"],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
             console.ok(Keys.maint.update_successful)
             return True
-
-    except subprocess.CalledProcessError as e:
+        else:
+            console.err(Keys.maint.update_failed(error=result.stderr))
+            return False
+    except Exception as e:
         console.err(Keys.maint.update_failed(error=e))
-        console.warn(Keys.maint.repo_broken)
-        console.warn(Keys.maint.try_reinstall)
         return False
-    except FileNotFoundError:
-        console.err(Keys.maint.git_not_found)
+
+
+def _perform_binary_update() -> bool:
+    """Self-destructive binary update: download → rename → spawn updater."""
+    import tempfile
+
+    repo = "rannd1nt/tetodl"
+    current_exe = sys.executable
+
+    try:
+        console.proc(Keys.maint.checking_for_updates)
+        url = f"https://api.github.com/repos/{repo}/releases/latest"
+        with urllib.request.urlopen(url, timeout=10) as resp:
+            release = json.loads(resp.read())
+
+        tag = release["tag_name"]
+        asset_name = _binary_asset_name()
+        asset_url = None
+        for a in release["assets"]:
+            if a["name"] == asset_name:
+                asset_url = a["browser_download_url"]
+                break
+
+        if not asset_url:
+            console.err(f"No binary found for {asset_name}")
+            return False
+
+        console.proc(f"Downloading {tag} ...")
+        tmp_dir = Path(tempfile.mkdtemp())
+        tmp_bin = tmp_dir / asset_name
+
+        urllib.request.urlretrieve(asset_url, tmp_bin)
+        os.chmod(tmp_bin, 0o755)
+
+        console.ok(Keys.maint.update_successful)
+        _spawn_updater(current_exe, tmp_bin)
+        return True
+
+    except Exception as e:
+        console.err(Keys.maint.update_failed(error=e))
         return False
+
+
+def _binary_asset_name() -> str:
+    import platform
+    system = platform.system().lower()
+    if system == "windows":
+        return "tetodl.exe"
+    return "tetodl-linux"
+
+
+def _spawn_updater(old_exe: str, new_exe: str) -> None:
+    """Replace old binary with new binary using platform-appropriate script."""
+    import platform
+
+    if platform.system() == "Windows":
+        bat_path = Path(old_exe).with_suffix(".update.bat")
+        bat_content = f"""@echo off
+timeout /t 1 /nobreak >nul
+move /y "{new_exe}" "{old_exe}" >nul
+start "" "{old_exe}" --version
+del "%~f0"
+"""
+        bat_path.write_text(bat_content)
+        subprocess.Popen(["cmd.exe", "/c", str(bat_path)],
+                         shell=True, creationflags=subprocess.CREATE_NO_WINDOW)
+    else:
+        updater_script = f"""#!/bin/sh
+sleep 1
+mv -f "{new_exe}" "{old_exe}"
+chmod +x "{old_exe}"
+exec "{old_exe}" --version
+"""
+        import tempfile
+        script = Path(tempfile.mktemp(suffix=".sh"))
+        script.write_text(updater_script)
+        os.chmod(script, 0o755)
+        subprocess.Popen([str(script)], shell=False)
+
+    sys.exit(0)
 
 def perform_uninstall():
     """Trigger the bash uninstaller script and manage user data cleanup."""

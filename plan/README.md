@@ -914,25 +914,39 @@ BUILD_VARIANT=full   pyinstaller tetodl.spec           → tetodl-linux        (
 
 ### B2. GitHub Actions Workflow
 
-#### 3-Tier Testing Strategy
+#### Trigger Strategy
+
+| Event | Jobs | Waktu | Siapa yg kena dampak |
+|-------|------|-------|---------------------|
+| **Push** (branch apapun) | Tier 1: lint + unit | ~1 menit | Developer — feedback cepet |
+| **PR ke main** | Tier 1 + Tier 2: integration | ~4 menit | Reviewer — flag regression terdeteksi |
+| **Push ke main** | Tier 1 + 2 + 3 + 4a/4b/4c | ~15 menit | Tim — binary verified sebelum rilis |
+| **Manual dispatch** | Full suite + Tier 4d | ~25 menit | Tim — comprehensive check |
 
 ```
-Push ke feat/packaging / PR ke main
+Setiap push (branch apapun)
 │
-├── Tier 1: Unit Tests (~30 detik) — setiap push
-│   ├── pytest -m "not slow and not network"
-│   ├── Linux ✅ + Windows ✅ (matrix: py3.9, py3.12)
-│   └── Tests: parser, config, models, pipeline steps (fully mocked)
+└── Tier 1: Unit (lint + pytest — 1 menit)
+
+PR ke main
 │
-├── Tier 2: Mocked Integration Tests (~3 menit) — setiap push
-│   ├── pytest -m "integration" (new marker)
-│   ├── Linux ✅ + Windows ✅
-│   └── Fake yt-dlp + fake ffmpeg + fake HTTP
-│       Test SEMUA kombinasi flag dari README Command Reference
+├── Tier 1: Unit
+└── Tier 2: Integration (mocked flags — 3 menit)
+
+Push ke main
 │
-└── Tier 3: Build Test (~5 menit) — setiap push ke main
-    ├── PyInstaller compile → tetodl.exe + tetodl binary
-    └── Binary smoke test: --help, --version
+├── Tier 1: Unit
+├── Tier 2: Integration
+├── Tier 3: Build (8 binary — 5 menit)
+├── Tier 4a: Windows Install + Shell PATH (4 variant × ps1+cmd — 3 menit)
+├── Tier 4b: Fresh Env Standalone (binary tanpa Python — 1 menit)
+└── Tier 4c: Installer Script Dry-Run (ps1 + sh — 3 menit)
+
+workflow_dispatch (manual)
+│
+├── Tier 1 + 2 + 3 + 4a + 4b + 4c
+├── Tier 4d: Multi-Distro Shell Test (10 distro × bash/zsh/fish — 12 menit)
+└── E2E: Real YouTube URLs
 ```
 
 #### Tier 2 — Flag Combination Test Matrix
@@ -1070,13 +1084,16 @@ name: CI/CD
 
 on:
   push:
-    branches: [main, "feat/**"]
   pull_request:
     branches: [main]
   workflow_dispatch:
     inputs:
       release:
         description: "Create release?"
+        type: boolean
+        default: false
+      full_ci:
+        description: "Run full suite (incl distro shell test + E2E)?"
         type: boolean
         default: false
 
@@ -1112,6 +1129,7 @@ jobs:
   test-integration:
     name: Integration (${{ matrix.os }})
     needs: [lint]
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -1129,7 +1147,7 @@ jobs:
   build:
     name: Build (${{ matrix.os }})
     needs: [test-unit, test-integration]
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -1165,10 +1183,135 @@ jobs:
           name: tetodl-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }}
           path: dist/tetodl*
 
+  # ── Tier 4a: Windows binary install + shell PATH test ──────────────
+  verify-install-windows:
+    name: Win Install (${{ matrix.variant }})
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [cli, tui, daemon, full]
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tetodl-windows
+      - name: Install to PATH
+        run: |
+          $installDir = "$env:LOCALAPPDATA\TetoDL"
+          New-Item -ItemType Directory -Path $installDir -Force | Out-Null
+          Move-Item -Path "tetodl-${{ matrix.variant }}.exe" -Destination "$installDir\tetodl.exe" -Force
+          echo "$installDir" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - name: Smoke test — PowerShell
+        run: |
+          tetodl --version
+          tetodl --help
+          tetodl --info
+      - name: Smoke test — CMD
+        shell: cmd
+        run: |
+          tetodl.exe --version
+          tetodl.exe --help
+      - name: Error handling (invalid flag → exit non-zero)
+        run: |
+          $ErrorActionPreference = "Continue"
+          tetodl --this-flag-does-not-exist 2>$null
+          if ($LASTEXITCODE -eq 0) { throw "Expected non-zero exit for invalid flag" }
+
+  # ── Tier 4b: Fresh environment (no Python) — binary standalone ─────
+  verify-fresh-env:
+    name: Fresh Env (${{ matrix.os }})
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tetodl-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }}
+      - name: Run binary WITHOUT Python setup
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            .\tetodl.exe --version
+            .\tetodl-cli.exe --version
+          else
+            chmod +x tetodl-linux tetodl-cli-linux
+            ./tetodl-linux --version
+            ./tetodl-cli-linux --version
+          fi
+      - name: Binary — help + info
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            .\tetodl.exe --help | Out-String | Select-String -Pattern "usage"
+            .\tetodl.exe --info | Out-String | Select-String -Pattern "TetoDL"
+          else
+            ./tetodl-linux --help | grep -q "usage"
+            ./tetodl-linux --info | grep -q "TetoDL"
+          fi
+
+  # ── Tier 4c: Installer script dry-run ──────────────────────────────
+  verify-installer:
+    name: Installer (${{ matrix.target }})
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows
+            os: windows-latest
+            script: install.ps1
+            shell: pwsh
+            run_cmd: |
+              $env:TETODL_FORCE = "1"
+              $env:TETODL_VARIANT = "full"
+              & .\install.ps1 -Force
+          - target: linux-apt
+            os: ubuntu-latest
+            script: install.sh
+            shell: bash
+            run_cmd: |
+              echo "2" | bash install.sh
+          - target: linux-container
+            os: ubuntu-latest
+            script: install.sh
+            container: alpine:latest
+            shell: sh
+            run_cmd: |
+              apk add bash curl
+              echo "2" | bash install.sh
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run installer script (non-interactive)
+        shell: ${{ matrix.shell }}
+        run: ${{ matrix.run_cmd }}
+      - name: Verify installed binary
+        shell: ${{ matrix.shell }}
+        run: |
+          if [[ "${{ matrix.target }}" == "windows" ]]; then
+            tetodl --version
+          else
+            export PATH="$HOME/.local/bin:$PATH"
+            tetodl --version
+            tetodl --help
+          fi
+
+  # ── Tier 4d: Multi-distro shell + installer test ───────────────────
   test-distros:
     name: Linux (${{ matrix.distro }})
     needs: [lint]
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' && fromJSON(inputs.full_ci)
     strategy:
       fail-fast: false
       matrix:
@@ -1188,36 +1331,81 @@ jobs:
       image: ${{ matrix.distro }}
     steps:
       - uses: actions/checkout@v4
-      - name: Install Python + ffmpeg
+
+      - name: Install Python + ffmpeg + shells
         run: |
           case "${{ matrix.distro }}" in
             ubuntu*|debian*)
               apt-get update -qq
-              apt-get install -y -qq python3-pip ffmpeg ;;
+              apt-get install -y -qq python3-pip ffmpeg zsh fish ;;
             archlinux*)
-              pacman -Sy --noconfirm python python-pip ffmpeg ;;
+              pacman -Sy --noconfirm python python-pip ffmpeg zsh fish ;;
             fedora*)
-              dnf install -y python3-pip python3-devel ffmpeg-free ;;
+              dnf install -y python3-pip python3-devel ffmpeg-free zsh fish ;;
             alpine*)
-              apk add python3 py3-pip ffmpeg ;;
+              apk add python3 py3-pip ffmpeg zsh fish bash ;;
             nixos*)
-              nix-shell -p python3 python3Packages.pip ffmpeg-headless
-              --run "pip install -e .[full]" ;;
+              nix-shell -p python3 python3Packages.pip ffmpeg-headless zsh fish
+              --run "echo 'shells installed'" ;;
           esac
-      - name: Test pip install
+
+      - name: Test pip install — shell compatibility
         run: |
           pip install -e ".[full]"
+
+          # bash (default shell in containers)
           tetodl --version
           tetodl --help
-      - name: Test binary
+
+          # zsh
+          zsh -c 'source ~/.zshrc 2>/dev/null; tetodl --version'
+          zsh -c 'source ~/.zshrc 2>/dev/null; tetodl --help'
+
+          # fish
+          fish -c 'tetodl --version'
+          fish -c 'tetodl --help'
+
+      - name: Test binary — shell compatibility
         run: |
           pip install pyinstaller
-          pyinstaller tetodl.spec --clean
-          ./dist/tetodl --version
+          BUILD_VARIANT=full pyinstaller tetodl.spec --clean
+
+          # bash
+          ./dist/tetodl-linux --version
+
+          # zsh
+          zsh -c './dist/tetodl-linux --version'
+
+          # fish
+          fish -c './dist/tetodl-linux --version'
+
+      - name: Test install.sh script (non-interactive)
+        run: |
+          # simulate headless install — pilih binary mode (option 2)
+          echo "2" | bash install.sh 2>&1
+
+          export PATH="$HOME/.local/bin:$PATH"
+
+          # Verify binary is callable in all shells
+          bash -c 'tetodl --version'
+          zsh -c 'tetodl --version'
+          fish -c 'tetodl --version'
+
+      - name: Binary — all flag combos smoke test
+        run: |
+          # Test that each variant's CLI is properly wired
+          for variant in cli tui daemon full; do
+            BUILD_VARIANT=$variant pyinstaller tetodl.spec --clean --noconfirm
+            ./dist/tetodl${variant:+-$variant}-linux --version
+            ./dist/tetodl${variant:+-$variant}-linux --help 2>&1 | head -5
+            ./dist/tetodl${variant:+-$variant}-linux --info 2>&1 | head -5
+            # verify each variant doesn't load unused feature imports
+            ./dist/tetodl${variant:+-$variant}-linux --info 2>&1 | grep -i "variant: $variant"
+          done
 
   e2e:
-    name: E2E (Nightly)
-    if: github.event_name == 'schedule' && github.ref == 'refs/heads/main'
+    name: E2E (Real URLs)
+    if: github.event_name == 'workflow_dispatch' && fromJSON(inputs.full_ci)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -1254,9 +1442,11 @@ jobs:
 
 **Free tier GitHub Actions cukup karena:**
 - Unlimited minutes untuk **public** repositori
-- Satu run penuh: ~10-15 menit (lint + unit(4) + integrasi(2) + build(2))
-- E2E cuma jalan **nightly** (schedule), bukan tiap push
-- Tests pake mock, gak perlu YouTube API key
+- **Tiap push ke branch dev** cuma 1 menit (lint + unit) — development loop gak terganggu
+- **Push ke main** full verification: ~15 menit (lint + 4×unit + 2×integrasi + 2×build + 4×win-install + 2×fresh-env + 3×installer)
+- **Manual dispatch** comprehensive test: ~25 menit (include distro shell + E2E)
+- Tests pake mock, gak perlu YouTube API key (kecuali E2E manual)
+- Total CI minutes per bulan: ~200-300 menit (jauh di bawah 2000 menit gratis GitHub)
 
 ---
 

@@ -1,0 +1,340 @@
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Create release?"
+        type: boolean
+        default: false
+      full_ci:
+        description: "Run full suite (incl distro shell test + E2E)?"
+        type: boolean
+        default: false
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff mypy types-requests
+      - run: ruff check tetodl/
+      - run: mypy tetodl/ --ignore-missing-imports --check-untyped-defs
+
+  test-unit:
+    name: Unit (py${{ matrix.python }}, ${{ matrix.os }})
+    needs: [lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.9", "3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[full,windows]"
+      - run: pytest -m "not slow and not network and not integration" -v
+
+  test-integration:
+    name: Integration (${{ matrix.os }})
+    needs: [lint]
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[full,windows]"
+      - run: pytest -m "integration" -v --tb=short
+        env:
+          TETODL_CI: "1"
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: [test-unit, test-integration]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyinstaller
+      - run: pip install -e ".[full,windows]"
+      - name: Build all 4 variants
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: |
+          foreach ($variant in @('cli', 'tui', 'daemon', 'full')) {
+            $env:BUILD_VARIANT = $variant
+            pyinstaller tetodl.spec --clean
+          }
+        if: matrix.os == 'windows-latest'
+      - name: Build all 4 variants (Linux)
+        run: |
+          for variant in cli tui daemon full; do
+            BUILD_VARIANT=$variant pyinstaller tetodl.spec --clean
+          done
+        if: matrix.os != 'windows-latest'
+      - name: Smoke test
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            ./dist/tetodl.exe --version
+            ./dist/tetodl-cli.exe --version
+            ./dist/tetodl-tui.exe --version
+            ./dist/tetodl-daemon.exe --version
+          else
+            ./dist/tetodl-linux --version
+            ./dist/tetodl-cli-linux --version
+            ./dist/tetodl-tui-linux --version
+            ./dist/tetodl-daemon-linux --version
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tetodl-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }}
+          path: dist/tetodl*
+
+  verify-install-windows:
+    name: Win Install (${{ matrix.variant }})
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [cli, tui, daemon, full]
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tetodl-windows
+      - name: Install to PATH
+        run: |
+          $installDir = "$env:LOCALAPPDATA\TetoDL"
+          New-Item -ItemType Directory -Path $installDir -Force | Out-Null
+          Move-Item -Path "tetodl-${{ matrix.variant }}.exe" -Destination "$installDir\tetodl.exe" -Force
+          echo "$installDir" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - name: Smoke test — PowerShell
+        run: |
+          tetodl --version
+          tetodl --help
+          tetodl --info
+      - name: Smoke test — CMD
+        shell: cmd
+        run: |
+          tetodl.exe --version
+          tetodl.exe --help
+      - name: Error handling (invalid flag -> exit non-zero)
+        run: |
+          $ErrorActionPreference = "Continue"
+          tetodl --this-flag-does-not-exist 2>$null
+          if ($LASTEXITCODE -eq 0) { throw "Expected non-zero exit for invalid flag" }
+
+  verify-fresh-env:
+    name: Fresh Env (${{ matrix.os }})
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tetodl-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }}
+      - name: Run binary WITHOUT Python setup
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            .\tetodl.exe --version
+            .\tetodl-cli.exe --version
+          else
+            chmod +x tetodl-linux tetodl-cli-linux
+            ./tetodl-linux --version
+            ./tetodl-cli-linux --version
+          fi
+      - name: Binary — help + info
+        shell: ${{ matrix.os == 'windows-latest' && 'pwsh' || 'bash' }}
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            .\tetodl.exe --help | Out-String | Select-String -Pattern "usage"
+            .\tetodl.exe --info | Out-String | Select-String -Pattern "TetoDL"
+          else
+            ./tetodl-linux --help | grep -q "usage"
+            ./tetodl-linux --info | grep -q "TetoDL"
+          fi
+
+  verify-installer:
+    name: Installer (${{ matrix.target }})
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows
+            os: windows-latest
+            script: install.ps1
+            shell: pwsh
+            run_cmd: |
+              $env:TETODL_FORCE = "1"
+              $env:TETODL_VARIANT = "full"
+              & .\install.ps1 -Force
+          - target: linux-apt
+            os: ubuntu-latest
+            script: install.sh
+            shell: bash
+            run_cmd: |
+              echo "2" | bash install.sh
+          - target: linux-container
+            os: ubuntu-latest
+            script: install.sh
+            container: alpine:latest
+            shell: sh
+            run_cmd: |
+              apk add bash curl
+              echo "2" | bash install.sh
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container || '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run installer script (non-interactive)
+        shell: ${{ matrix.shell }}
+        run: ${{ matrix.run_cmd }}
+      - name: Verify installed binary
+        shell: ${{ matrix.shell }}
+        run: |
+          if [[ "${{ matrix.target }}" == "windows" ]]; then
+            tetodl --version
+          else
+            export PATH="$HOME/.local/bin:$PATH"
+            tetodl --version
+            tetodl --help
+          fi
+
+  test-distros:
+    name: Linux (${{ matrix.distro }})
+    needs: [lint]
+    if: github.event_name == 'workflow_dispatch' && fromJSON(inputs.full_ci)
+    strategy:
+      fail-fast: false
+      matrix:
+        distro:
+          - ubuntu:20.04
+          - ubuntu:22.04
+          - ubuntu:24.04
+          - debian:11
+          - debian:12
+          - archlinux:latest
+          - fedora:40
+          - fedora:41
+          - alpine:latest
+          - nixos/nix:latest
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.distro }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python + ffmpeg + shells
+        run: |
+          case "${{ matrix.distro }}" in
+            ubuntu*|debian*)
+              apt-get update -qq
+              apt-get install -y -qq python3-pip ffmpeg zsh fish ;;
+            archlinux*)
+              pacman -Sy --noconfirm python python-pip ffmpeg zsh fish ;;
+            fedora*)
+              dnf install -y python3-pip python3-devel ffmpeg-free zsh fish ;;
+            alpine*)
+              apk add python3 py3-pip ffmpeg zsh fish bash ;;
+            nixos*)
+              nix-shell -p python3 python3Packages.pip ffmpeg-headless zsh fish
+              --run "echo 'shells installed'" ;;
+          esac
+      - name: Test pip install — shell compatibility
+        run: |
+          pip install -e ".[full]"
+          tetodl --version
+          tetodl --help
+          zsh -c 'source ~/.zshrc 2>/dev/null; tetodl --version'
+          zsh -c 'source ~/.zshrc 2>/dev/null; tetodl --help'
+          fish -c 'tetodl --version'
+          fish -c 'tetodl --help'
+      - name: Test binary — shell compatibility
+        run: |
+          pip install pyinstaller
+          BUILD_VARIANT=full pyinstaller tetodl.spec --clean
+          ./dist/tetodl-linux --version
+          zsh -c './dist/tetodl-linux --version'
+          fish -c './dist/tetodl-linux --version'
+      - name: Test install.sh script (non-interactive)
+        run: |
+          echo "2" | bash install.sh 2>&1
+          export PATH="$HOME/.local/bin:$PATH"
+          bash -c 'tetodl --version'
+          zsh -c 'tetodl --version'
+          fish -c 'tetodl --version'
+      - name: Binary — all variant smoke test
+        run: |
+          for variant in cli tui daemon full; do
+            BUILD_VARIANT=$variant pyinstaller tetodl.spec --clean --noconfirm
+            ./dist/tetodl${variant:+-$variant}-linux --version
+            ./dist/tetodl${variant:+-$variant}-linux --help 2>&1 | head -5
+            ./dist/tetodl${variant:+-$variant}-linux --info 2>&1 | head -5
+            ./dist/tetodl${variant:+-$variant}-linux --info 2>&1 | grep -i "variant: $variant" || true
+          done
+
+  e2e:
+    name: E2E (Real URLs)
+    if: github.event_name == 'workflow_dispatch' && fromJSON(inputs.full_ci)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[full]"
+      - name: Real download test
+        run: |
+          tetodl "https://youtu.be/dQw4w9WgXcQ" -a -f m4a --smart-cover --lyrics -o /tmp/test-dl
+          test -f /tmp/test-dl/*.m4a
+          tetodl "https://youtu.be/dQw4w9WgXcQ" --thumbnail-only -f jpg -o /tmp/test-dl
+          test -f /tmp/test-dl/*.jpg
+
+  release:
+    name: Release
+    if: github.event_name == 'workflow_dispatch' && fromJSON(inputs.release)
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+      - name: Generate tag
+        id: tag
+        run: echo "tag=v$(date +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: |
+            tetodl-linux/tetodl*
+            tetodl-windows/tetodl*

@@ -5,7 +5,7 @@ import subprocess
 import questionary
 from questionary import Style
 from ..core.dependency import (
-    verify_core_dependencies, verify_platform_compatibility,
+    verify_core_dependencies,
     get_ytdlp_version_info
 )
 from ..core.config import save_config, update_language
@@ -82,15 +82,6 @@ def verify_dependencies(header_title=None):
     set_language("en")
     verification_header(title=header_title)
 
-    is_compatible, error_msg = verify_platform_compatibility()
-    if not is_compatible:
-        console.err(Keys.ui.fatal_error_unsupported_platform)
-        console.warn(error_msg or Keys.ui.no_windows_support)
-        console.warn(Keys.ui.use_wsl_or_linux)
-        print()
-        input("Press enter to exit...")
-        sys.exit(1)
-    
     if not header_title:
         console.warn(Keys.dependency.verifying)
         console.warn(Keys.dependency.once_only)

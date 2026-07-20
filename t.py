@@ -1,4 +1,2 @@
 from tetodl.utils.console import console
-
-
-console.debug
+from tetodl.utils.tracer import trace, traced

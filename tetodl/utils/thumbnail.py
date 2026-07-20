@@ -2,10 +2,12 @@
 Thumbnail processing — download, crop, convert, and smart-cover lookup.
 Merged from legacy ``media/thumbnail`` and ``downloaders/youtube/tasks``.
 """
+from __future__ import annotations
 import os
+import abc
 import subprocess
 import requests
-from ..constants import FFMPEG_CMD
+from ..constants import FFMPEG_CMD, IS_WINDOWS, IS_BINARY
 from ..core import config as cfg
 from ..core.models import DownloadResult
 from ..utils.i18n_keys import Keys
@@ -24,106 +26,114 @@ FAKE_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
 }
 
-def crop_thumbnail_to_square(thumbnail_path):
-    """
-    Crop a landscape 16:9 thumbnail image to a square 1:1 aspect ratio.
 
-    Uses FFmpeg's crop filter to extract the largest square region from the
-    centre of the input image.  On success the original file is replaced
-    in-place with the cropped version.
+class ThumbnailProcessor(abc.ABC):
+    """Abstract base for thumbnail image operations."""
 
-    Parameters
-    ----------
-    thumbnail_path : str
-        Absolute or relative path to the thumbnail image to crop.
+    @abc.abstractmethod
+    def crop_to_square(self, thumbnail_path: str) -> bool:
+        ...
 
-    Returns
-    -------
-    bool
-        ``True`` if the crop succeeded and the original file was replaced by
-        the cropped image; ``False`` otherwise.
+    @abc.abstractmethod
+    def convert_format(self, thumbnail_path: str, target_format: str = "jpg") -> str | None:
+        ...
 
-    Raises
-    ------
-    None
-        All exceptions are caught internally and result in a ``False`` return.
 
-    Example
-    -------
-    >>> crop_thumbnail_to_square('/tmp/thumb.jpg')
-    True
+class FFmpegThumbnailProcessor(ThumbnailProcessor):
+    """Thumbnail processing via FFmpeg subprocess."""
 
-    See Also
-    --------
-    :func:`convert_thumbnail_format` : Convert a thumbnail to a different image format.
-    :func:`download_and_process_thumbnail` : Full pipeline that downloads and processes thumbnails.
-    """
-    try:
-        output_path = thumbnail_path + ".square.jpg"
-        cmd = [
-            FFMPEG_CMD, '-i', thumbnail_path,
-            '-vf', r'crop=min(iw\,ih):min(iw\,ih)',
-            '-y', output_path
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode == 0 and os.path.exists(output_path):
-            os.remove(thumbnail_path)
-            os.rename(output_path, thumbnail_path)
+    def crop_to_square(self, thumbnail_path: str) -> bool:
+        try:
+            output_path = thumbnail_path + ".square.jpg"
+            cmd = [
+                FFMPEG_CMD, '-i', thumbnail_path,
+                '-vf', r'crop=min(iw\,ih):min(iw\,ih)',
+                '-y', output_path
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0 and os.path.exists(output_path):
+                os.remove(thumbnail_path)
+                os.rename(output_path, thumbnail_path)
+                return True
+            console.err(Keys.media.crop_failed(error=result.stderr))
+            return False
+        except Exception as e:
+            console.err(Keys.media.crop_error(error=str(e)))
+            return False
+
+    def convert_format(self, thumbnail_path: str, target_format: str = "jpg") -> str | None:
+        try:
+            ext = target_format.lower().replace('jpeg', 'jpg')
+            output_path = f"{os.path.splitext(thumbnail_path)[0]}.converted.{ext}"
+            cmd = [FFMPEG_CMD, '-i', thumbnail_path, '-y', output_path]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0 and os.path.exists(output_path):
+                os.remove(thumbnail_path)
+                return output_path
+            return None
+        except Exception:
+            return None
+
+
+class PyAVThumbnailProcessor(ThumbnailProcessor):
+    """Thumbnail processing via PyAV (av) library — Windows binary fallback."""
+
+    def crop_to_square(self, thumbnail_path: str) -> bool:
+        try:
+            import av
+            container = av.open(thumbnail_path)
+            frame = next(container.decode(video=0))
+            img = frame.to_image()
+            w, h = img.size
+            size = min(w, h)
+            left = (w - size) // 2
+            top = (h - size) // 2
+            cropped = img.crop((left, top, left + size, top + size))
+            cropped.save(thumbnail_path)
+            container.close()
             return True
-        console.err(Keys.media.crop_failed(error=result.stderr))
-        return False
-    except Exception as e:
-        console.err(Keys.media.crop_error(error=str(e)))
-        return False
+        except Exception as e:
+            console.err(Keys.media.crop_error(error=str(e)))
+            return False
 
-def convert_thumbnail_format(thumbnail_path, target_format="jpg"):
-    """
-    Convert a thumbnail image to a different file format using FFmpeg.
-
-    Supported target formats are ``jpg``, ``png``, and ``webp``.  The input
-    ``jpeg`` is normalised to ``jpg`` internally.  The original file is
-    removed and the converted file takes its place.
-
-    Parameters
-    ----------
-    thumbnail_path : str
-        Absolute or relative path to the thumbnail image to convert.
-    target_format : str, optional
-        Desired output format extension (``'jpg'``, ``'png'``, or
-        ``'webp'``).  Defaults to ``'jpg'``.
-
-    Returns
-    -------
-    str or None
-        Absolute path to the converted file on success, or ``None`` if the
-        conversion failed.
-
-    Raises
-    ------
-    None
-        All exceptions are caught internally and result in a ``None`` return.
-
-    Example
-    -------
-    >>> convert_thumbnail_format('/tmp/thumb.jpg', 'png')
-    '/tmp/thumb.converted.png'
-
-    See Also
-    --------
-    :func:`crop_thumbnail_to_square` : Crop a thumbnail to a square aspect ratio.
-    :func:`download_and_process_thumbnail` : Full pipeline that downloads and processes thumbnails.
-    """
-    try:
-        ext = target_format.lower().replace('jpeg', 'jpg')
-        output_path = f"{os.path.splitext(thumbnail_path)[0]}.converted.{ext}"
-        cmd = [FFMPEG_CMD, '-i', thumbnail_path, '-y', output_path]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode == 0 and os.path.exists(output_path):
+    def convert_format(self, thumbnail_path: str, target_format: str = "jpg") -> str | None:
+        try:
+            ext = target_format.lower().replace('jpeg', 'jpg')
+            output_path = f"{os.path.splitext(thumbnail_path)[0]}.converted.{ext}"
+            from PIL import Image
+            img = Image.open(thumbnail_path)
+            img.save(output_path)
             os.remove(thumbnail_path)
             return output_path
-        return None
-    except Exception:
-        return None
+        except Exception:
+            return None
+
+
+def get_thumbnail_processor() -> ThumbnailProcessor:
+    """Factory: pick the best thumbnail processor for the current platform."""
+    if IS_WINDOWS and IS_BINARY:
+        try:
+            import av  # noqa: F401
+            return PyAVThumbnailProcessor()
+        except ImportError:
+            pass
+    return FFmpegThumbnailProcessor()
+
+
+_processor = None
+
+
+def _get_processor() -> ThumbnailProcessor:
+    global _processor
+    if _processor is None:
+        _processor = get_thumbnail_processor()
+    return _processor
+def crop_thumbnail_to_square(thumbnail_path):
+    return _get_processor().crop_to_square(thumbnail_path)
+
+
+def convert_thumbnail_format(thumbnail_path, target_format="jpg"):
+    return _get_processor().convert_format(thumbnail_path, target_format)
 
 @trace
 def download_and_process_thumbnail(info_dict, download_folder, should_crop=True, smart_mode=True, force_crop=False):

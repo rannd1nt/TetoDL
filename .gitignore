@@ -30,7 +30,7 @@ MANIFEST
 
 # PyInstaller
 *.manifest
-*.spec
+# tetodl.spec is tracked — single source for 8 binary variants
 
 # Installer logs
 pip-log.txt
