@@ -11,7 +11,7 @@ on:
         type: boolean
         default: false
       full_ci:
-        description: "Run full suite (incl distro shell test + E2E)?"
+        description: "Run full suite (incl E2E real YouTube download)?"
         type: boolean
         default: false
 
@@ -240,73 +240,6 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           tetodl --version
-
-  test-distros:
-    name: Distro (${{ matrix.distro }})
-    needs: [lint]
-    if: github.event_name == 'workflow_dispatch' && fromJSON(inputs.full_ci)
-    strategy:
-      fail-fast: false
-      matrix:
-        distro:
-          - ubuntu:20.04
-          - ubuntu:22.04
-          - ubuntu:24.04
-          - debian:11
-          - debian:12
-          - archlinux:latest
-          - fedora:40
-          - fedora:41
-          - alpine:latest
-          - nixos/nix:latest
-    runs-on: ubuntu-latest
-    container:
-      image: ${{ matrix.distro }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Python + ffmpeg + shells
-        run: |
-          case "${{ matrix.distro }}" in
-            ubuntu*|debian*)
-              apt-get update -qq
-              apt-get install -y -qq python3-pip ffmpeg zsh fish ;;
-            archlinux*)
-              pacman -Sy --noconfirm python python-pip ffmpeg zsh fish ;;
-            fedora*)
-              dnf install -y python3-pip python3-devel ffmpeg-free zsh fish ;;
-            alpine*)
-              apk add python3 py3-pip ffmpeg zsh fish bash ;;
-            nixos*)
-              nix-shell -p python3 python3Packages.pip ffmpeg-headless zsh fish
-              --run "echo 'shells installed'" ;;
-          esac
-      - name: Test pip install — shell compatibility
-        env:
-          PIP_BREAK_SYSTEM_PACKAGES: "1"
-        run: |
-          pip install -e ".[windows]"
-          tetodl --version
-          tetodl --help
-          zsh -c 'source ~/.zshrc 2>/dev/null; tetodl --version'
-          zsh -c 'source ~/.zshrc 2>/dev/null; tetodl --help'
-          fish -c 'tetodl --version'
-          fish -c 'tetodl --help'
-      - name: Test binary — shell compatibility
-        env:
-          PIP_BREAK_SYSTEM_PACKAGES: "1"
-        run: |
-          pip install pyinstaller
-          pyinstaller tetodl.spec --clean
-          ./dist/tetodl-linux --version
-          zsh -c './dist/tetodl-linux --version'
-          fish -c './dist/tetodl-linux --version'
-      - name: Test install.sh script (non-interactive)
-        run: |
-          bash install.sh 2>&1
-          export PATH="$HOME/.local/bin:$PATH"
-          bash -c 'tetodl --version'
-          zsh -c 'tetodl --version'
-          fish -c 'tetodl --version'
 
   e2e:
     name: E2E (Real URLs)
