@@ -65,7 +65,7 @@ if BUILD_VARIANT in ("daemon", "full"):
 # ── Exclude unused feature libraries ───────────────────────────
 EXCLUDES = [
     "tkinter", "unittest", "email", "http.server", "pydoc", "test",
-    "distutils", "venv", "ensurepip",
+    "venv", "ensurepip",
 ]
 if BUILD_VARIANT == "cli":
     EXCLUDES += TUI_HIDDEN + DAEMON_HIDDEN
