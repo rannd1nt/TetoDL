@@ -51,9 +51,9 @@ if IS_WIN_BUILD:
 CORE_HIDDEN = [
     "yt_dlp", "yt_dlp.extractor", "yt_dlp.postprocessor",
     "mutagen", "mutagen.mp3", "mutagen.mp4", "mutagen.flac", "mutagen.id3",
-    "pydantic", "requests", "bs4", "colorama",
+    "pydantic", "requests", "bs4", "colorama", "rich",
 ]
-TUI_HIDDEN = ["rich", "questionary", "qrcode"]
+TUI_HIDDEN = ["questionary", "qrcode"]
 DAEMON_HIDDEN = ["fastapi", "uvicorn", "zeroconf"]
 
 hidden = list(CORE_HIDDEN)
