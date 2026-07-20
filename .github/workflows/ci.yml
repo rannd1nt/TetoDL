@@ -281,6 +281,8 @@ jobs:
               --run "echo 'shells installed'" ;;
           esac
       - name: Test pip install — shell compatibility
+        env:
+          PIP_BREAK_SYSTEM_PACKAGES: "1"
         run: |
           pip install -e ".[windows]"
           tetodl --version
@@ -290,6 +292,8 @@ jobs:
           fish -c 'tetodl --version'
           fish -c 'tetodl --help'
       - name: Test binary — shell compatibility
+        env:
+          PIP_BREAK_SYSTEM_PACKAGES: "1"
         run: |
           pip install pyinstaller
           pyinstaller tetodl.spec --clean
@@ -322,7 +326,11 @@ jobs:
             pip-e2e-
             pip-
       - run: pip install -e ".[windows]"
+      - name: Install system deps
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Real download test
+        env:
+          TETODL_CI: "1"
         run: |
           tetodl "https://youtu.be/dQw4w9WgXcQ" -a -f m4a --smart-cover --lyrics -o /tmp/test-dl
           test -f /tmp/test-dl/*.m4a
