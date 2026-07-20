@@ -641,126 +641,136 @@ Files affected (dari hasil scan):
 
 ## Phase B — Build & CI/CD
 
-### B1. PyInstaller Packaging
+### B1. PyInstaller Packaging — Single Spec, 8 Binaries
+
+Satu file `tetodl.spec` menghasilkan 8 binary berbeda (4 platform × 4 variant).
+
+**Prinsip:** PyInstaller cuma bundle library yang *terinstall* di build machine + yang explicitly di-include di `hiddenimports`. Linux build machine gak punya `av` (PyAV) atau `ffmpeg.exe`, jadi binary Linux gak kebawa kode platform Windows — cuma nyisa beberapa byte Python bytecode di dalam `if IS_WINDOWS:` guard.
 
 File **`tetodl.spec`** di root repo:
 
 ```python
 # -*- mode: python ; coding: utf-8 -*-
+"""
+Single PyInstaller spec for all 8 binary variants.
 
-import platform
-import sys
-from pathlib import Path
+Usage (Windows build machine):
+  set BUILD_VARIANT=full && pyinstaller tetodl.spec   → tetodl.exe
+  set BUILD_VARIANT=cli  && pyinstaller tetodl.spec   → tetodl-cli.exe
 
-is_windows = platform.system() == "Windows"
+Usage (Linux build machine):
+  BUILD_VARIANT=full pyinstaller tetodl.spec           → tetodl-linux
+  BUILD_VARIANT=cli  pyinstaller tetodl.spec           → tetodl-cli-linux
+"""
 
-block_cipher = None
+import os, platform, sys
 
-# Base analysis — common for all variants
-common_excludes = [
-    "tkinter", "unittest", "email", "http.server",
-    "pydoc", "test", "distutils", "lib2to3",
-]
+IS_WIN_BUILD = platform.system() == "Windows"
+BUILD_VARIANT = os.environ.get("BUILD_VARIANT", "full").lower()
 
-# Detect platform
-IS_WINDOWS_BUILD = platform.system() == "Windows"
+# ── Naming ──────────────────────────────────────────────
+suffix = ".exe" if IS_WIN_BUILD else ""
+platform_tag = "" if IS_WIN_BUILD else "-linux"
+variant_tag = "" if BUILD_VARIANT == "full" else f"-{BUILD_VARIANT}"
+binary_name = f"tetodl{variant_tag}{platform_tag}{suffix}"
 
-# Helper: download ffmpeg for Windows build
-if IS_WINDOWS_BUILD:
-    import urllib.request
-    import zipfile
-    FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-    FFMPEG_ZIP = "ffmpeg.zip"
+# ── Platform-specific deps ──────────────────────────────
+# Windows bundle: ffmpeg.exe + av (PyAV)
+# Linux bundle: system ffmpeg (no bundling)
+binaries = []
+if IS_WIN_BUILD:
+    import urllib.request, zipfile
     if not os.path.exists("ffmpeg.exe"):
-        print("Downloading ffmpeg.exe...")
-        urllib.request.urlretrieve(FFMPEG_URL, FFMPEG_ZIP)
-        with zipfile.ZipFile(FFMPEG_ZIP) as z:
+        print("[spec] Downloading ffmpeg.exe for Windows bundle...")
+        URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+        urllib.request.urlretrieve(URL, "ffmpeg.zip")
+        with zipfile.ZipFile("ffmpeg.zip") as z:
             for f in z.namelist():
                 if f.endswith("ffmpeg.exe"):
                     with z.open(f) as src, open("ffmpeg.exe", "wb") as dst:
                         dst.write(src.read())
                     break
-        os.remove(FFMPEG_ZIP)
-
-binaries = []
-datas = [("tetodl/locales/*.json", "tetodl/locales"), ("assets/*.txt", "assets")]
-
-if IS_WINDOWS_BUILD and os.path.exists("ffmpeg.exe"):
+        os.remove("ffmpeg.zip")
     binaries.append(("ffmpeg.exe", "."))
 
+# ── Feature-specific hidden imports ─────────────────────
+CORE_HIDDEN = [
+    "yt_dlp", "yt_dlp.extractor", "yt_dlp.postprocessor",
+    "mutagen", "mutagen.mp3", "mutagen.mp4", "mutagen.flac", "mutagen.id3",
+    "pydantic", "requests", "bs4", "colorama",
+]
+TUI_HIDDEN = ["rich", "questionary", "qrcode"]
+DAEMON_HIDDEN = ["fastapi", "uvicorn", "zeroconf"]
+WIN_HIDDEN = ["av"] if IS_WIN_BUILD else []
+
+hidden = list(CORE_HIDDEN)
+if BUILD_VARIANT in ("tui", "full"):
+    hidden += TUI_HIDDEN
+if BUILD_VARIANT in ("daemon", "full"):
+    hidden += DAEMON_HIDDEN
+if IS_WIN_BUILD and BUILD_VARIANT in ("tui", "daemon", "full"):
+    hidden += WIN_HIDDEN
+
+# ── Exclude unused feature libs ─────────────────────────
+EXCLUDES = ["tkinter", "unittest", "email", "http.server", "pydoc", "test"]
+if BUILD_VARIANT == "cli":
+    EXCLUDES += TUI_HIDDEN + DAEMON_HIDDEN
+elif BUILD_VARIANT == "tui":
+    EXCLUDES += DAEMON_HIDDEN
+elif BUILD_VARIANT == "daemon":
+    EXCLUDES += TUI_HIDDEN
+
+# ── Analysis ────────────────────────────────────────────
 a = Analysis(
     ["tetodl/__main__.py"],
-    pathex=[],
     binaries=binaries,
-    datas=datas,
-    hiddenimports=[
-        "yt_dlp",
-        "yt_dlp.extractor",
-        "yt_dlp.postprocessor",
-        "mutagen",
-        "mutagen.mp3",
-        "mutagen.mp4",
-        "mutagen.flac",
-        "mutagen.id3",
-        "pydantic",
-        "requests",
-        "bs4",
-        "colorama",
+    datas=[
+        ("tetodl/locales/*.json", "tetodl/locales"),
+        ("assets/*.txt", "assets"),
     ],
-    hookspath=[],
-    runtime_hooks=[],
-    excludes=common_excludes,
+    hiddenimports=hidden,
+    excludes=EXCLUDES,
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
-    cipher=block_cipher,
     noarchive=False,
 )
 
-# TUI-specific imports
-tui_hidden = ["rich", "questionary", "qrcode"]
-daemon_hidden = ["fastapi", "uvicorn", "zeroconf"]
-
-# Build variants
-if "CLI_ONLY" not in os.environ:
-    a.binaries += [x for x in tui_hidden if x not in a.binaries]
-
-if "DAEMON" in os.environ.get("BUILD_VARIANT", ""):
-    a.binaries += daemon_hidden
-elif "FULL" in os.environ.get("BUILD_VARIANT", "FULL"):
-    a.binaries += tui_hidden + daemon_hidden
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-
+pyz = PYZ(a.pure, a.zipped_data)
 exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    name="tetodl",
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=True,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
+    pyz, a.scripts, a.binaries, a.zipfiles, a.datas,
+    name=binary_name, console=True, upx=True,
 )
 ```
 
 Build commands:
-```bash
-# CLI only
-BUILD_VARIANT=CLI_ONLY pyinstaller tetodl.spec
 
-# Full
-BUILD_VARIANT=FULL pyinstaller tetodl.spec
+```bash
+# ── Windows Build Machine ──
+set BUILD_VARIANT=cli     && pyinstaller tetodl.spec   → tetodl-cli.exe     (25 MB)
+set BUILD_VARIANT=tui     && pyinstaller tetodl.spec   → tetodl-tui.exe     (40 MB)
+set BUILD_VARIANT=daemon  && pyinstaller tetodl.spec   → tetodl-daemon.exe  (45 MB)
+set BUILD_VARIANT=full    && pyinstaller tetodl.spec   → tetodl.exe         (70 MB)
+
+# ── Linux Build Machine ──
+BUILD_VARIANT=cli    pyinstaller tetodl.spec           → tetodl-cli-linux    (20 MB)
+BUILD_VARIANT=tui    pyinstaller tetodl.spec           → tetodl-tui-linux    (35 MB)
+BUILD_VARIANT=daemon pyinstaller tetodl.spec           → tetodl-daemon-linux (40 MB)
+BUILD_VARIANT=full   pyinstaller tetodl.spec           → tetodl-linux        (50 MB)
 ```
+
+**Ukuran optimal karena:**
+| Binary | ffmpeg.exe | PyAV DLL | rich/fastapi DLL | Total |
+|--------|-----------|---------|-----------------|-------|
+| `tetodl-cli.exe` | ❌ | ❌ | ❌ | **~25 MB** |
+| `tetodl-tui.exe` | ❌ | ❌ | ✅ TUI | **~40 MB** |
+| `tetodl-daemon.exe` | ❌ | ❌ | ✅ Daemon | **~45 MB** |
+| `tetodl.exe` | ✅ 40 MB | ✅ 5 MB | ✅ All | **~70 MB** |
+| `tetodl-cli-linux` | ❌ | ❌ | ❌ | **~20 MB** |
+| `tetodl-tui-linux` | ❌ | ❌ | ✅ TUI | **~35 MB** |
+| `tetodl-daemon-linux` | ❌ | ❌ | ✅ Daemon | **~40 MB** |
+| `tetodl-linux` | ❌ | ❌ | ✅ All | **~50 MB** |
+
+**tldr:** Satu source code. 8 binary. Gak ada library/platform tools yang nyasar ke binary yang gak butuh.
 
 ### B2. GitHub Actions Workflow
 
@@ -991,15 +1001,24 @@ jobs:
           python-version: "3.12"
       - run: pip install pyinstaller
       - run: pip install -e ".[full,windows]"
-      - run: pyinstaller tetodl.spec
+      - name: Build all 4 variants
+        run: |
+          for variant in cli tui daemon full; do
+            export BUILD_VARIANT=$variant
+            pyinstaller tetodl.spec --clean
+          done
       - name: Smoke test
         run: |
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             ./dist/tetodl.exe --version
-            ./dist/tetodl.exe --help
+            ./dist/tetodl-cli.exe --version
+            ./dist/tetodl-tui.exe --version
+            ./dist/tetodl-daemon.exe --version
           else
-            ./dist/tetodl --version
-            ./dist/tetodl --help
+            ./dist/tetodl-linux --version
+            ./dist/tetodl-cli-linux --version
+            ./dist/tetodl-tui-linux --version
+            ./dist/tetodl-daemon-linux --version
           fi
       - uses: actions/upload-artifact@v4
         with:
@@ -1148,11 +1167,15 @@ Write-Host ""
 if (-not $Variant) {
     Write-Host "Select variant:" -ForegroundColor Cyan
     Write-Host "  [1] tetodl-cli.exe (~25 MB) — CLI only"
-    Write-Host "  [2] tetodl.exe (~70 MB) — Full: CLI + TUI + Daemon"
+    Write-Host "  [2] tetodl-tui.exe (~40 MB) — CLI + TUI"
+    Write-Host "  [3] tetodl-daemon.exe (~45 MB) — CLI + Daemon"
+    Write-Host "  [4] tetodl.exe (~70 MB) — Full (CLI + TUI + Daemon) [Recommended]"
     Write-Host ""
-    $choice = Read-Host "Choice (1/2)"
+    $choice = Read-Host "Choice (1/2/3/4)"
     switch ($choice) {
         "1" { $Variant = "cli" }
+        "2" { $Variant = "tui" }
+        "3" { $Variant = "daemon" }
         default { $Variant = "full" }
     }
 }
@@ -1164,7 +1187,14 @@ $arch = switch ([Environment]::Is64BitOperatingSystem) {
     $true  { "x86_64" }
     $false { "i686" }
 }
-$binaryName = if ($Variant -eq "cli") { "tetodl-cli.exe" } else { "tetodl.exe" }
+# Map variant to binary filename
+$binaryMap = @{
+    "cli"    = "tetodl-cli.exe"
+    "tui"    = "tetodl-tui.exe"
+    "daemon" = "tetodl-daemon.exe"
+    "full"   = "tetodl.exe"
+}
+$binaryName = $binaryMap[$Variant]
 $downloadUrl = "https://github.com/rannd1nt/TetoDL/releases/latest/download/$binaryName"
 
 # ─────────────────────────────────────────────────
@@ -1262,14 +1292,21 @@ case "$method" in
     *)
         # Binary mode (default)
         echo "Select variant:"
-        echo "  [1] tetodl-cli (~25 MB) — CLI only"
-        echo "  [2] tetodl (~50 MB) — Full: CLI + TUI + Daemon"
-        read -p "Choice (1/2): " variant
-        BIN="tetodl"
-        [ "$variant" = "1" ] && BIN="tetodl-cli"
+        echo "  [1] tetodl-cli-linux (~20 MB) — CLI only"
+        echo "  [2] tetodl-tui-linux (~35 MB) — CLI + TUI"
+        echo "  [3] tetodl-daemon-linux (~40 MB) — CLI + Daemon"
+        echo "  [4] tetodl-linux (~50 MB) — Full (Recommended)"
+        read -p "Choice (1/2/3/4): " variant
+        
+        case "$variant" in
+            1) BIN="tetodl-cli-linux" ;;
+            2) BIN="tetodl-tui-linux" ;;
+            3) BIN="tetodl-daemon-linux" ;;
+            *) BIN="tetodl-linux" ;;
+        esac
         
         echo "Downloading $BIN..."
-        curl -L "https://github.com/rannd1nt/TetoDL/releases/latest/download/$BIN-linux" \
+        curl -L "https://github.com/rannd1nt/TetoDL/releases/latest/download/$BIN" \
              -o "$HOME/.local/bin/$BIN"
         chmod +x "$HOME/.local/bin/$BIN"
         
@@ -1484,14 +1521,28 @@ pip install "tetodl[daemon] @ git+https://github.com/rannd1nt/TetoDL"
 pip install tetodl[all]
 ```
 
-### Binary Variants
+### Binary Variants — 8 Platform-Specific Binaries
 
-| Binary Name | Content | Size (Win) | Size (Linux) | Flags in --help |
-|-------------|---------|-----------|-------------|-----------------|
-| `tetodl-cli.exe` | Core only | ~25 MB | ~20 MB | Core CLI flags |
-| `tetodl-tui.exe` | Core + TUI | ~40 MB | ~35 MB | Core + TUI flags |
-| `tetodl-daemon.exe` | Core + Daemon | ~45 MB | ~40 MB | Core + Daemon flags |
-| `tetodl.exe` / `tetodl-linux` | Full (Core+TUI+Daemon) | ~70 MB | ~50 MB | All flags |
+Satu source code → 8 binary (4 variant × 2 platform). Setiap platform build cuma bundle library yang relevan.
+
+| Binary | Content | Windows Size | Linux Size | ffmpeg | PyAV | TUI libs | Daemon libs |
+|--------|---------|:-----------:|:---------:|:------:|:----:|:--------:|:----------:|
+| `tetodl-cli` | Core only | 25 MB | 20 MB | ❌ | ❌ | ❌ | ❌ |
+| `tetodl-tui` | Core + TUI | 40 MB | 35 MB | ❌ | ❌ | ✅ | ❌ |
+| `tetodl-daemon` | Core + Daemon | 45 MB | 40 MB | ❌ | ❌ | ❌ | ✅ |
+| `tetodl` (full) | Core + TUI + Daemon | **70 MB** | **50 MB** | ✅ (Win only) | ✅ (Win only) | ✅ | ✅ |
+
+Naming convention:
+| Platform | CLi only | Core + TUI | Core + Daemon | Full |
+|----------|----------|-----------|--------------|------|
+| **Windows** | `tetodl-cli.exe` | `tetodl-tui.exe` | `tetodl-daemon.exe` | `tetodl.exe` |
+| **Linux** | `tetodl-cli-linux` | `tetodl-tui-linux` | `tetodl-daemon-linux` | `tetodl-linux` |
+
+**Flags di `--help`** menyesuaikan library yang ter-bundle (via lazy import detection di parser):
+- CLI binary → cuma core flags
+- TUI binary → core + TUI flags (--header, --progress-style)
+- Daemon binary → core + daemon subcommand
+- Full binary → semua flags
 
 ### Graceful Degradation Matrix
 
