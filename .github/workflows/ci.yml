@@ -310,31 +310,23 @@ jobs:
 
   e2e:
     name: E2E (Real URLs)
+    needs: [build]
     if: github.event_name == 'workflow_dispatch' && fromJSON(inputs.full_ci)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/download-artifact@v4
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: pip-e2e-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            pip-e2e-
-            pip-
-      - run: pip install -e ".[windows]"
+          name: tetodl-linux
       - name: Install system deps
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
       - name: Real download test
         env:
           TETODL_CI: "1"
         run: |
-          tetodl "https://youtu.be/dQw4w9WgXcQ" -a -f m4a --smart-cover --lyrics -o /tmp/test-dl
+          chmod +x tetodl-linux
+          ./tetodl-linux "https://youtu.be/dQw4w9WgXcQ" -a -f m4a --smart-cover --lyrics -o /tmp/test-dl
           test -f /tmp/test-dl/*.m4a
-          tetodl "https://youtu.be/dQw4w9WgXcQ" --thumbnail-only -f jpg -o /tmp/test-dl
+          ./tetodl-linux "https://youtu.be/dQw4w9WgXcQ" --thumbnail-only -f jpg -o /tmp/test-dl
           test -f /tmp/test-dl/*.jpg
 
   release:
