@@ -30,7 +30,7 @@ MANIFEST
 
 # PyInstaller
 *.manifest
-*.spec
+# tetodl.spec is tracked — single source for 8 binary variants
 
 # Installer logs
 pip-log.txt
@@ -40,7 +40,7 @@ pip-delete-this-directory.txt
 htmlcov/
 .tox/
 .nox/
-tests/
+# tests/
 .coverage
 .coverage.*
 .cache
@@ -88,14 +88,16 @@ videos/
 *.backup
 
 # Test files
-test/
-test_*.py
-*_test.py
+# test/
+# test_*.py
+# *_test.py
 
-# Development
+# Development Notes
 *.D.md
 *ANALYSIS.md
 *URL.md
+refactor/
+BIG_REFACTOR.md
 
 # ==== System Files ====
 # macOS

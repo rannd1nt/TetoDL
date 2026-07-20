@@ -9,7 +9,6 @@ import urllib.parse
 from pathlib import Path
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 
 _STATIC_DIR = Path(__file__).parent / "share_static"
 
@@ -54,19 +53,28 @@ def _resolve_path(root: str, subpath: str) -> str:
 
 
 def _classify(ext: str):
-    if ext in AUDIO_EXTS: return 'audio', SVG['audio']
-    if ext in VIDEO_EXTS: return 'video', SVG['video']
-    if ext in IMAGE_EXTS: return 'image', SVG['image']
-    if ext in ARCHIVE_EXTS: return 'archive', SVG['archive']
-    if ext in CODE_EXTS: return 'code', SVG['code']
-    if ext in DOC_EXTS: return 'doc', SVG['doc']
-    if ext in APP_EXTS: return 'app', SVG['app']
+    if ext in AUDIO_EXTS:
+        return 'audio', SVG['audio']
+    if ext in VIDEO_EXTS:
+        return 'video', SVG['video']
+    if ext in IMAGE_EXTS:
+        return 'image', SVG['image']
+    if ext in ARCHIVE_EXTS:
+        return 'archive', SVG['archive']
+    if ext in CODE_EXTS:
+        return 'code', SVG['code']
+    if ext in DOC_EXTS:
+        return 'doc', SVG['doc']
+    if ext in APP_EXTS:
+        return 'app', SVG['app']
     return 'file', SVG['file']
 
 
 def _human_size(size: int) -> str:
-    if size < 1024: return f"{size} B"
-    if size < 1024**2: return f"{size/1024:.1f} KB"
+    if size < 1024:
+        return f"{size} B"
+    if size < 1024**2:
+        return f"{size/1024:.1f} KB"
     return f"{size/(1024**2):.1f} MB"
 
 
@@ -114,7 +122,6 @@ def render_player_page(file_path: str, serve_root: str) -> str:
     filename = os.path.basename(file_path)
     ext = os.path.splitext(filename)[1].lower()
     is_audio = ext in AUDIO_EXTS
-    is_video = ext in VIDEO_EXTS
 
     rel = os.path.relpath(file_path, serve_root)
     src_url = urllib.parse.quote(rel) + "?raw=true"
@@ -189,7 +196,7 @@ def list_entries(real_path: str) -> list:
     return entries
 
 
-async def stream_file(full_path: str, range_header: str = None):
+async def stream_file(full_path: str, range_header: str | None = None):
     """Async generator for streaming file with byte-range support."""
     file_size = os.path.getsize(full_path)
     start, end = 0, file_size - 1

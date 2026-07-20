@@ -7,28 +7,23 @@ from .processing import (
     extract_video_id,
 )
 
-from .styles import (
+from .formatters import (
     Colors,
     color,
     colored_info,
     colored_switch,
-    print_process,
-    print_info,
-    print_success,
-    print_debug,
-    print_error,
-    print_neutral
+    clear,
 )
-
-from .spinner import Spinner
 
 from .network import (
     check_internet,
     is_valid_youtube_url,
     is_youtube_music_url,
     classify_youtube_url,
-    is_valid_spotify_url,
-    classify_spotify_url
+)
+
+from .media_scanner import (
+    scan_media_files,
 )
 
 from .files import (
@@ -52,10 +47,6 @@ from .i18n import (
     get_current_language,
 )
 
-from .metadata_fetcher import (
-    MetadataFetcher
-)
-
 from .hooks import (
     QuietLogger,
     get_progress_hook
@@ -67,23 +58,15 @@ __all__ = [
     'color',
     'colored_info',
     'colored_switch',
-    'print_process',
-    'print_info',
-    'print_success',
-    'print_debug',
-    'print_error',
-    'print_neutral',
+    'clear',
     'show_ascii',
     'visit_instagram',
     'visit_github',
     'wait_and_clear_prompt',
-    'Spinner',
     'check_internet',
     'is_valid_youtube_url',
     'is_youtube_music_url',
     'classify_youtube_url',
-    'is_valid_spotify_url',
-    'classify_spotify_url',
     'remove_nomedia_file',
     'clean_temp_files',
     'fetch_cover',
@@ -94,5 +77,8 @@ __all__ = [
     'set_language',
     'get_available_languages',
     'get_language_display_name',
-    'get_current_language'
+    'get_current_language',
+    'scan_media_files',
+    'extract_all_urls_from_content',
+    'extract_video_id',
 ]

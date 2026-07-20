@@ -105,12 +105,6 @@ detect_environment() {
     fi
 }
 
-# Parse arguments
-LITE_MODE=false
-if [[ "$1" == "--lite" ]]; then
-    LITE_MODE=true
-fi
-
 # ==== MAIN EXECUTION START ====
 print_header
 detect_environment
@@ -121,10 +115,7 @@ print_step "Step 1/5: Checking System Dependencies..."
 if [ "$IS_TERMUX" = true ]; then
     print_info "Updating Termux repositories..."
     pkg update -y > /dev/null 2>&1
-    DEPENDENCIES="python ffmpeg termux-api termux-tools"
-    if [ "$LITE_MODE" = false ]; then
-        DEPENDENCIES="$DEPENDENCIES rust binutils build-essential git"
-    fi
+    DEPENDENCIES="python ffmpeg termux-api termux-tools rust binutils build-essential git"
     pkg install -y $DEPENDENCIES
 
 elif [ "$IS_LINUX" = true ]; then
@@ -183,24 +174,13 @@ fi
 # Step 3: Install Project Requirements
 print_step "Step 3/5: Installing Python Libraries..."
 
-if [ "$LITE_MODE" = true ]; then
-    print_info "MODE: LITE (No Spotify)"
-    if $PIP_EXEC install -r requirements-lite.txt; then
-        print_success "Dependencies installed."
-    else
-        print_error "Failed to install dependencies."
-        exit 1
-    fi
+print_info "Compiling and installing dependencies..."
+if $PIP_EXEC install -r requirements.txt; then
+    print_success "Dependencies installed."
 else
-    print_info "MODE: FULL (With Spotify)"
-    print_info "Compiling and installing dependencies..."
-    if $PIP_EXEC install -r requirements.txt; then
-        print_success "Dependencies installed."
-    else
-        print_error "Failed to install dependencies."
-        print_info "Tip: Try checking requirements.txt versions or use --lite mode."
-        exit 1
-    fi
+    print_error "Failed to install dependencies."
+    print_info "Tip: Try checking requirements.txt versions."
+    exit 1
 fi
 
 # Step 4: Storage & Config

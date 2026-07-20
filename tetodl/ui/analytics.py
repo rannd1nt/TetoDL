@@ -11,10 +11,10 @@ from rich import box
 import questionary
 
 # Import Registry & Utils
-from ..constants import RuntimeConfig, HISTORY_DISPLAY_LIMIT
+from ..constants import HISTORY_DISPLAY_LIMIT
 from ..core.registry import registry
 from ..core.history import calculate_stats, load_history, get_history_stats, reset_history
-from ..utils.styles import clear, menu_style, format_duration, format_duration_digital, console
+from ..utils.formatters import clear, menu_style, format_duration, format_duration_digital, console
 from ..utils.processing import get_platform_badge
 
 def render_analytics_view():
@@ -101,7 +101,8 @@ def render_history_view(limit=20, reverse_order=False, search_query=None):
         search_query (str): Kata kunci untuk filter judul (case-insensitive).
     """
     
-    raw_history = RuntimeConfig.DOWNLOAD_HISTORY
+    from ..core.history import _download_history
+    raw_history = _download_history
     valid_history = [x for x in raw_history if x.get('success', True)]
 
     # === FILTERING (SEARCH) ===
@@ -237,9 +238,13 @@ def display_history():
             instruction=" "
         ).ask()
 
-        if choice == "back" or choice is None: break
-        elif choice == "analytics": show_analytics()
-        elif choice == "refresh": load_history(); continue
+        if choice == "back" or choice is None:
+            break
+        elif choice == "analytics":
+            show_analytics()
+        elif choice == "refresh":
+            load_history()
+            continue
         elif choice == "clear":
             if questionary.confirm("Clear history logs?", style=menu_style(), qmark=' ').ask():
                 reset_history()

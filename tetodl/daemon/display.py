@@ -8,7 +8,9 @@ import json
 import subprocess
 from pathlib import Path
 
-from ..utils.styles import print_error, print_info, print_success, color
+from ..utils.console import console
+from ..utils.formatters import color
+from ..utils.i18n_keys import Keys
 from ..constants import SERVICE_PATH, CONFIG_PATH
 
 def _get_ip_from_ip_a():
@@ -76,19 +78,19 @@ def display_daemon_url():
     config_exists = os.path.exists(CONFIG_PATH)
 
     if not service_exists and not config_exists:
-        print_error("TetoDL daemon is not configured.")
-        print_info("Run 'tetodl daemon --setup' to register a systemd service,")
-        print_info("or 'tetodl daemon --run' to start it manually.")
+        console.err(Keys.daemon.not_configured)
+        console.warn("Run 'tetodl daemon --setup' to register a systemd service,")
+        console.warn("or 'tetodl daemon --run' to start it manually.")
         return 1
 
     running = _is_service_running()
     if not running:
         if service_exists:
-            print_info("TetoDL daemon is registered but not currently running.")
-            print_info("Start it with:  systemctl --user start tetodl.service")
+            console.warn(Keys.daemon.registered_not_running)
+            console.warn(Keys.daemon.start_with_systemctl)
         else:
-            print_info("TetoDL daemon service is unavailable.")
-            print_info("Run 'tetodl daemon --setup' to register a systemd service,")
+            console.warn(Keys.daemon.service_unavailable)
+            console.warn("Run 'tetodl daemon --setup' to register a systemd service,")
         return 1
 
     # State 3: running
@@ -96,13 +98,13 @@ def display_daemon_url():
     ip = _get_ip_from_ip_a()
 
     if not ip:
-        print_error("Could not detect LAN IP address. Are you connected to a network?")
+        console.err(Keys.daemon.could_not_detect_lan_ip)
         return 1
 
     url = f"http://{ip}:{port}"
     print()
-    print_success(f"TetoDL Daemon URL: {color(url, 'c')}")
-    print_info(f"Port: {port}")
+    console.ok(f"TetoDL Daemon URL: {color(url, 'c')}")
+    console.warn(Keys.daemon.daemon_port(port=port))
     print()
 
     try:
@@ -112,8 +114,8 @@ def display_daemon_url():
         qr.make(fit=True)
         qr.print_ascii(invert=True)
         print()
-        print_info("Scan QR above with your phone camera to open the daemon.")
+        console.warn(Keys.daemon.scan_qr)
     except ImportError:
-        print_info(f"Open {url} in your browser.")
+        console.warn(Keys.daemon.open_browser(url=url))
 
     return 0

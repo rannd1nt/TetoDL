@@ -1,22 +1,38 @@
 """
 Display utilities and ASCII art
 """
-import os
 import sys
+from pathlib import Path
 from rich.text import Text
 from rich.table import Table
 from rich import box
 
-from ..constants import RuntimeConfig, APP_VERSION, CONFIG_PATH, DATA_DIR
+from ..constants import APP_VERSION, CONFIG_PATH, DATA_DIR, IS_BINARY
+from ..core import config as cfg
 from ..core import cache
 from ..utils.files import get_free_space
 from ..utils.network import open_url
-from ..utils.styles import print_error, clear, console
+from .formatters import clear, console as rich_console
+from ..utils.console import console
 from ..utils.i18n import get_text as _
+from ..utils.i18n_keys import Keys
+
+
+def _assets_dir() -> Path:
+    """Resolve the assets directory regardless of CWD or binary bundle mode."""
+    if IS_BINARY:
+        meipass = Path(getattr(sys, '_MEIPASS', sys.executable)).parent
+        candidate = meipass / "assets"
+        if candidate.is_dir():
+            return candidate
+    candidate = Path(__file__).resolve().parent.parent.parent / "assets"
+    if candidate.is_dir():
+        return candidate
+    return Path("assets")
 
 
 def show_ascii(filename=None, str_only=False) -> str | None:
-    """Display ASCII art from txt file"""
+    """Display ASCII art — built-in default or from assets/*.txt file."""
     header_raw = r'''
   ______     __        ____  __
  /_  __/__  / /_____  / __ \/ /
@@ -25,36 +41,32 @@ def show_ascii(filename=None, str_only=False) -> str | None:
 /_/  \___/\__/\____/_____/_____/
 
 '''
-    header_text = Text(header_raw, style="bold bright_cyan")
-
-    if not filename or filename == 'classic':
+    if not filename or filename in ('classic', 'default'):
         if str_only:
             return header_raw
         text = Text(header_raw, style="bold bright_cyan")
-        console.print(text)
+        rich_console.print(text)
         return None
 
-    target_file = filename if filename else 'default'
+    target_file = filename
+    asset_dir = _assets_dir()
+    asset_path = asset_dir / f"{target_file}.txt"
 
     try:
-        asset_path = os.path.join("assets", f"{target_file}.txt")
-        with open(asset_path, "r", encoding="utf-8") as f:
-            content = f.read()
-            if str_only:
-                return content
-            print(content, flush=True)
+        content = asset_path.read_text(encoding="utf-8")
+        if str_only:
             return content
+        print(content, flush=True)
+        return content
 
     except FileNotFoundError:
-        if target_file != 'classic':
-            if not str_only:
-                print_error(f"Header '{target_file}' not found. Falling back.")
-                pass
-            return show_ascii('classic', str_only)
+        if not str_only:
+            console.err(Keys.ui.header_not_found(file=target_file))
+        return show_ascii('classic', str_only)
 
     except Exception as e:
         if not str_only:
-            print_error(f"Error tak terduga: {e}")
+            console.err(Keys.ui.unexpected_error(error=str(e)))
         return None
 
 def show_app_info() -> None:
@@ -81,24 +93,24 @@ def show_app_info() -> None:
     # --- SECTION 2: STORAGE & PATHS ---
     table.add_section()
     table.add_row("[bold]> Storage & Paths[/]", "")
-    music_space = get_free_space(RuntimeConfig.MUSIC_ROOT)
-    music_val = f"{RuntimeConfig.MUSIC_ROOT}\n[cyan]({music_space})[/]" 
+    music_space = get_free_space(cfg.music_root)
+    music_val = f"{cfg.music_root}\n[cyan]({music_space})[/]" 
     table.add_row("Music Location", music_val)
 
-    video_space = get_free_space(RuntimeConfig.VIDEO_ROOT)
-    video_val = f"{RuntimeConfig.VIDEO_ROOT}\n[cyan]({video_space})[/]"
+    video_space = get_free_space(cfg.video_root)
+    video_val = f"{cfg.video_root}\n[cyan]({video_space})[/]"
     table.add_row("Video Location", video_val)
 
     # --- SECTION 3: CONFIGURATION ---
     table.add_section()
     table.add_row("[bold]> User Configuration[/]", "")
 
-    header_val = getattr(RuntimeConfig, 'HEADER_STYLE', 'default')
-    p_style = getattr(RuntimeConfig, 'PROGRESS_STYLE', 'minimal')
-    lang = getattr(RuntimeConfig, 'LANGUAGE', 'en')
-    delay = getattr(RuntimeConfig, 'DOWNLOAD_DELAY', 2)
-    retries = getattr(RuntimeConfig, 'MAX_RETRIES', 3)
-    scanner = getattr(RuntimeConfig, 'MEDIA_SCANNER_ENABLED', False)
+    header_val = getattr(cfg, 'header_style', 'default')
+    p_style = getattr(cfg, 'progress_style', 'minimal')
+    lang = getattr(cfg, 'language', 'en')
+    delay = getattr(cfg, 'download_delay', 2)
+    retries = getattr(cfg, 'max_retries', 3)
+    scanner = getattr(cfg, 'media_scanner_enabled', False)
 
     scanner_str = "[green]Enabled[/]" if scanner else "[dim]Disabled[/]"
 
@@ -109,32 +121,32 @@ def show_app_info() -> None:
     table.add_row("Media Scanner", scanner_str)
 
     # Video Prefs
-    codec = getattr(RuntimeConfig, 'VIDEO_CODEC', 'default')
-    res = getattr(RuntimeConfig, 'MAX_VIDEO_RESOLUTION', '720p')
-    container = getattr(RuntimeConfig, 'VIDEO_CONTAINER', 'mp4')
+    codec = getattr(cfg, 'video_codec', 'default')
+    res = getattr(cfg, 'max_video_resolution', '720p')
+    container = getattr(cfg, 'video_container', 'mp4')
 
     table.add_row("Video Settings", f"{container.upper()} | {res} | {codec.upper()}")
 
     # Render
-    console.print()
-    console.print(table)
-    console.print()
+    rich_console.print()
+    rich_console.print(table)
+    rich_console.print()
 
 def visit_instagram():
     """Open Instagram profile"""
     url = "https://www.instagram.com/rannd1nt/"
     if not open_url(url):
-        print_error(f"Failed to Load Content. Visit: {url}")
+        console.err(Keys.ui.failed_load_content(url=url))
 
 
 def visit_github():
     """Open GitHub profile"""
     url = "https://github.com/rannd1nt"
     if not open_url(url):
-        print_error(f"Failed to Load Content. Visit: {url}")
+        console.err(Keys.ui.failed_load_content(url=url))
 
 
-def wait_and_clear_prompt(msg: str = None):
+def wait_and_clear_prompt(msg: str | None = None):
     """Wait for user input and clear screen"""
     try:
         if msg:

@@ -1,23 +1,21 @@
-import os
 import sys
-import shutil
 from threading import Thread
 import threading
 
-from ..constants import RuntimeConfig
+from ..core import config as cfg
 from ..utils.i18n import get_text as _
 from ..utils.display import show_ascii
-from ..utils.styles import Colors, console, clear
+from ..utils.formatters import Colors, console, clear
 
-def run_in_thread(fn, *args):
+def run_in_thread(fn, *args, **kwargs):
     """Run function in a separate thread"""
-    t = threading.Thread(target=fn, args=args, daemon=True)
+    t = threading.Thread(target=fn, args=args, kwargs=kwargs, daemon=True)
     t.start()
     return t
 
 def header():
     # reccomended size: stretch 35x16
-    current_style = getattr(RuntimeConfig, 'HEADER_STYLE', 'default')
+    current_style = getattr(cfg, 'header_style', 'default')
     show_ascii(current_style)
     
     title = _('menu.main.title')
@@ -36,7 +34,7 @@ def verification_header(title=None):
     print(f"{Colors.CYAN}╚════════════════════════════════════════╝{Colors.WHITE}")
     print()
 
-def thread_cancel_handle(t: Thread) -> SystemExit:
+def thread_cancel_handle(t: Thread):
     try:
         t.join()
     except KeyboardInterrupt:

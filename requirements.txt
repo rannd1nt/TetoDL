@@ -1,9 +1,8 @@
-# TetoDL Downloader - Full Requirements (with Spotify)
-# =====================================================
+# TetoDL Downloader - Requirements
+# ================================
 
 # Core dependencies
 yt-dlp >= 2026.2.4
-spotdl >= 4.4.3
 rich == 13.9.4
 questionary == 2.1.1
 qrcode == 8.2
@@ -14,3 +13,4 @@ zeroconf >= 0.2.0
 pydantic >= 2.13.4
 fastapi >= 0.136.3
 uvicorn >= 0.48.0
+colorama >= 0.4.6

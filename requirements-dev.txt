@@ -1,0 +1,24 @@
+# TetoDL - Development & Testing Requirements
+# ===============================================
+# Install with: pip install -r requirements-dev.txt
+
+# ===== Test Runner =====
+pytest >= 8.3
+
+# ===== Coverage & Reporting =====
+pytest-cov >= 6.0
+
+# ===== Mocking =====
+pytest-mock >= 3.14
+
+# ===== HTTP Mocking =====
+responses >= 0.25
+
+# ===== Parallel Execution =====
+pytest-xdist >= 3.6
+
+# ===== Code Quality =====
+ruff >= 0.9
+
+# ===== Type Checking =====
+mypy >= 1.14

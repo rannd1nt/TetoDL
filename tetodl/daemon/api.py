@@ -13,12 +13,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
 from .models import DownloadRequest, PreviewRequest
 from .discovery import MDNSBroadcaster
-from ..ui.entry.dispatch import execute_cli_context
-from ..constants import RuntimeConfig
+from ..cli.dispatch import execute_download
+from ..core.models import DownloadSession, DownloadResult
+from ..core import config as cfg
 from ..core import config as config_mgr
 from ..utils.display import get_free_space
 from ..utils.files import TempManager
@@ -26,18 +27,19 @@ from ..utils.share import list_entries, stream_file, create_share_router, SVG as
 from ..utils.time_parser import get_cut_seconds
 from ..utils.processing import parse_playlist_items
 from ..utils.network import find_free_port, get_best_ip
-from ..utils.styles import console as rich_console
+from typing import Any, Literal
+from ..utils.formatters import console as rich_console
 
-share_launchers = {}
+share_launchers: dict[str, Any] = {}
 
-active_tasks = {}
+active_tasks: dict[str, Any] = {}
 broadcaster = None
 
 # --- BACKGROUND WORKERS ---
 async def cleanup_worker():
     while True:
         # Ambil interval dari config (default 3600 detik / 1 jam)
-        interval = getattr(RuntimeConfig, 'DAEMON_CLEANUP_INTERVAL', 3600)
+        interval = getattr(cfg, 'daemon_cleanup_interval', 3600)
         temp_dir = TempManager.get_temp_dir()
         current_time = time.time()
 
@@ -100,8 +102,8 @@ async def root():
     return RedirectResponse(url="/web/")
 
 # Mount Folder Media untuk Streaming Lokal
-app.mount("/media/music", StaticFiles(directory=RuntimeConfig.MUSIC_ROOT), name="music_media")
-app.mount("/media/videos", StaticFiles(directory=RuntimeConfig.VIDEO_ROOT), name="video_media")
+app.mount("/media/music", StaticFiles(directory=cfg.music_root), name="music_media")
+app.mount("/media/videos", StaticFiles(directory=cfg.video_root), name="video_media")
 app.mount("/media/temp", StaticFiles(directory=TempManager.get_temp_dir()), name="temp_media")
 
 
@@ -125,12 +127,12 @@ class _LogTee:
     def isatty(self):
         return False
 
-def background_task_runner(task_id: str, context: dict):
+def background_task_runner(task_id: str, session: DownloadSession, mode: str = 'cli_download', task_title: str = ''):
     log_buf = io.StringIO()
     task_data = {
         "status": "processing",
-        "details": context.get('url', 'Task Queued'),
-        "title": context.get('task_title', ''),
+        "details": session.url or 'Task Queued',
+        "title": task_title or '',
         "file_path": None,
         "logs": "",
     }
@@ -142,16 +144,16 @@ def background_task_runner(task_id: str, context: dict):
 
     sys.stdout = tee
     try:
-        rich_console.file = tee
+        rich_console.file = tee  # type: ignore[assignment]
     except Exception:
         pass
 
     try:
-        result = execute_cli_context(context) or {}
+        result = execute_download(session) or DownloadResult(success=False)
         task = active_tasks[task_id]
         task["status"] = "completed"
-        if isinstance(result, dict):
-            fp = result.get('file_path')
+        if isinstance(result, DownloadResult):
+            fp = result.file_path
             if fp:
                 fp_abs = os.path.abspath(fp)
                 task["file_path"] = fp_abs
@@ -160,7 +162,7 @@ def background_task_runner(task_id: str, context: dict):
                     task["dir_path"] = fp_abs
                 else:
                     task["dir_path"] = os.path.dirname(fp_abs)
-            fc = result.get('file_count')
+            fc = result.file_count
             if fc:
                 task["file_count"] = fc
     except Exception as e:
@@ -185,8 +187,8 @@ async def get_system_status():
     return {
         "status": "online",
         "storage": {
-            "music_free_space": get_free_space(RuntimeConfig.MUSIC_ROOT),
-            "video_free_space": get_free_space(RuntimeConfig.VIDEO_ROOT)
+            "music_free_space": get_free_space(cfg.music_root),
+            "video_free_space": get_free_space(cfg.video_root)
         }
     }
 
@@ -195,13 +197,13 @@ async def get_current_config():
     """Membaca konfigurasi yang tersimpan (termasuk setting Daemon)"""
     config_mgr.load_config()
     return {
-        "audio_quality": RuntimeConfig.AUDIO_QUALITY,
-        "video_container": RuntimeConfig.VIDEO_CONTAINER,
-        "max_resolution": RuntimeConfig.MAX_VIDEO_RESOLUTION,
-        "daemon_default_temp": getattr(RuntimeConfig, 'DAEMON_DEFAULT_TEMP', True),
-        "daemon_cleanup_interval": getattr(RuntimeConfig, 'DAEMON_CLEANUP_INTERVAL', 3600),
-        "smart_cover_mode": RuntimeConfig.SMART_COVER_MODE,
-        "lyrics_mode": RuntimeConfig.LYRICS_MODE,
+        "audio_quality": cfg.audio_quality,
+        "video_container": cfg.video_container,
+        "max_resolution": cfg.max_video_resolution,
+        "daemon_default_temp": getattr(cfg, 'daemon_default_temp', True),
+        "daemon_cleanup_interval": getattr(cfg, 'daemon_cleanup_interval', 3600),
+        "smart_cover_mode": cfg.smart_cover_mode,
+        "lyrics_mode": cfg.lyrics_mode,
     }
 
 @app.patch("/api/v1/config")
@@ -211,12 +213,18 @@ async def update_config(request: Request):
     config_mgr.load_config()
     
     # Petakan request JSON ke objek konfigurasi
-    if "daemon_default_temp" in data: RuntimeConfig.DAEMON_DEFAULT_TEMP = data["daemon_default_temp"]
-    if "daemon_cleanup_interval" in data: RuntimeConfig.DAEMON_CLEANUP_INTERVAL = data["daemon_cleanup_interval"]
-    if "audio_quality" in data: RuntimeConfig.AUDIO_QUALITY = data["audio_quality"]
-    if "max_resolution" in data: RuntimeConfig.MAX_VIDEO_RESOLUTION = data["max_resolution"]
-    if "smart_cover_mode" in data: RuntimeConfig.SMART_COVER_MODE = data["smart_cover_mode"]
-    if "lyrics_mode" in data: RuntimeConfig.LYRICS_MODE = data["lyrics_mode"]
+    if "daemon_default_temp" in data:
+        cfg.daemon_default_temp = data["daemon_default_temp"]
+    if "daemon_cleanup_interval" in data:
+        cfg.daemon_cleanup_interval = data["daemon_cleanup_interval"]
+    if "audio_quality" in data:
+        cfg.audio_quality = data["audio_quality"]
+    if "max_resolution" in data:
+        cfg.max_video_resolution = data["max_resolution"]
+    if "smart_cover_mode" in data:
+        cfg.smart_cover_mode = data["smart_cover_mode"]
+    if "lyrics_mode" in data:
+        cfg.lyrics_mode = data["lyrics_mode"]
     
     config_mgr.save_config() # Simpan ke disk
     return {"status": "success", "message": "Configuration updated persistently."}
@@ -229,43 +237,6 @@ async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail="Must provide 'url' or 'search_query'")
 
     task_id = str(uuid.uuid4())[:8]
-    overrides = {'simple_mode': True}
-
-    if req.url: overrides['url'] = req.url
-    if req.audio_only: overrides['type'] = 'audio'
-    if req.video_only: overrides['type'] = 'video'
-    if req.thumbnail_only: overrides['thumbnail_only'] = True
-
-    if req.format: overrides['format'] = req.format
-    if req.resolution: overrides['resolution'] = req.resolution
-    if req.codec: overrides['codec'] = req.codec
-
-    if req.async_mode: overrides['async'] = True
-    if req.cut_time:
-        overrides['cut_raw'] = req.cut_time
-        try:
-            start, end = get_cut_seconds(req.cut_time)
-            overrides['cut_range'] = (start, end)
-        except ValueError:
-            pass
-    if req.items:
-        overrides['items_raw'] = req.items
-        try:
-            overrides['playlist_items'] = parse_playlist_items(req.items)
-        except ValueError:
-            pass
-    if req.group: overrides['group'] = req.group
-    if req.m3u: overrides['m3u'] = True
-    if req.smart_cover: overrides['smart_cover'] = True
-    if req.no_cover: overrides['no_cover'] = True
-    if req.force_crop: overrides['force_crop'] = True
-
-    # Explicit set semua boolean (biar gak ada state leakage antar request)
-    overrides['lyrics'] = req.lyrics
-    overrides['romaji'] = req.romaji
-
-    if req.title:
-        overrides['task_title'] = req.title
 
     # --- TEMP VS PERMANENT STORAGE LOGIC ---
     if req.share_temp:
@@ -273,25 +244,57 @@ async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
     elif req.share:
         is_temp = False
     else:
-        is_temp = getattr(RuntimeConfig, 'DAEMON_DEFAULT_TEMP', True)
+        is_temp = getattr(cfg, 'daemon_default_temp', True)
 
+    output_path: str | None = None
     if is_temp:
         task_dir = Path(str(TempManager.get_temp_dir())) / task_id
         task_dir.mkdir(parents=True, exist_ok=True)
-        overrides['output_path'] = str(task_dir)
+        output_path = str(task_dir)
 
-    context = {
-        'mode': 'cli_download' if req.url else 'cli_search',
-        'is_temp_session': False,
-        'overrides': overrides,
-        'task_title': req.title or '',
-    }
-        
-    # CATATAN PENTING: Di mode Daemon, `is_temp_session` sengaja False.
-    # Biarkan auto-cleanup worker yang hapus file lama, jangan `TempManager.cleanup()`.
-    # (Itu langsung hapus file sebelum sempat di-streaming).
+    media_type: Literal['audio', 'video', 'thumbnail'] = 'audio'
+    if req.video_only:
+        media_type = 'video'
+    elif req.thumbnail_only:
+        media_type = 'thumbnail'
 
-    bg_tasks.add_task(background_task_runner, task_id, context)
+    cut_range: tuple[float, float] | None = None
+    if req.cut_time:
+        try:
+            cut_range = get_cut_seconds(req.cut_time)
+        except ValueError:
+            pass
+
+    playlist_items: set[int] | None = None
+    if req.items:
+        try:
+            playlist_items = parse_playlist_items(req.items)
+        except ValueError:
+            pass
+
+    session = DownloadSession(
+        url=req.url or '',
+        media_type=media_type,
+        output_path=output_path,
+        format=req.format or None,
+        resolution=req.resolution or None,
+        codec=req.codec or None,
+        cut_range=cut_range,
+        playlist_items=playlist_items,
+        group_folder=req.group or False,
+        m3u=req.m3u or False,
+        smart_cover=req.smart_cover or False,
+        no_cover=req.no_cover or False,
+        force_crop=req.force_crop or False,
+        lyrics=req.lyrics,
+        romaji=req.romaji,
+        async_mode=req.async_mode or False,
+        is_temp_session=False,
+    )
+
+    mode = 'cli_download' if req.url else 'cli_search'
+
+    bg_tasks.add_task(background_task_runner, task_id, session, mode, req.title or '')
 
     target_loc = "Temporary Storage" if is_temp else "Permanent Library"
     return {
@@ -414,39 +417,62 @@ async def share_browse(path: str = ""):
         raise HTTPException(400, f"Browse error: {e}")
 
 
-# --- 5. SHARE STREAM (raw file serving, no HTML) ---
+# --- 5. SHARE STREAM (raw file serving, no HTML, supports Range for <video>/<audio>) ---
 @app.get("/api/v1/share/stream")
 async def share_stream(request: Request):
-    path = request.query_params.get("path", "")
-    if not path:
+    path_raw = request.query_params.get("path", "")
+    if not path_raw:
         raise HTTPException(400, "Missing 'path' query param")
-    real = os.path.abspath(path)
+    real = os.path.abspath(path_raw)
     if not os.path.isfile(real):
         raise HTTPException(404, "File not found")
     range_header = request.headers.get("range")
-    dl = request.query_params.get("dl")
-    response = await stream_file(real, range_header)
-    if dl is not None:
-        filename = os.path.basename(real)
-        safe = filename.replace('\\', '\\\\').replace('"', '\\"')
-        response.headers["Content-Disposition"] = f'attachment; filename="{safe}"'
-    return response
+    return await stream_file(real, range_header or "")
+
+
+# --- 5B. SHARE DOWNLOAD (dedicated endpoint, always attachment, no Range interference) ---
+@app.get("/api/v1/share/download")
+async def share_download(request: Request):
+    path_raw = request.query_params.get("path", "")
+    if not path_raw:
+        raise HTTPException(400, "Missing 'path' query param")
+    real = os.path.abspath(path_raw)
+    if not os.path.isfile(real):
+        raise HTTPException(404, "File not found")
+    filename = os.path.basename(real)
+    safe_name = filename.replace('\\', '\\\\').replace('"', '\\"')
+    encoded_name = urllib.parse.quote(filename, safe='')
+    return FileResponse(
+        real,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}"; filename*=UTF-8\'\'{encoded_name}'
+        },
+    )
 
 
 # --- 6. SHARE BROWSER HTML (dir listing, same glassmorphism as TetoDL Share) ---
 
 def _icon(ext: str):
-    if ext in ('.mp3','.m4a','.wav','.flac','.opus'): return _SHARE_SVG['audio']
-    if ext in ('.mp4','.mkv','.webm','.avi','.mov'): return _SHARE_SVG['video']
-    if ext in ('.jpg','.jpeg','.png','.webp','.gif','.svg'): return _SHARE_SVG['image']
-    if ext in ('.zip','.rar','.7z','.tar','.gz'): return _SHARE_SVG['archive']
-    if ext in ('.py','.js','.html','.css','.json','.c'): return _SHARE_SVG['code']
-    if ext in ('.pdf','.txt','.md'): return _SHARE_SVG['doc']
+    if ext in ('.mp3','.m4a','.wav','.flac','.opus'):
+        return _SHARE_SVG['audio']
+    if ext in ('.mp4','.mkv','.webm','.avi','.mov'):
+        return _SHARE_SVG['video']
+    if ext in ('.jpg','.jpeg','.png','.webp','.gif','.svg'):
+        return _SHARE_SVG['image']
+    if ext in ('.zip','.rar','.7z','.tar','.gz'):
+        return _SHARE_SVG['archive']
+    if ext in ('.py','.js','.html','.css','.json','.c'):
+        return _SHARE_SVG['code']
+    if ext in ('.pdf','.txt','.md'):
+        return _SHARE_SVG['doc']
     return _SHARE_SVG['file']
 
 def _size_str(size: int) -> str:
-    if size < 1024: return f"{size} B"
-    if size < 1024**2: return f"{size/1024:.1f} KB"
+    if size < 1024:
+        return f"{size} B"
+    if size < 1024**2:
+        return f"{size/1024:.1f} KB"
     return f"{size/(1024**2):.1f} MB"
 
 @app.get("/api/v1/share/browse_html")
@@ -456,7 +482,8 @@ async def share_browse_html(request: Request):
     real = os.path.abspath(path) if path else ""
     root_abs = os.path.abspath(root_raw)
     if not real or not os.path.isdir(real):
-        raise HTTPException(404, "Not a directory")
+        detail = f"Directory not found: {htmlmod.escape(real)}"
+        return HTMLResponse(_error_html(detail), status_code=404)
 
     css = _player_css()
     dirname = htmlmod.escape(os.path.basename(real) or real)
@@ -472,8 +499,10 @@ async def share_browse_html(request: Request):
             link = f"/api/v1/share/browse_html?path={urllib.parse.quote(os.path.abspath(full))}&root={urllib.parse.quote(root_abs)}"
         else:
             sz = 0
-            try: sz = os.path.getsize(full)
-            except: pass
+            try:
+                sz = os.path.getsize(full)
+            except Exception:
+                pass
             meta = _size_str(sz)
             icon = _icon(ext)
             link = f"/api/v1/share/player?path={urllib.parse.quote(os.path.abspath(full))}"
@@ -541,15 +570,15 @@ def _get_meta(path: str) -> dict:
         if ext == ".mp3":
             from mutagen.mp3 import MP3
             from mutagen.id3 import APIC
-            a = MP3(path)
+            a: Any = MP3(path)
             meta["title"] = str(a.tags.get("TIT2", "")) if a.tags else ""
             meta["artist"] = str(a.tags.get("TPE1", "")) if a.tags else ""
             meta["album"] = str(a.tags.get("TALB", "")) if a.tags else ""
             if a.tags:
                 for t in a.tags.values():
                     if isinstance(t, APIC):
-                        meta["cover_b64"] = base64.b64encode(t.data).decode()
-                        meta["cover_mime"] = t.mime
+                        meta["cover_b64"] = base64.b64encode(t.data).decode()  # type: ignore[attr-defined]
+                        meta["cover_mime"] = t.mime  # type: ignore[attr-defined]
                         break
         elif ext == ".m4a":
             from mutagen.mp4 import MP4
@@ -581,14 +610,40 @@ def _get_meta(path: str) -> dict:
         pass 
     return meta
 
+def _error_html(detail: str) -> str:
+    """Return a standalone HTML error page matching the daemon's glassmorphism theme."""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Error - TetoDL Player</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:'Outfit',-apple-system,sans-serif;background:#0f172a;color:#fff;height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px}}
+.glass{{background:rgba(20,20,35,0.65);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:30px;max-width:480px;text-align:center}}
+h1{{color:#f43f5e;margin-bottom:12px;font-size:1.3rem}}
+p{{color:#94a3b8;font-size:0.9rem;word-break:break-all}}
+</style>
+</head>
+<body>
+<div class="glass">
+<h1>Cannot Open Player</h1>
+<p>{htmlmod.escape(detail)}</p>
+</div>
+</body>
+</html>"""
+
+
 @app.get("/api/v1/share/player")
 async def share_player(request: Request):
     path = request.query_params.get("path", "")
     if not path:
-        raise HTTPException(400, "Missing 'path' query param")
+        return HTMLResponse(_error_html("Missing file path"), status_code=400)
     real = os.path.abspath(path)
     if not os.path.isfile(real):
-        raise HTTPException(404, "File not found")
+        detail = f"File not found: {htmlmod.escape(real)}"
+        return HTMLResponse(_error_html(detail), status_code=404)
 
     filename = os.path.basename(real)
     ext = os.path.splitext(filename)[1].lower()
@@ -652,7 +707,7 @@ async def share_player(request: Request):
 <input type="range" id="progressBar" min="0" max="100" value="0" step="0.1">
 <div class="time-labels"><span id="currTime">0:00</span><span id="totalTime">0:00</span></div>
 <div class="btn-row">
-<a href="{stream_url}&dl=1" download class="btn-dl">{_SVG_DOWNLOAD}<span>Save</span></a>
+<a href="/api/v1/share/download?path={urllib.parse.quote(real)}" download="{htmlmod.escape(filename)}" class="btn-dl">{_SVG_DOWNLOAD}<span>Save</span></a>
 <button id="playBtn" class="btn-control btn-play">{_SVG_PLAY}</button>
 <div style="width:20px"></div>
 </div>
@@ -709,7 +764,8 @@ async def share_launch(request: Request):
     url = f"http://{ip}:{port}/{urllib.parse.quote(serve_file)}" if serve_file else f"http://{ip}:{port}/"
 
     # Tunggu server siap (max 5 detik)
-    import urllib.request as _ureq, urllib.error as _uerr
+    import urllib.request as _ureq
+    import urllib.error as _uerr
     import time as _time
     deadline = _time.time() + 5
     ready = False

@@ -3,21 +3,23 @@ Constants and Path Configuration
 """
 import os
 import sys
+import shutil
 import subprocess
 from pathlib import Path
+
+# ==== BINARY / FROZEN DETECTION ====
+IS_BINARY = getattr(sys, 'frozen', False)
 
 # ==== PLATFORM DETECTION ====
 IS_TERMUX = os.path.exists("/data/data/com.termux") or "com.termux" in os.environ.get("PREFIX", "")
 IS_WINDOWS = os.name == "nt"
-IS_VENV = (sys.prefix != sys.base_prefix)
+IS_VENV = not IS_BINARY and (sys.prefix != sys.base_prefix)
 
 IS_WSL = False
 if not IS_WINDOWS and not IS_TERMUX:
     try:
-        # Check 1: uname release (Standard method)
         if hasattr(os, "uname") and "microsoft" in os.uname().release.lower():
             IS_WSL = True
-        # Check 2: /proc/version (Fallback method, more robust)
         elif os.path.exists("/proc/version"):
             with open("/proc/version", "r") as f:
                 if "microsoft" in f.read().lower():
@@ -26,72 +28,73 @@ if not IS_WINDOWS and not IS_TERMUX:
         pass
 
 APP_NAME = "TetoDL"
-APP_VERSION = "1.3.0"
+APP_VERSION = "1.4.0"
+
+# ==== BINARY ROOT (PyInstaller) ====
+_BINARY_DIR: Path | None
+if IS_BINARY:
+    _BINARY_DIR = Path(sys.executable).parent
+else:
+    _BINARY_DIR = None
 
 # ==== PATH SETUP ====
 if IS_TERMUX:
-    # --- ANDROID (Termux) ---
     BASE_PATH = Path("/storage/emulated/0/TetoDL")
-
     CONFIG_DIR = BASE_PATH
     DATA_DIR = BASE_PATH
     CACHE_DIR = BASE_PATH
     TEMP_DIR = CACHE_DIR / "temp"
-
-    # Binary Paths
     FFMPEG_CMD = "/data/data/com.termux/files/usr/bin/ffmpeg"
     SPOTDL_CMD = "/data/data/com.termux/files/usr/bin/spotdl"
 
 elif IS_WINDOWS:
-    # --- PLAIN WINDOWS  ---
     home = Path.home()
     BASE_PATH = home / "Downloads" / APP_NAME
     CONFIG_DIR = home / ".config" / APP_NAME
     DATA_DIR = home / ".local" / "share" / APP_NAME
     CACHE_DIR = home / ".cache" / APP_NAME
     TEMP_DIR = CACHE_DIR / "temp"
-    FFMPEG_CMD = "ffmpeg"
     SPOTDL_CMD = "spotdl"
-    
+
+    # FFmpeg — bundled binary first, fallback to PATH
+    if IS_BINARY:
+        assert _BINARY_DIR is not None
+        bundled_ffmpeg = _BINARY_DIR / "ffmpeg.exe"
+        FFMPEG_CMD = str(bundled_ffmpeg) if bundled_ffmpeg.exists() else "ffmpeg"
+    else:
+        FFMPEG_CMD = shutil.which("ffmpeg") or "ffmpeg"
+
 else:
-    # --- LINUX ---
+    # --- LINUX / WSL ---
     home = Path.home()
 
-    # Config
     xdg_config = os.environ.get("XDG_CONFIG_HOME")
     CONFIG_DIR = (Path(xdg_config) if xdg_config else home / ".config") / APP_NAME
 
-    # Data
     xdg_data = os.environ.get("XDG_DATA_HOME")
     DATA_DIR = (Path(xdg_data) if xdg_data else home / ".local" / "share") / APP_NAME
-    
-    # Cache
+
     xdg_cache = os.environ.get("XDG_CACHE_HOME")
     CACHE_DIR = (Path(xdg_cache) if xdg_cache else home / ".cache") / APP_NAME
 
-    # Temp
     TEMP_DIR = CACHE_DIR / "temp"
+
+    WSL_MUSIC_OVERRIDE: Path | None
+    WSL_VIDEO_OVERRIDE: Path | None
 
     if IS_WSL:
         try:
             proc_win = subprocess.run(
-                ["cmd.exe", "/c", "echo %USERPROFILE%"], 
-                capture_output=True, 
-                text=True, 
-                check=True
+                ["cmd.exe", "/c", "echo %USERPROFILE%"],
+                capture_output=True, text=True, check=True
             )
             win_path_raw = proc_win.stdout.strip()
-            
             proc_wsl = subprocess.run(
                 ["wslpath", win_path_raw],
-                capture_output=True,
-                text=True, 
-                check=True
+                capture_output=True, text=True, check=True
             )
             wsl_home_path = Path(proc_wsl.stdout.strip())
-            
             BASE_PATH = wsl_home_path / "Downloads" / "TetoDL"
-            
             WSL_MUSIC_OVERRIDE = wsl_home_path / "Music"
             WSL_VIDEO_OVERRIDE = wsl_home_path / "Videos"
         except Exception as e:
@@ -100,17 +103,21 @@ else:
             WSL_MUSIC_OVERRIDE = None
             WSL_VIDEO_OVERRIDE = None
     else:
-        # Native Linux
         BASE_PATH = home / "Downloads" / "TetoDL"
         WSL_MUSIC_OVERRIDE = None
         WSL_VIDEO_OVERRIDE = None
 
-    if os.path.exists("/usr/bin/ffmpeg"):
+    # FFmpeg — system path
+    ffmpeg_system = shutil.which("ffmpeg")
+    if ffmpeg_system:
+        FFMPEG_CMD = ffmpeg_system
+    elif os.path.exists("/usr/bin/ffmpeg"):
         FFMPEG_CMD = "/usr/bin/ffmpeg"
     else:
         ffmpeg_venv = os.path.join(sys.prefix, "bin", "ffmpeg")
         FFMPEG_CMD = ffmpeg_venv if os.path.exists(ffmpeg_venv) else "ffmpeg"
 
+    # spotdl
     if IS_VENV:
         SPOTDL_CMD = os.path.join(sys.prefix, "bin", "spotdl")
     else:
@@ -120,7 +127,7 @@ else:
         elif user_local_bin.exists():
             SPOTDL_CMD = str(user_local_bin)
         else:
-            SPOTDL_CMD = "spotdl"
+            SPOTDL_CMD = shutil.which("spotdl") or "spotdl"
 
 # ==== CONFIG FILES ====
 CONFIG_PATH = str(CONFIG_DIR / "config.json")
@@ -128,7 +135,6 @@ CACHE_PATH = str(CACHE_DIR / "cache.json")
 HISTORY_PATH = str(DATA_DIR / "history.json")
 REGISTRY_PATH = str(DATA_DIR / "registry.json")
 
-# Daemon systemd service
 SERVICE_PATH = str(Path.home() / ".config" / "systemd" / "user" / "tetodl.service")
 
 # ==== DEFAULT ROOTS ====
@@ -150,91 +156,19 @@ HISTORY_DISPLAY_LIMIT = 20
 
 # ==== AUDIO QUALITY OPTIONS ====
 AUDIO_QUALITY_OPTIONS = {
-    "mp3": {
-        "ext": "mp3",
-        "bitrate": "~192 kbps",
-        "codec": "MP3 (Lossy)"
-    },
-    "m4a": {
-        "ext": "m4a",
-        "bitrate": "~128 kbps",
-        "codec": "AAC (M4A)"
-    },
-    "opus": {
-        "ext": "opus",
-        "bitrate": "~160-180 kbps",
-        "codec": "Opus (Best Quality)"
-    }
+    "mp3": {"ext": "mp3", "bitrate": "~192 kbps", "codec": "MP3 (Lossy)"},
+    "m4a": {"ext": "m4a", "bitrate": "~128 kbps", "codec": "AAC (M4A)"},
+    "opus": {"ext": "opus", "bitrate": "~160-180 kbps", "codec": "Opus (Best Quality)"},
 }
 
-# ==== RUNTIME VARIABLES ====
-class RuntimeConfig:
-    """Runtime configuration that can be modified"""
-    MUSIC_ROOT = DEFAULT_MUSIC_ROOT
-    VIDEO_ROOT = DEFAULT_VIDEO_ROOT
-    THUMBNAIL_ROOT = DEFAULT_THUMBNAIL_ROOT
-    
-
-    DOWNLOAD_HISTORY = []
-    USER_SUBFOLDERS = {}
-    
-    SIMPLE_MODE = False
-    ASYNC_MODE = False
-    QUIET = False
-    SMART_COVER_MODE = True
-    THUMBNAIL_FORMAT = "jpg"
-    NO_COVER_MODE = False
-    FORCE_CROP = False
-    GROUP_MODE = False
-    FORCE_GROUPING_ON_SHARE = False
-    LYRICS_MODE = False
-    ROMAJI_MODE = False
-    ZIP_MODE = False
-    CREATE_M3U = False
-    SKIP_EXISTING_FILES = True
-    MAX_VIDEO_RESOLUTION = "720p"
-    AUDIO_QUALITY = "m4a"
-    VIDEO_CONTAINER = "mp4"
-    VIDEO_CODEC = "default"
-
-    HEADER_STYLE = "default"
-    PROGRESS_STYLE = "minimal"
-    
-    MEDIA_SCANNER_ENABLED = False
-    DOWNLOAD_DELAY = 2
-    MAX_RETRIES = 3
-    RETRY_DELAY = 2
-    ASYNC_WORKERS = 3
-    DAEMON_DEFAULT_TEMP = True
-    DAEMON_CLEANUP_INTERVAL = 3600
-
-    # Dependency verification
-    VERIFIED_DEPENDENCIES = False
-    SPOTIFY_AVAILABLE = False
-    
-    # Spotify Credentials
-    SPOTIFY_CLIENT_ID = None
-    SPOTIFY_CLIENT_SECRET = None
-
-    # Language
-    LANGUAGE = "en"
-
 # ==== INITIALIZATION ====
-try:
-    if not IS_WINDOWS: 
-        if not IS_TERMUX:
-            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-            DATA_DIR.mkdir(parents=True, exist_ok=True)
-            CACHE_DIR.mkdir(parents=True, exist_ok=True)
-            TEMP_DIR.mkdir(parents=True, exist_ok=True)
-        
+def _init_dirs():
+    dirs = [CONFIG_DIR, DATA_DIR, CACHE_DIR, TEMP_DIR,
+            Path(DEFAULT_MUSIC_ROOT), Path(DEFAULT_VIDEO_ROOT)]
+    for d in dirs:
         try:
-            os.makedirs(DEFAULT_MUSIC_ROOT, exist_ok=True)
-            os.makedirs(DEFAULT_VIDEO_ROOT, exist_ok=True)
-        except OSError:
+            d.mkdir(parents=True, exist_ok=True)
+        except (OSError, PermissionError):
             pass
 
-except PermissionError:
-    print(f"\n[ERROR] Permission Denied.")
-    print("Please check write permissions for configuration and download directories.")
-    sys.exit(1)
+_init_dirs()

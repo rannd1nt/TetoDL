@@ -2,7 +2,7 @@
 Time parsing utilities for TetoDL.
 Handles flexible formats like HH:MM:SS, MM:SS, or SS.
 """
-from typing import Optional, Tuple, List, Union
+from typing import Optional, Tuple, List
 
 def time_to_seconds(t_str: str) -> float:
     """
@@ -23,9 +23,12 @@ def time_to_seconds(t_str: str) -> float:
     """
     t_str = t_str.strip().lower()
     
-    if t_str in ['start', '0']: return 0.0
-    if t_str in ['end', 'inf']: return float('inf')
-    if not t_str: return 0.0
+    if t_str in ['start', '0']:
+        return 0.0
+    if t_str in ['end', 'inf']:
+        return float('inf')
+    if not t_str:
+        return 0.0
 
     try:
         parts: List[float] = [float(p) for p in reversed(t_str.split(':'))]

@@ -7,10 +7,12 @@ import questionary
 from questionary import Choice, Separator
 from rich.padding import Padding
 from rich.text import Text
-from ..constants import RuntimeConfig
+from ..core import config as cfg
 from ..ui.components import header
 from ..utils.i18n import get_text as _
-from ..utils.styles import print_error, print_info, clear, console, menu_style
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
+from ..utils.formatters import clear, menu_style, console as rich_console
 from ..utils.files import remove_nomedia_file
 from ..core.config import save_config, cleanup_ghost_subfolders
 
@@ -22,8 +24,8 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
 
     while True:
         clear()
-        console.print()
-        console.print(Padding(title, (0, 3)), style='bright_cyan')
+        rich_console.print()
+        rich_console.print(Padding(title, (0, 3)), style='bright_cyan')
 
         loc_text = Text.assemble(
             (_('download.navigation.current_location'), "bright_cyan"),
@@ -31,9 +33,9 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
             (current_path, "green")
         )
 
-        console.print() 
-        console.print(Padding(loc_text, (0, 3)))
-        console.print()
+        rich_console.print() 
+        rich_console.print(Padding(loc_text, (0, 3)))
+        rich_console.print()
 
         # 1. Ambil list folder
         try:
@@ -43,15 +45,15 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
                 if os.path.isdir(os.path.join(current_path, item))
             ]
         except PermissionError:
-            print_error(f"Akses ditolak ke: {current_path}")
+            console.err(Keys.ui.access_denied_to(path=current_path))
             current_path = os.path.dirname(current_path)
             time.sleep(1)
             continue
         except Exception as e:
-            print_error(f"Error membaca folder: {e}")
+            console.err(Keys.ui.error_reading_folder(error=str(e)))
             return None
 
-        choices = []
+        choices: list[Choice | Separator] = []
 
         can_go_up = True
         if restrict_to_start:
@@ -75,7 +77,7 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
         choices.append(Separator("-" * 30))
 
         if not folders:
-            choices.append(Choice(title="   (Empty Folder)", value="__NONE__", disabled=True))
+            choices.append(Choice(title="   (Empty Folder)", value="__NONE__", disabled="—"))
         else:
             for folder in folders:
                 choices.append(Choice(
@@ -121,7 +123,7 @@ def select_download_folder(root_dir, type_key='Unknown'):
     Download folder selection yang terikat pada PATH (root_dir).
     Menggunakan Questionary & Rich UI.
     """
-    if RuntimeConfig.SIMPLE_MODE:
+    if cfg.simple_mode:
         return root_dir
         
     cleanup_ghost_subfolders()
@@ -133,7 +135,7 @@ def select_download_folder(root_dir, type_key='Unknown'):
         header()
         
         def path_info():
-            console.print(Padding(
+            rich_console.print(Padding(
                 Text.assemble(
                     (_('download.folder.select_location', type=type_key), "bright_cyan"),
                     ("\nBase: ", "bright_cyan"),
@@ -143,11 +145,11 @@ def select_download_folder(root_dir, type_key='Unknown'):
             ))
 
         path_info()
-        current_subfolders = RuntimeConfig.USER_SUBFOLDERS.get(root_key, [])
+        current_subfolders = cfg.user_subfolders.get(root_key, [])
         
-        choices = []
+        choices: list[Choice | Separator] = []
 
-        choices.append(Separator(f"--- TetoDL Subfolders ---"))
+        choices.append(Separator("--- TetoDL Subfolders ---"))
         if current_subfolders:
             for folder in current_subfolders:
                 choices.append(Choice(
@@ -158,10 +160,10 @@ def select_download_folder(root_dir, type_key='Unknown'):
         else:
             choices.append(Choice(
                 title=_('download.folder.no_subfolder'), 
-                disabled=True
+                disabled="—"
             ))
         
-        choices.append(Separator(f"-------- Action ---------"))
+        choices.append(Separator("-------- Action ---------"))
         choices.append(Choice(
             title=f"- {_('download.folder.save_to_root')}", 
             value="__ROOT__"
@@ -224,17 +226,17 @@ def select_download_folder(root_dir, type_key='Unknown'):
                 os.makedirs(new_path, exist_ok=True)
                 remove_nomedia_file(new_path)
 
-                if root_key not in RuntimeConfig.USER_SUBFOLDERS:
-                    RuntimeConfig.USER_SUBFOLDERS[root_key] = []
+                if root_key not in cfg.user_subfolders:
+                    cfg.user_subfolders[root_key] = []
                 
-                if name.strip() not in RuntimeConfig.USER_SUBFOLDERS[root_key]:
-                    RuntimeConfig.USER_SUBFOLDERS[root_key].append(name.strip())
+                if name.strip() not in cfg.user_subfolders[root_key]:
+                    cfg.user_subfolders[root_key].append(name.strip())
                     save_config()
 
                 return new_path
 
             except Exception as e:
-                print_error(_('download.folder.create_failed', error=e))
+                console.err(Keys.download.folder.create_failed(error=str(e)))
                 time.sleep(1.5)
                 continue
 
@@ -256,20 +258,20 @@ def select_download_folder(root_dir, type_key='Unknown'):
 
             # Validasi apakah folder fisik masih ada?
             if not os.path.exists(selected_path):
-                print_info(_('download.folder.not_found', name=selected_folder))
+                console.warn(Keys.download.folder.not_found(name=selected_folder))
                 
                 # Hapus shortcut mati ini dari config
-                if root_key in RuntimeConfig.USER_SUBFOLDERS:
+                if root_key in cfg.user_subfolders:
                     try:
-                        RuntimeConfig.USER_SUBFOLDERS[root_key].remove(selected_folder)
+                        cfg.user_subfolders[root_key].remove(selected_folder)
                         # Hapus key dictionary jika list jadi kosong (bersih-bersih)
-                        if not RuntimeConfig.USER_SUBFOLDERS[root_key]:
-                            del RuntimeConfig.USER_SUBFOLDERS[root_key]
+                        if not cfg.user_subfolders[root_key]:
+                            del cfg.user_subfolders[root_key]
                         save_config()
                     except ValueError:
                         pass # Sudah terhapus duluan
                 
-                print_info(_('download.folder.choose_again'))
+                console.warn(Keys.download.folder.choose_again)
                 time.sleep(1.5)
                 continue # Refresh menu
 

@@ -7,13 +7,15 @@ from questionary import Choice, Separator
 
 from ..core.cache import get_cache_size
 from ..ui.navigation import navigate_folders, remove_nomedia_file
-from ..utils.styles import (
-    clear, color, menu_style, print_error, print_info, print_success,
-    colored_switch, console
+from ..utils.console import console
+from ..utils.formatters import (
+    clear, color, menu_style, colored_switch, console as rich_console
 )
 from ..utils.i18n import get_language_display_name, get_available_languages, get_text as _
+from ..utils.i18n_keys import Keys
 from ..utils.display import formatted_video_codec
-from ..constants import RuntimeConfig, AUDIO_QUALITY_OPTIONS, VALID_RESOLUTIONS, VALID_CODECS
+from ..constants import AUDIO_QUALITY_OPTIONS, VALID_RESOLUTIONS, VALID_CODECS
+from ..core import config as cfg
 from ..utils.files import get_free_space
 from ..core.config import (
     save_config, reset_to_defaults, toggle_video_container,
@@ -27,7 +29,7 @@ def menu_audio_quality():
     """Menu for audio quality settings"""
     while True:
         clear()
-        current_quality = RuntimeConfig.AUDIO_QUALITY
+        current_quality = cfg.audio_quality
         quality_info = AUDIO_QUALITY_OPTIONS[current_quality]
 
         print(color(f"\n======== {_('menu.audio_quality.title')} ========\n", "c"))
@@ -66,27 +68,27 @@ def menu_audio_quality():
 
         if choice == "1":
             toggle_audio_quality("mp3")
-            print_success(_('menu.audio_quality.changed', format=color("MP3", 'lgrn')))
+            console.ok(Keys.menu.audio_quality.changed(format=color("MP3", 'lgrn')))
             time.sleep(1)
         elif choice == "2":
             toggle_audio_quality("m4a")
-            print_success(_('menu.audio_quality.changed', format=color("M4A", 'lgrn')))
+            console.ok(Keys.menu.audio_quality.changed(format=color("M4A", 'lgrn')))
             time.sleep(1)
         elif choice == "3":
             toggle_audio_quality("opus")
-            print_success(_('menu.audio_quality.changed', format=color("OPUS", 'lgrn')))
+            console.ok(Keys.menu.audio_quality.changed(format=color("OPUS", 'lgrn')))
             time.sleep(1)
         elif choice == "0" or choice == '':
             return
         else:
-            print_error(_('error.invalid_input'))
+            console.err(Keys.error.invalid_input)
             time.sleep(0.6)
 
 def menu_video_resolution():
     """Menu for video resolution settings"""
     while True:
         clear()
-        current_res = RuntimeConfig.MAX_VIDEO_RESOLUTION
+        current_res = cfg.max_video_resolution
         print(current_res)
 
         print(color(f"\n======== {_('menu.video_resolution.title')} ========\n", "c"))
@@ -127,25 +129,24 @@ def menu_video_resolution():
             if 1 <= choice_int <= len(VALID_RESOLUTIONS):
                 selected_res = VALID_RESOLUTIONS[choice_int - 1]
                 set_video_resolution(selected_res)
-                print_success(_('config.resolution_changed',
-                                resolution=color(selected_res, 'lgrn')))
+                console.ok(Keys.config.resolution_changed(resolution=color(selected_res, 'lgrn')))
                 time.sleep(1)
             elif choice_int == back_idx:
                 return
             else:
-                print_error(_('error.invalid_input'))
+                console.err(Keys.error.invalid_input)
                 time.sleep(0.6)
         elif choice == '':
             return
         else:
-            print_error(_('error.invalid_input'))
+            console.err(Keys.error.invalid_input)
             time.sleep(0.6)
 
 def menu_video_codec():
     """Menu for video codec settings"""
     while True:
         clear()
-        current_codec = RuntimeConfig.VIDEO_CODEC
+        current_codec = cfg.video_codec
         
         print(color(f"\n======== {_('menu.video_codec.title')} ========\n", "c"))
         print(_('menu.video_codec.select') + "\n")
@@ -191,18 +192,17 @@ def menu_video_codec():
                 selected_codec = VALID_CODECS[choice_int - 1]
                 set_video_codec(selected_codec)
                 
-                print_success(_('config.codec_changed', 
-                                codec=color(formatted_video_codec(selected_codec), 'lgrn')))
+                console.ok(Keys.config.codec_changed(codec=color(formatted_video_codec(selected_codec) or "", 'lgrn')))
                 time.sleep(1)
             elif choice_int == back_idx:
                 return
             else:
-                print_error(_('error.invalid_input'))
+                console.err(Keys.error.invalid_input)
                 time.sleep(0.6)
         elif choice == '':
             return
         else:
-            print_error(_('error.invalid_input'))
+            console.err(Keys.error.invalid_input)
             time.sleep(0.6)
 
 def prompt_language_selection(force_selection=False):
@@ -212,7 +212,7 @@ def prompt_language_selection(force_selection=False):
         force_selection (bool): If True, 'Back' option will be hidden.
     """
     available_codes = get_available_languages()
-    choices = []
+    choices: list[Choice | Separator] = []
 
     choices.append(Separator())
     for code in available_codes:
@@ -238,7 +238,7 @@ def language_setting():
     while True:
         clear()
         
-        current_code = RuntimeConfig.LANGUAGE
+        current_code = cfg.language
         current_display = get_language_display_name(current_code)
         
         print(color(f"\n ======== {_('menu.language.title')} ========\n", "c"))
@@ -268,23 +268,23 @@ def menu_folder():
             table.add_column("Space", style="dim white", justify="right")
 
             # Music Row
-            music_space = get_free_space(RuntimeConfig.MUSIC_ROOT)
+            music_space = get_free_space(cfg.music_root)
             table.add_row(
                 "Music Path:", 
-                RuntimeConfig.MUSIC_ROOT, 
+                cfg.music_root, 
                 music_space
             )
 
             # Video Row
-            video_space = get_free_space(RuntimeConfig.VIDEO_ROOT)
+            video_space = get_free_space(cfg.video_root)
             table.add_row(
                 "Video Path:", 
-                RuntimeConfig.VIDEO_ROOT, 
+                cfg.video_root, 
                 video_space
             )
 
             # Render table ke layar
-            console.print(table)
+            rich_console.print(table)
 
         path_info()
 
@@ -307,30 +307,31 @@ def menu_folder():
             instruction=' ',
         ).ask()
 
-        if selection is None: return
+        if selection is None:
+            return
         choice = selection
 
         if choice == "1":
-            new_dir = navigate_folders(RuntimeConfig.MUSIC_ROOT, _('download.navigation.title'), restrict_to_start=False)
+            new_dir = navigate_folders(cfg.music_root, _('download.navigation.title'), restrict_to_start=False)
             if new_dir:
-                RuntimeConfig.MUSIC_ROOT = new_dir
-                os.makedirs(RuntimeConfig.MUSIC_ROOT, exist_ok=True)
-                remove_nomedia_file(RuntimeConfig.MUSIC_ROOT)
+                cfg.music_root = new_dir
+                os.makedirs(cfg.music_root, exist_ok=True)
+                remove_nomedia_file(cfg.music_root)
                 save_config()
 
         elif choice == "2":
-            new_dir = navigate_folders(RuntimeConfig.VIDEO_ROOT, _('download.navigation.title'), restrict_to_start=False)
+            new_dir = navigate_folders(cfg.video_root, _('download.navigation.title'), restrict_to_start=False)
             if new_dir:
-                RuntimeConfig.VIDEO_ROOT = new_dir
-                os.makedirs(RuntimeConfig.VIDEO_ROOT, exist_ok=True)
-                remove_nomedia_file(RuntimeConfig.VIDEO_ROOT)
+                cfg.video_root = new_dir
+                os.makedirs(cfg.video_root, exist_ok=True)
+                remove_nomedia_file(cfg.video_root)
                 save_config()
 
         elif choice == "3":
             reset_to_defaults()
             clear()
             path_info()
-            print("   " + print_success(_('config.reset_default'), str_only=True))
+            console.ok(Keys.config.reset_default)
             time.sleep(1)
 
         elif choice == "4":
@@ -340,32 +341,32 @@ def menu_settings():
     """Menu for app settings"""
     while True:
         clear()
-        lang_name = get_language_name(RuntimeConfig.LANGUAGE)
+        lang_name = get_language_name(cfg.language)
         audio_quality_info = get_audio_quality_info()
-        current_container = getattr(RuntimeConfig, 'VIDEO_CONTAINER', 'mp4')
-        current_codec = getattr(RuntimeConfig, 'VIDEO_CODEC', 'default')
+        current_container = getattr(cfg, 'video_container', 'mp4')
+        current_codec = getattr(cfg, 'video_codec', 'default')
 
-        console.print("="*15, f"{_('menu.settings.title')}", "="*15, justify='center', end='\n\n')
+        rich_console.print("="*15, f"{_('menu.settings.title')}", "="*15, justify='center', end='\n\n')
 
         # Simple Mode
-        simple_status = colored_switch(RuntimeConfig.SIMPLE_MODE, _('common.active'), _('common.inactive'))
+        simple_status = colored_switch(cfg.simple_mode, _('common.active'), _('common.inactive'))
         print(color(f"1) {_('menu.settings.simple_mode', status=simple_status)}", "c"))
         print(f"{_('menu.settings.simple_mode_desc')}\n")
 
         # Smart Cover Mode
-        s_cover_status = colored_switch(RuntimeConfig.SMART_COVER_MODE, _('common.active'), _('common.inactive'))
+        s_cover_status = colored_switch(cfg.smart_cover_mode, _('common.active'), _('common.inactive'))
         print(color(f"2) {_('menu.settings.smart_cover', status=s_cover_status)}", "c"))
         print(f"{_('menu.settings.smart_cover_desc_1')}")
         print(f"{_('menu.settings.smart_cover_desc_2')}")
         print(f"{_('menu.settings.smart_cover_desc_3')}\n")
         
         # Skip Existing
-        skip_status = colored_switch(RuntimeConfig.SKIP_EXISTING_FILES, _('common.active'), _('common.inactive'))
+        skip_status = colored_switch(cfg.skip_existing_files, _('common.active'), _('common.inactive'))
         print(color(f"3) {_('menu.settings.skip_existing', status=skip_status)}", "c"))
         print(f"{_('menu.settings.skip_existing_desc')}\n")
 
         # Max Resolution
-        print(color(f"4) {_('menu.settings.max_resolution', resolution=color(RuntimeConfig.MAX_VIDEO_RESOLUTION, 'g'))}", "c"))
+        print(color(f"4) {_('menu.settings.max_resolution', resolution=color(cfg.max_video_resolution, 'g'))}", "c"))
         print(f"{_('menu.settings.max_resolution_desc_2')}\n")
 
         # Video Container
@@ -373,8 +374,7 @@ def menu_settings():
         print(f"{_('menu.settings.video_container_desc')}\n")
 
         # Video Codec
-        print(color(f"6) {_('menu.settings.video_codec',
-                codec=color(formatted_video_codec(current_codec), 'g'))}", "c"))
+        print(color(f"6) {_('menu.settings.video_codec', codec=color(formatted_video_codec(current_codec) or '', 'g'))}", "c"))
         print(f"{_('menu.settings.video_codec_desc')}\n")
 
         # Audio Quality
@@ -396,32 +396,32 @@ def menu_settings():
             return
 
         if choice == "1":
-            toggle_simple_mode(not RuntimeConfig.SIMPLE_MODE)
-            status = _('config.simple_mode_enabled') if RuntimeConfig.SIMPLE_MODE else _('config.simple_mode_disabled')
-            print_success(status)
+            toggle_simple_mode(not cfg.simple_mode)
+            status = _('config.simple_mode_enabled') if cfg.simple_mode else _('config.simple_mode_disabled')
+            console.ok(status)
             time.sleep(1)
 
         elif choice == "2":
-            toggle_smart_cover(not RuntimeConfig.SMART_COVER_MODE)
-            status = _('config.smart_cover_enabled') if RuntimeConfig.SMART_COVER_MODE else _('config.smart_cover_disabled')
-            print_success(status)
+            toggle_smart_cover(not cfg.smart_cover_mode)
+            status = _('config.smart_cover_enabled') if cfg.smart_cover_mode else _('config.smart_cover_disabled')
+            console.ok(status)
             time.sleep(1)
 
         elif choice == "3":
-            toggle_skip_existing(not RuntimeConfig.SKIP_EXISTING_FILES)
-            status = _('config.skip_existing_enabled') if RuntimeConfig.SKIP_EXISTING_FILES else _('config.skip_existing_disabled')
-            print_success(status)
+            toggle_skip_existing(not cfg.skip_existing_files)
+            status = _('config.skip_existing_enabled') if cfg.skip_existing_files else _('config.skip_existing_disabled')
+            console.ok(status)
             time.sleep(1)
 
         elif choice == "4":
             menu_video_resolution()
 
         elif choice == "5":
-            current = getattr(RuntimeConfig, 'VIDEO_CONTAINER', 'mp4')
+            current = getattr(cfg, 'video_container', 'mp4')
             new_container = "mkv" if current == "mp4" else "mp4"
             
             if toggle_video_container(new_container):
-                print_success(_('config.container_changed', container=new_container.upper()))
+                console.ok(Keys.config.container_changed(container=new_container.upper()))
             time.sleep(1)
 
         elif choice == "6":
@@ -437,14 +437,14 @@ def menu_settings():
             confirm = input(_('config.confirm_clear_cache')).strip().lower()
             if confirm == _('common.yes'):
                 if clear_cache():
-                    print_success(_('config.cache_deleted'))
+                    console.ok(Keys.config.cache_deleted)
                 else:
-                    print_info(_('config.cache_empty'))
+                    console.warn(Keys.config.cache_empty)
             time.sleep(1)
 
         elif choice == "0" or choice == '':
             return
 
         else:
-            print_error(_('error.invalid_input'))
+            console.err(Keys.error.invalid_input)
             time.sleep(0.6)

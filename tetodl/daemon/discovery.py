@@ -1,13 +1,14 @@
 import socket
 from zeroconf import ServiceInfo, Zeroconf
-from ..utils.styles import print_info
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
 
 class MDNSBroadcaster:
     def __init__(self, port: int, hostname: str = "tetodl"):
         self.port = port
         self.hostname = f"{hostname}.local."
-        self.zeroconf = None
-        self.info = None
+        self.zeroconf: Zeroconf | None = None
+        self.info: ServiceInfo | None = None
 
     def start(self):
         try:
@@ -17,17 +18,18 @@ class MDNSBroadcaster:
 
             self.info = ServiceInfo(
                 "_http._tcp.local.",
-                f"TetoDL Web API._http._tcp.local.",
+                "TetoDL Web API._http._tcp.local.",
                 addresses=[ip_bytes],
                 port=self.port,
                 server=self.hostname,
                 properties={"version": "1.3.0", "description": "TetoDL Daemon"}
             )
             self.zeroconf = Zeroconf()
+            assert self.zeroconf is not None
             self.zeroconf.register_service(self.info)
-            print_info(f"mDNS Broadcast active. You can access via: http://{self.hostname[:-1]}:{self.port}")
+            console.warn(Keys.daemon.mdns_broadcast_active(hostname=self.hostname[:-1], port=self.port))
         except Exception as e:
-            print_info(f"mDNS Broadcast failed (Zeroconf might not be supported on this network): {e}")
+            console.warn(Keys.daemon.mdns_broadcast_failed(error=str(e)))
 
     def stop(self):
         if self.zeroconf and self.info:

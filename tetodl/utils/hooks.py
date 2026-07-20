@@ -4,7 +4,7 @@ Provides logging handlers and progress hooks for different UI styles.
 """
 import sys
 from typing import Any, Dict, Optional, Union, Callable
-from ..utils.spinner import Spinner
+from ..utils.console import console
 
 _ACTIVE_RICH: Optional['RichProgressManager'] = None
 
@@ -129,20 +129,18 @@ class EncodingSpinnerHook:
     """
     def __init__(self, text: str) -> None:
         self.text = text
-        self.spinner: Optional[Spinner] = None
         self.is_running: bool = False 
 
     def __call__(self, d: Dict[str, Any]) -> None:
         if d['status'] == 'started':
             if not self.is_running:
-                self.spinner = Spinner(self.text)
-                self.spinner.start()
+                console.proc(self.text)
                 self.is_running = True
-                
+
         elif d['status'] == 'finished':
-            if self.is_running and self.spinner:
-                self.spinner.stop()
-                self.spinner = None
+            if self.is_running:
+                sys.stdout.write("\r\033[K")
+                sys.stdout.flush()
                 self.is_running = False
 
 def get_progress_hook(style_name: str = 'minimal') -> Union[Callable[[Dict[str, Any]], None], 'RichProgressManager']:

@@ -1,0 +1,280 @@
+name: CI/CD
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Create release?"
+        type: boolean
+        default: false
+      full_ci:
+        description: "Run full suite (incl E2E real YouTube download)?"
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-lint-${{ hashFiles('pyproject.toml') }}
+      - run: pip install ruff mypy types-requests
+      - run: ruff check tetodl/
+      - run: mypy tetodl/ --ignore-missing-imports --check-untyped-defs
+
+  test-unit:
+    name: Unit (py${{ matrix.python }}, ${{ matrix.os }})
+    needs: [lint]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-unit-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            pip-${{ runner.os }}-unit-
+            pip-${{ runner.os }}-
+      - run: pip install -e ".[windows]" pytest pytest-mock
+      - run: pytest -m "not slow and not network and not integration" -v
+
+  test-integration:
+    name: Integration (${{ matrix.os }})
+    needs: [lint]
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-integration-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            pip-${{ runner.os }}-integration-
+            pip-${{ runner.os }}-
+      - run: pip install -e ".[windows]" pytest pytest-mock
+      - run: pytest -v --tb=short
+        env:
+          TETODL_CI: "1"
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: [test-unit, test-integration]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-build-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            pip-${{ runner.os }}-build-
+            pip-${{ runner.os }}-
+      - run: pip install pyinstaller
+      - run: pip install -e ".[windows]"
+      - name: Cache PyInstaller
+        uses: actions/cache@v4
+        with:
+          path: |
+            __pycache__
+            build/
+            **/*.pyc
+          key: pyinstaller-${{ runner.os }}-${{ hashFiles('tetodl/**/*.py', 'tetodl.spec') }}
+      - name: Build binary
+        run: pyinstaller tetodl.spec --clean
+      - name: Smoke test (--version)
+        shell: bash
+        run: ./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }} --version
+      - name: Smoke test (--help contains usage)
+        shell: bash
+        run: ./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }} --help 2>&1 | grep -q "usage"
+      - name: Smoke test (--info)
+        shell: bash
+        run: ./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }} --info 2>&1 | grep -q "TetoDL"
+      - name: Error handling (invalid flag -> non-zero)
+        shell: bash
+        run: |
+          bin=./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }}
+          set +e
+          output=$("$bin" --this-flag-does-not-exist 2>&1); code=$?
+          set -e
+          if [ $code -eq 0 ]; then echo "FAIL: exit 0"; exit 1; fi
+          echo "$output" | grep -qi "unrecognized arguments" || { echo "FAIL: no error msg"; exit 1; }
+      - name: URL argument parsing
+        shell: bash
+        run: |
+          bin=./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }}
+          set +e
+          output=$("$bin" "https://youtu.be/dQw4w9WgXcQ" 2>&1); code=$?
+          set -e
+          echo "URL parse exit: $code"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tetodl-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }}
+          path: dist/tetodl*
+
+  verify-install-windows:
+    name: Install Smoke (Windows)
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tetodl-windows
+      - name: Install to PATH
+        run: |
+          $installDir = "$env:LOCALAPPDATA\TetoDL"
+          New-Item -ItemType Directory -Path $installDir -Force | Out-Null
+          Move-Item -Path "tetodl.exe" -Destination "$installDir\tetodl.exe" -Force
+          echo "$installDir" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+      - name: Smoke test — PowerShell
+        run: |
+          tetodl --version
+          tetodl --help
+          tetodl --info
+      - name: Smoke test — CMD
+        shell: cmd
+        run: |
+          tetodl.exe --version
+          tetodl.exe --help
+      - name: Error handling (invalid flag -> non-zero)
+        shell: bash
+        run: |
+          bin=tetodl
+          set +e
+          output=$("$bin" --this-flag-does-not-exist 2>&1); code=$?
+          set -e
+          if [ $code -eq 0 ]; then echo "FAIL: exit 0"; exit 1; fi
+          echo "$output" | grep -qi "unrecognized arguments" || { echo "FAIL: no error msg"; exit 1; }
+
+  verify-installer-windows:
+    name: Install Script (Windows)
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: tetodl-windows
+      - name: Run installer script
+        run: |
+          $env:TETODL_FORCE = "1"
+          & .\install.ps1 -Force
+      - name: Verify installed binary
+        run: tetodl --version
+
+  verify-installer-linux:
+    name: Install Script (Linux)
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run installer script
+        run: bash install.sh
+      - name: Verify installed binary
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          tetodl --version
+          tetodl --help
+
+  verify-installer-alpine:
+    name: Install Script (Alpine)
+    needs: [build]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    container: alpine:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run installer script (Alpine)
+        run: |
+          apk add bash curl
+          bash install.sh
+      - name: Verify installed binary
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          tetodl --version
+
+  e2e:
+    name: E2E (Real URLs)
+    needs: [build]
+    if: github.event_name == 'workflow_dispatch' && fromJSON(inputs.full_ci)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tetodl-linux
+      - name: Install system deps
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Real download test
+        env:
+          TETODL_CI: "1"
+        run: |
+          chmod +x tetodl-linux
+          printf '\n\n\n\n\n' | ./tetodl-linux "https://youtu.be/dQw4w9WgXcQ" -a -f m4a --smart-cover --lyrics -o /tmp/test-dl
+          test -f /tmp/test-dl/*.m4a
+
+  release:
+    name: Release
+    if: github.event_name == 'workflow_dispatch' && fromJSON(inputs.release)
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+      - name: Generate tag
+        id: tag
+        run: echo "tag=v$(date +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: |
+            tetodl-linux/tetodl*
+            tetodl-windows/tetodl*

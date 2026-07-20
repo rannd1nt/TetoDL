@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tetodl"
+version = "1.4.0"
+description = "An User Friendly and Configurable TUI/CLI Media Downloader"
+authors = [{name = "rannd1nt"}]
+license = {text = "MIT"}
+requires-python = ">=3.12"
+readme = "README.md"
+
+dependencies = [
+    "yt-dlp>=2024.0.0",
+    "mutagen>=1.46",
+    "pydantic>=2.0",
+    "requests>=2.28",
+    "beautifulsoup4>=4.11",
+    "colorama>=0.4.6",
+    "rich>=13.0",
+    "questionary>=2.0",
+    "qrcode>=7.4",
+    "fastapi>=0.100",
+    "uvicorn>=0.20",
+    "zeroconf>=0.100",
+]
+
+[project.optional-dependencies]
+windows = [
+    "av>=10.0",
+    "Pillow>=9.0",
+]
+
+[project.scripts]
+tetodl = "tetodl.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/rannd1nt/tetodl"
+Repository = "https://github.com/rannd1nt/tetodl"
+"Release Notes" = "https://github.com/rannd1nt/tetodl/releases"
+
+[tool.setuptools.packages.find]
+include = ["tetodl*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tetodl/tests"]
+pythonpath = ["tetodl"]
+filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "network: marks tests that require network access (deselect with '-m \"not network\"')",
+    "integration: marks mocked integration tests",
+]
+
+[tool.coverage.run]
+source = ["tetodl"]
+omit = ["tetodl/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "except ImportError",
+    "if __name__ == .__main__.:",
+]
