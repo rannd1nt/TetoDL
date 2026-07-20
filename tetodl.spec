@@ -81,6 +81,7 @@ if IS_LINUX_BUILD:
 # ── Data files ─────────────────────────────────────────────────
 datas = []
 for pattern, dest in [("tetodl/locales/*.json", "tetodl/locales"),
+                       ("tetodl/utils/share_static/*", "tetodl/utils/share_static"),
                        ("assets/*", "assets")]:
     matches = [str(f) for f in Path().glob(pattern) if f.is_file()]
     datas += [(m, dest) for m in matches]
