@@ -59,7 +59,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[full,windows]" pytest pytest-mock
-      - run: pytest -m "integration" -v --tb=short
+      - run: pytest -v --tb=short
         env:
           TETODL_CI: "1"
 
