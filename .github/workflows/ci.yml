@@ -121,12 +121,16 @@ jobs:
       - name: Build binary
         run: pyinstaller tetodl.spec --clean
       - name: Smoke test (--version)
+        shell: bash
         run: ./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }} --version
       - name: Smoke test (--help contains usage)
+        shell: bash
         run: ./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }} --help 2>&1 | grep -q "usage"
       - name: Smoke test (--info)
+        shell: bash
         run: ./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }} --info 2>&1 | grep -q "TetoDL"
       - name: Error handling (invalid flag -> non-zero)
+        shell: bash
         run: |
           bin=./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }}
           set +e
@@ -135,6 +139,7 @@ jobs:
           if [ $code -eq 0 ]; then echo "FAIL: exit 0"; exit 1; fi
           echo "$output" | grep -qi "unrecognized arguments" || { echo "FAIL: no error msg"; exit 1; }
       - name: URL argument parsing
+        shell: bash
         run: |
           bin=./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }}
           set +e
