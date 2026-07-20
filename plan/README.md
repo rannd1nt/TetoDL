@@ -64,6 +64,146 @@ utils/ ← core/ ← pipeline/ ← [cli/, ui/, daemon/]
 
 Lapisan ini tidak berubah. Yang berubah hanya implementasi di dalamnya untuk mendukung Windows.
 
+### Design Patterns untuk Multi-Platform
+
+Pattern yang dipake untuk handle platform-specific code, mengikuti gaya yang udah ada di kode.
+
+**A. Guard Pattern** — untuk logika SIMPLE (1-3 baris beda per platform).
+
+```python
+# utils/network.py
+def open_url(url):
+    if IS_WINDOWS:
+        os.startfile(url)
+        return True
+    subprocess.run(["xdg-open", url], ...)
+```
+
+**Kapan:** beda implementasi cuma 1-3 baris, gak perlu abstraction overhead.
+
+---
+
+**B. Strategy Pattern** — untuk logika COMPLEX dengan > 1 fungsi per platform. Mengikuti pola `Extractor` ABC yang udah ada di `core/extractor.py`.
+
+```
+┌──────────────────────────────────────────────┐
+│              ThumbnailStrategy (ABC)          │
+│  crop_to_square(path) → bool                 │
+│  convert_format(path, fmt) → str | None      │
+├──────────────────────┬───────────────────────┤
+│   FFmpegThumbnail    │    PyAVThumbnail      │
+│   (Linux, existing)  │    (Windows, new)     │
+└──────────────────────┴───────────────────────┘
+
+┌──────────────────────────────────────────────┐
+│              ServiceManager (ABC)             │
+│  install(host, port) → void                  │
+│  remove() → void                             │
+│  status() → str                              │
+├──────────────────────┬───────────────────────┤
+│  SystemdServiceMgr   │   NullServiceMgr      │
+│  (Linux, existing)   │  (Windows, stub)      │
+└──────────────────────┴───────────────────────┘
+```
+
+Factory (mirip `extractors/__init__.py`):
+
+```python
+# utils/thumbnail.py
+from ..constants import IS_WINDOWS
+
+_strategy = None
+
+def _get_thumbnail_strategy():
+    global _strategy
+    if _strategy is None:
+        if IS_WINDOWS:
+            from .thumbnail_pyav import PyAVThumbnail
+            _strategy = PyAVThumbnail()
+        else:
+            from .thumbnail_ffmpeg import FFmpegThumbnail
+            _strategy = FFmpegThumbnail()
+    return _strategy
+
+# Public API — callers gak peduli platform
+def crop_thumbnail_to_square(path):
+    return _get_thumbnail_strategy().crop_to_square(path)
+
+def convert_thumbnail_format(path, fmt):
+    return _get_thumbnail_strategy().convert_format(path, fmt)
+```
+
+**Kapan:** > 3 fungsi yang beda per platform, atau fungsi kompleks dengan state.
+
+---
+
+**C. Provider Pattern** — untuk fitur OPTIONAL ([existing] `ui/provider.py`).
+
+```python
+# Existing — gak diubah
+class UIProvider(ABC):
+    def header(self): ...
+    def clear(self): ...
+    def wait_and_clear_prompt(self): ...
+
+class TUIProvider(UIProvider): ...   # full interactive
+class NullUI(UIProvider): ...        # silent, headless
+
+# Pattern ini dipake juga untuk feature detection
+try:
+    import rich
+except ImportError:
+    rich = None    # → fallback ke PlainTheme
+```
+
+**Kapan:** fitur bisa ada atau tidak tergantung library yang terinstall.
+
+---
+
+**D. Centralized Feature Flag Detection** — terkumpul di satu tempat.
+
+```python
+# constants.py
+def has_tui():
+    try:
+        import rich, questionary  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+def has_daemon():
+    try:
+        import fastapi, uvicorn, zeroconf  # noqa: F401
+        return True
+    except ImportError:
+        return False
+```
+
+Dipanggil dari:
+- `cli/parser.py` — untuk nambah/hilang flag sesuai variant
+- `ui/` — untuk fallback TUI → plain input
+- `daemon/` — untuk stub jika gak ada daemon libs
+
+**Kapan:** setiap kali perlu tau fitur mana yang available.
+
+---
+
+**Peta perubahan per file:**
+
+| File | Pattern Sebelum | Pattern Sesudah |
+|------|----------------|-----------------|
+| `utils/thumbnail.py` | `if IS_WINDOWS` inline | **Strategy**: `FFmpegThumbnail` / `PyAVThumbnail` + factory |
+| `utils/thumbnail_pyav.py` *(new)* | — | `PyAVThumbnail(ThumbnailStrategy)` |
+| `utils/thumbnail_ffmpeg.py` *(new)* | — | `FFmpegThumbnail(ThumbnailStrategy)` (extract dari existing) |
+| `daemon/service.py` | `if IS_WINDOWS` inline | **Strategy**: `SystemdServiceManager` / `NullServiceManager` |
+| `cli/parser.py` | argparse full | + `has_tui()` / `has_daemon()` flag filtering |
+| `ui/*.py` | `IS_TERMUX` inline | **Provider** (existing) + `has_tui()` fallback |
+| `constants.py` | `IS_WINDOWS`, `IS_TERMUX`, `IS_WSL` | + `has_tui()`, `has_daemon()` centralized |
+
+---
+
+Garis besar: **Strategy untuk complex logic per platform, Guard untuk simple diffs, Provider untuk optional features.** Sama persis kaya pattern yang udah ada di TetoDL — gak ada paradigm shift.
+
 ### Dual FFmpeg / PyAV Layer (Thumbnail Processing Only)
 
 PyAV hanya menggantikan **panggilan ffmpeg langsung dari kode TetoDL** (thumbnail crop & convert). Ini cuma 2 fungsi: `crop_thumbnail_to_square()` dan `convert_thumbnail_format()` di `utils/thumbnail.py`.
