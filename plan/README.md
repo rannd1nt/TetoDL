@@ -405,7 +405,7 @@ description = "YouTube Media Downloader — CLI, TUI & Daemon"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "rannd1nt"}]
-requires-python = ">=3.9"
+requires-python = ">=3.12"
 
 dependencies = [
     "yt-dlp>=2026.2.4",
@@ -1116,7 +1116,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python: ["3.9", "3.12"]
+        python: ["3.12"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

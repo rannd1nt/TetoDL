@@ -17,17 +17,22 @@ class TestRegistry:
         from tetodl.core.registry import RegistryManager
         return RegistryManager()
 
-    def test_is_cached(self, fresh_registry):
+    @pytest.fixture
+    def base(self, tmp_path):
+        return tmp_path
+
+    def test_is_cached(self, fresh_registry, base):
         """check_existing returns (False, None) for an uncached file."""
-        found, meta = fresh_registry.check_existing("nonexistent_id", "audio", "/tmp")
+        found, meta = fresh_registry.check_existing("nonexistent_id", "audio", str(base))
         assert found is False
         assert meta is None
 
-    def test_register_download(self, fresh_registry):
+    def test_register_download(self, fresh_registry, base):
         """register_download adds an entry to the registry."""
+        path = str(base / "music" / "song.mp3")
         fresh_registry.register_download(
             video_id="vid123",
-            file_path="/tmp/music/song.mp3",
+            file_path=path,
             content_type="audio/mp3",
             metadata={"title": "My Song", "artist": "Artist", "album": "Album"},
         )
@@ -35,20 +40,20 @@ class TestRegistry:
         assert "vid123" in fresh_registry.data
         assert "audio" in fresh_registry.data["vid123"]
         entry = fresh_registry.data["vid123"]["audio"]
-        assert "/tmp/music/song.mp3" in entry["paths"]
+        assert path in entry["paths"]
         assert entry["t"] == "My Song"
         assert entry["a"] == "Artist"
 
-    def test_register_download_increments_count(self, fresh_registry):
+    def test_register_download_increments_count(self, fresh_registry, base):
         """register_download increments the counter on each call."""
-        fresh_registry.register_download("vid1", "/tmp/s1.mp3", "audio", {"title": "S1"})
-        fresh_registry.register_download("vid1", "/tmp/s2.mp3", "audio", {"title": "S2"})
+        fresh_registry.register_download("vid1", str(base / "s1.mp3"), "audio", {"title": "S1"})
+        fresh_registry.register_download("vid1", str(base / "s2.mp3"), "audio", {"title": "S2"})
         assert fresh_registry.data["vid1"]["audio"]["c"] == 2
 
-    def test_register_multiple_types(self, fresh_registry):
+    def test_register_multiple_types(self, fresh_registry, base):
         """register_download separates audio and video entries."""
-        fresh_registry.register_download("vid1", "/tmp/a.mp3", "audio", {"title": "A"})
-        fresh_registry.register_download("vid1", "/tmp/v.mp4", "video", {"title": "V"})
+        fresh_registry.register_download("vid1", str(base / "a.mp3"), "audio", {"title": "A"})
+        fresh_registry.register_download("vid1", str(base / "v.mp4"), "video", {"title": "V"})
 
         assert "audio" in fresh_registry.data["vid1"]
         assert "video" in fresh_registry.data["vid1"]
@@ -65,26 +70,26 @@ class TestRegistry:
         assert old not in entry["paths"]
         assert new in entry["paths"]
 
-    def test_update_path_no_match(self, fresh_registry):
+    def test_update_path_no_match(self, fresh_registry, base):
         """update_path does nothing when old_path is not registered."""
-        fresh_registry.register_download("vid1", "/tmp/s1.mp3", "audio", {"title": "S1"})
-        fresh_registry.update_path("/nonexistent/old.mp3", "/tmp/new.mp3")
+        fresh_registry.register_download("vid1", str(base / "s1.mp3"), "audio", {"title": "S1"})
+        fresh_registry.update_path(str(base / "nonexistent" / "old.mp3"), str(base / "new.mp3"))
 
         assert len(fresh_registry.data["vid1"]["audio"]["paths"]) == 1
 
-    def test_register_download_empty_id(self, fresh_registry):
+    def test_register_download_empty_id(self, fresh_registry, base):
         """register_download exits early when video_id is empty."""
-        fresh_registry.register_download("", "/tmp/s.mp3", "audio", {"title": "T"})
+        fresh_registry.register_download("", str(base / "s.mp3"), "audio", {"title": "T"})
         assert fresh_registry.data == {}
 
-    def test_register_download_empty_content_type(self, fresh_registry):
+    def test_register_download_empty_content_type(self, fresh_registry, base):
         """register_download exits early when content_type is empty."""
-        fresh_registry.register_download("vid1", "/tmp/s.mp3", "", {"title": "T"})
+        fresh_registry.register_download("vid1", str(base / "s.mp3"), "", {"title": "T"})
         assert "vid1" not in fresh_registry.data
 
-    def test_reset(self, fresh_registry):
+    def test_reset(self, fresh_registry, base):
         """reset clears all data and removes the file."""
-        fresh_registry.register_download("vid1", "/tmp/s.mp3", "audio", {"title": "T"})
+        fresh_registry.register_download("vid1", str(base / "s.mp3"), "audio", {"title": "T"})
         fresh_registry.reset()
         assert fresh_registry.data == {}
 
@@ -111,9 +116,9 @@ class TestRegistry:
         found, meta = fresh_registry.check_existing("vid1", "music", str(music_dir))
         assert found is True
 
-    def test_check_existing_missing_type(self, fresh_registry):
+    def test_check_existing_missing_type(self, fresh_registry, base):
         """check_existing returns (False, None) when content_type not registered."""
-        fresh_registry.register_download("vid1", "/tmp/a.mp3", "audio", {"title": "A"})
-        found, meta = fresh_registry.check_existing("vid1", "video", "/tmp")
+        fresh_registry.register_download("vid1", str(base / "a.mp3"), "audio", {"title": "A"})
+        found, meta = fresh_registry.check_existing("vid1", "video", str(base))
         assert found is False
         assert meta is None
