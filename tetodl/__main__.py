@@ -17,8 +17,6 @@ def main():
         from tetodl.cli.dispatch import execute_download
         from tetodl.core.models import CliDownload, CliSearch
         from tetodl.core.search import perform_youtube_search
-        from tetodl.core.config import load_app_config
-
         handled, result = cli.parse()
         if handled:
             return
