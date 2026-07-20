@@ -180,12 +180,14 @@ jobs:
           tetodl.exe --version
           tetodl.exe --help
       - name: Error handling (invalid flag -> non-zero)
+        shell: bash
         run: |
-          $output = tetodl --this-flag-does-not-exist 2>&1
-          $outputText = "$output"
-          $code = $LASTEXITCODE
-          if ($code -eq 0) { throw "Expected non-zero exit (got $code): $outputText" }
-          if ($outputText -notmatch "unrecognized arguments") { throw "No 'unrecognized arguments' in: $outputText" }
+          bin=tetodl
+          set +e
+          output=$("$bin" --this-flag-does-not-exist 2>&1); code=$?
+          set -e
+          if [ $code -eq 0 ]; then echo "FAIL: exit 0"; exit 1; fi
+          echo "$output" | grep -qi "unrecognized arguments" || { echo "FAIL: no error msg"; exit 1; }
 
   verify-installer-windows:
     name: Install Script (Windows)
