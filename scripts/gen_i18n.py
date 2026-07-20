@@ -52,7 +52,15 @@ def generate_classes(name: str, data: dict, path_parts: list | None = None) -> l
                 class_lines.append(f'    """[Props Type] {pascal_key}"""')
             else:
                 unique_vars = list(dict.fromkeys(vars_in_string))
-                args_str = ", ".join(f"{v}: str | int" for v in unique_vars)
+
+                def param_type(name: str) -> str:
+                    if name == "error":
+                        return "Exception | str | int"
+                    if name == "path":
+                        return "str | int | Path"
+                    return "str | int"
+
+                args_str = ", ".join(f"{v}: {param_type(v)}" for v in unique_vars)
                 dict_str = ", ".join(f'"{v}": {v}' for v in unique_vars)
                 
                 safe_class_name_part = f"_{pascal_key}" if pascal_key[0].isdigit() else pascal_key
@@ -73,7 +81,7 @@ def generate_classes(name: str, data: dict, path_parts: list | None = None) -> l
                 ])
                 
                 for var in unique_vars:
-                    functor_lines.append(f'            {var} (str | int): Dynamic value for {{{var}}}.')
+                    functor_lines.append(f'            {var} ({param_type(var)}): Dynamic value for {{{var}}}.')
                 
                 functor_lines.extend([
                     f'        ',
@@ -106,6 +114,7 @@ def run_generator():
     
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write('"""AUTO-GENERATED FILE. DO NOT EDIT."""\n')
+        f.write('from pathlib import Path\n')
         f.write('from typing import TypeAlias, Tuple, Dict, Any, Union\n\n')
         f.write('I18nKey: TypeAlias = Union[str, Tuple[str, Dict[str, Any]]]\n\n')
         

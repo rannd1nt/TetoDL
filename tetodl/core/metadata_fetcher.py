@@ -171,7 +171,7 @@ class MetadataFetcher:
             term = f"{clean_artist} {clean_title}"
             
             url = "https://itunes.apple.com/search"
-            params = {'term': term, 'media': 'music', 'entity': 'song', 'limit': 10}
+            params = {'term': term, 'media': 'music', 'entity': 'song', 'limit': '10'}
             
             response = requests.get(url, params=params, timeout=5)
             data = response.json()
