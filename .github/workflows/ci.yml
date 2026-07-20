@@ -129,15 +129,18 @@ jobs:
       - name: Error handling (invalid flag -> non-zero)
         run: |
           bin=./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }}
+          set +e
           output=$("$bin" --this-flag-does-not-exist 2>&1); code=$?
+          set -e
           if [ $code -eq 0 ]; then echo "FAIL: exit 0"; exit 1; fi
           echo "$output" | grep -qi "unrecognized arguments" || { echo "FAIL: no error msg"; exit 1; }
       - name: URL argument parsing
         run: |
           bin=./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }}
+          set +e
           output=$("$bin" "https://youtu.be/dQw4w9WgXcQ" 2>&1); code=$?
+          set -e
           echo "URL parse exit: $code"
-          echo "Output: $(echo "$output" | head -3)"
       - uses: actions/upload-artifact@v4
         with:
           name: tetodl-${{ matrix.os == 'ubuntu-latest' && 'linux' || 'windows' }}
