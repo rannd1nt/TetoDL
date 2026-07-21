@@ -58,8 +58,9 @@ elif IS_WINDOWS:
 
     # FFmpeg — bundled binary first, fallback to PATH
     if IS_BINARY:
-        assert _BINARY_DIR is not None
         bundled_ffmpeg = _BINARY_DIR / "ffmpeg.exe"
+        if not bundled_ffmpeg.exists() and hasattr(sys, '_MEIPASS'):
+            bundled_ffmpeg = Path(sys._MEIPASS) / "ffmpeg.exe"
         FFMPEG_CMD = str(bundled_ffmpeg) if bundled_ffmpeg.exists() else "ffmpeg"
     else:
         FFMPEG_CMD = shutil.which("ffmpeg") or "ffmpeg"
