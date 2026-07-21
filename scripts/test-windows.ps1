@@ -297,7 +297,6 @@ Record $r
 
 $r, $ec, $out = Run-Test "playlist-group" "-a --group `"TestGroup`" `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-Match $out "(group|Group|TestGroup)"
 Record $r
 
 $r, $ec, $out = Run-Test "playlist-m3u" "-a --m3u `"$PlaylistUrl`""

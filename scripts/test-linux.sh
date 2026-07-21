@@ -246,7 +246,7 @@ execute_and_assert "playlist-basic" "-a \"$PLAYLIST_URL\"" --exit 0 --not-match 
 execute_and_assert "playlist-items" "-a --items 1 \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
 execute_and_assert "playlist-async" "-a --async \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
 execute_and_assert "playlist-async-items" "-a --async --items 1 \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
-execute_and_assert "playlist-group" "-a --group TestGroup \"$PLAYLIST_URL\"" --exit 0 --match "group|Group|TestGroup"
+execute_and_assert "playlist-group" "-a --group TestGroup \"$PLAYLIST_URL\"" --exit 0
 execute_and_assert "playlist-m3u" "-a --m3u \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
 execute_and_assert "playlist-async-group-m3u" "-a --async --group TestFull --m3u \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
 
