@@ -68,10 +68,8 @@ function Run-Test($name, $cliArgs, [int]$timeout = $Timeout) {
         $exitCode = $proc.ExitCode
         $result.Output = $output
         Write-Host "  EXIT: $exitCode" -ForegroundColor $(if ($exitCode -eq 0) {"Green"} else {"Red"})
-        if ($exitCode -ne 0) {
-            Write-Host "  OUTPUT:" -ForegroundColor Yellow
-            $output -split "`n" | ForEach-Object { Write-Host "    $_" }
-        }
+        Write-Host "  OUTPUT:" -ForegroundColor Yellow
+        $output -split "`n" | ForEach-Object { Write-Host "    $_" }
         return [PSCustomObject]$result, $exitCode, $output
     } catch {
         $result.Status = "fail"
