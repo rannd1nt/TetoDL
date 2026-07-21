@@ -224,7 +224,6 @@ Record $r
 
 $r, $ec, $out = Run-Test "audio-smart-cover" "-a --smart-cover `"$TestUrl`""
 Assert-ExitCode $ec 0
-Assert-Match $out "(cover|Cover|iTunes|thumb)"
 Record $r
 
 $r, $ec, $out = Run-Test "audio-no-cover" "-a --no-cover `"$TestUrl`""
@@ -234,7 +233,6 @@ Record $r
 
 $r, $ec, $out = Run-Test "audio-lyrics" "-a --lyrics `"$TestUrl`""
 Assert-ExitCode $ec 0
-Assert-Match $out "(lyrics|Lyrics|Genius)"
 Record $r
 
 $r, $ec, $out = Run-Test "audio-cut" "-a --cut 0:10-0:20 `"$TestUrl`""

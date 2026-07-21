@@ -28,7 +28,7 @@ if not IS_WINDOWS and not IS_TERMUX:
         pass
 
 APP_NAME = "TetoDL"
-APP_VERSION = "1.4.0"
+APP_VERSION = "2.1.0"
 
 # ==== BINARY ROOT (PyInstaller) ====
 _BINARY_DIR: Path | None
