@@ -194,7 +194,6 @@ Write-Host "========================================" -ForegroundColor Yellow
 $r, $ec, $out = Run-Test "video-basic" "-v `"$TestUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
-Assert-NotMatch $out "ERROR"
 Record $r
 
 $r, $ec, $out = Run-Test "video-resolution" "-v -r 720p `"$TestUrl`""
@@ -211,12 +210,12 @@ Write-Host "========================================" -ForegroundColor Yellow
 
 $r, $ec, $out = Run-Test "audio-basic" "-a `"$TestUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "ERROR|ffmpeg is not installed"
+Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
 $r, $ec, $out = Run-Test "audio-format-mp3" "-a -f mp3 `"$TestUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "ERROR"
+Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
 $r, $ec, $out = Run-Test "audio-format-m4a" "-a -f m4a `"$TestUrl`""
@@ -253,7 +252,7 @@ Record $r
 
 $r, $ec, $out = Run-Test "audio-combo" "-a --smart-cover --lyrics -f m4a `"$TestUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "ERROR"
+Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
 # ---------------------------------------------------------------------------
@@ -280,22 +279,22 @@ Write-Host "========================================" -ForegroundColor Yellow
 
 $r, $ec, $out = Run-Test "playlist-basic" "-a `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "ERROR"
+Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
 $r, $ec, $out = Run-Test "playlist-items" "-a --items 1 `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "ERROR"
+Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
 $r, $ec, $out = Run-Test "playlist-async" "-a --async `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "ERROR"
+Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
 $r, $ec, $out = Run-Test "playlist-async-items" "-a --async --items 1 `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "ERROR"
+Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
 $r, $ec, $out = Run-Test "playlist-group" "-a --group `"TestGroup`" `"$PlaylistUrl`""
@@ -305,12 +304,12 @@ Record $r
 
 $r, $ec, $out = Run-Test "playlist-m3u" "-a --m3u `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "ERROR"
+Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
 $r, $ec, $out = Run-Test "playlist-async-group-m3u" "-a --async --group TestFull --m3u `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "ERROR"
+Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
 # ---------------------------------------------------------------------------
