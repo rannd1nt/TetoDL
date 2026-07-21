@@ -27,6 +27,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $env:PYTHONUNBUFFERED = "1"
+$env:PYTHONIOENCODING = "utf-8"
 $outDir = Join-Path (Join-Path $PSScriptRoot "..") "test-results"
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
 $outDir = Resolve-Path $outDir
