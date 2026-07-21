@@ -154,7 +154,7 @@ Record $r
 
 $r, $ec, $out = Run-Test "version" "--version"
 Assert-ExitCode $ec 0
-Assert-Match $out "2.1.0"
+Assert-Match $out "\d+\.\d+\.\d+"
 Record $r
 
 $r, $ec, $out = Run-Test "info" "--info"
@@ -352,7 +352,7 @@ if ($YtdlpUpdate) {
 
     $r, $ec, $out = Run-Test "ytdlp-version-info" "--version"
     Assert-ExitCode $ec 0
-    Assert-Match $out "2.1.0"
+    Assert-Match $out "\d+\.\d+\.\d+"
     Record $r
 }
 

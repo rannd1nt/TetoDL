@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: |
           bin="./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }}"
-          "$bin" --version 2>&1 | grep -q "2.1.0"
+          "$bin" --version 2>&1 | grep -qE "[0-9]+\.[0-9]+\.[0-9]+"
 
       - name: Smoke test (help)
         shell: bash

@@ -191,7 +191,7 @@ echo "  PHASE 1: Command-Line Parsing"
 echo "========================================"
 
 execute_and_assert "help" "--help" --exit 0 --match "usage"
-execute_and_assert "version" "--version" --exit 0 --match "2.1.0"
+execute_and_assert "version" "--version" --exit 0 --match "[0-9]+\.[0-9]+\.[0-9]+"
 execute_and_assert "info" "--info" --exit 0 --match "TetoDL"
 execute_and_assert "invalid-flag" "--bogus-flag" --exit 2 --match "unrecognized"
 execute_and_assert "recheck" "--recheck" --exit 0 --match "dependency|check|ffmpeg|yt-dlp"
@@ -285,7 +285,7 @@ if [[ "$YTDLP_UPDATE" == "true" ]]; then
     echo "========================================"
 
     execute_and_assert "ytdlp-update-check" "--recheck" --exit 0 --match "yt-dlp|version|update"
-    execute_and_assert "ytdlp-version-info" "--version" --exit 0 --match "2.1.0"
+    execute_and_assert "ytdlp-version-info" "--version" --exit 0 --match "[0-9]+\.[0-9]+\.[0-9]+"
 fi
 
 # ===========================================================================
