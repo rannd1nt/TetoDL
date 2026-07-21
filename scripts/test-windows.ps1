@@ -110,6 +110,7 @@ function Run-TestBlocking($name, $cliArgs, [int]$waitSec = 5) {
             Start-Sleep -Seconds 1
             if (-not $proc.HasExited) { $proc.Kill() }
         }
+        $proc.WaitForExit(2000) | Out-Null
 
         $stdout = $proc.StandardOutput.ReadToEnd()
         $stderr = $proc.StandardError.ReadToEnd()
