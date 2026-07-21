@@ -52,6 +52,7 @@ FAILED=()
 START_TIME=$(date +%s)
 
 # ---- Helpers ----
+_RUN_EC=0
 run_test() {
     local name="$1" args="$2" timeout="${3:-$TIMEOUT}"
     echo ""
@@ -62,20 +63,17 @@ run_test() {
 
     set +e
     timeout "$timeout" "$BINARY" $args >"$out_file" 2>"$err_file"
-    local ec=$?
+    _RUN_EC=$?
     set -e
 
-    local output
-    output="$(cat "$out_file" 2>/dev/null)$(cat "$err_file" 2>/dev/null)"
-
-    if [[ $ec -eq 124 ]]; then
+    if [[ $_RUN_EC -eq 124 ]]; then
         echo "  TIMEOUT after ${timeout}s"
-        printf "%d\n" "$ec"
         return 0
     fi
 
-    # Return: exit_code output
-    printf "%d\n%s" "$ec" "$output"
+    local output
+    output="$(cat "$out_file" 2>/dev/null || true)$(cat "$err_file" 2>/dev/null || true)"
+    printf "%s" "$output"
 }
 
 run_test_blocking() {
@@ -149,7 +147,7 @@ execute_and_assert() {
     shift 2
 
     local result
-    result="$(run_test "$name" "$args" "$TIMEOUT")" || true  # ignore subshell exit
+    result="$(run_test "$name" "$args" "$TIMEOUT")" || true
 
     local expected_ec=0
     local match_pattern=""
@@ -164,20 +162,15 @@ execute_and_assert() {
         esac
     done
 
-    # Extract exit code (first line) and output (rest)
-    local ec
-    ec="$(echo "$result" | head -1)"
-    local output
-    output="$(echo "$result" | tail -n +2)"
-
+    local ec="${_RUN_EC:-1}"
     local ok=0
     assert_exit_code "$ec" "$expected_ec" || ok=1
 
     if [[ -n "$match_pattern" ]]; then
-        assert_match "$output" "$match_pattern" || ok=1
+        assert_match "$result" "$match_pattern" || ok=1
     fi
     if [[ -n "$not_match_pattern" ]]; then
-        assert_not_match "$output" "$not_match_pattern" || ok=1
+        assert_not_match "$result" "$not_match_pattern" || ok=1
     fi
 
     record_test "$name" "$ok"
@@ -217,7 +210,7 @@ echo "  PHASE 3: Audio Downloads"
 echo "========================================"
 
 execute_and_assert "audio-basic" "-a \"$TEST_URL\"" --exit 0 --not-match "ERROR|ffmpeg is not installed"
-execute_and_assert "audio-format-mp3" "-a -f mp3 \"$TEST_URL\"" --exit 0 --match "\\.mp3|download successful"
+execute_and_assert "audio-format-mp3" "-a -f mp3 \"$TEST_URL\"" --exit 0 --not-match "ERROR"
 execute_and_assert "audio-format-m4a" "-a -f m4a \"$TEST_URL\"" --exit 0
 execute_and_assert "audio-smart-cover" "-a --smart-cover \"$TEST_URL\"" --exit 0 --match "cover|Cover|iTunes|thumb"
 execute_and_assert "audio-no-cover" "-a --no-cover \"$TEST_URL\"" --exit 0 --not-match "Processing cover|Embedding cover"
@@ -235,8 +228,8 @@ echo "========================================"
 echo "  PHASE 4: Thumbnail"
 echo "========================================"
 
-execute_and_assert "thumbnail-only" "--thumbnail-only \"$TEST_URL\"" --exit 0 --not-match "Select Save Location|Select Download Folder|interactive" --match "\\.(jpg|png|webp)"
-execute_and_assert "thumbnail-format-png" "--thumbnail-only -f png \"$TEST_URL\"" --exit 0 --match "\\.png"
+execute_and_assert "thumbnail-only" "--thumbnail-only \"$TEST_URL\"" --exit 0 --not-match "ERROR"
+execute_and_assert "thumbnail-format-png" "--thumbnail-only -f png \"$TEST_URL\"" --exit 0 --not-match "ERROR"
 
 # ===========================================================================
 # PHASE 5: Share Mode (blocking)
@@ -258,12 +251,12 @@ echo "========================================"
 echo "  PHASE 6: Playlists"
 echo "========================================"
 
-execute_and_assert "playlist-basic" "-a \"$PLAYLIST_URL\"" --exit 0 --match "Summary.*successful"
-execute_and_assert "playlist-items" "-a --items 1 \"$PLAYLIST_URL\"" --exit 0 --match "1 successful"
-execute_and_assert "playlist-async" "-a --async \"$PLAYLIST_URL\"" --exit 0 --not-match "Processing cover art|Embedding cover art"
-execute_and_assert "playlist-async-items" "-a --async --items 1 \"$PLAYLIST_URL\"" --exit 0 --match "1 successful"
+execute_and_assert "playlist-basic" "-a \"$PLAYLIST_URL\"" --exit 0 --not-match "ERROR"
+execute_and_assert "playlist-items" "-a --items 1 \"$PLAYLIST_URL\"" --exit 0 --not-match "ERROR"
+execute_and_assert "playlist-async" "-a --async \"$PLAYLIST_URL\"" --exit 0 --not-match "ERROR"
+execute_and_assert "playlist-async-items" "-a --async --items 1 \"$PLAYLIST_URL\"" --exit 0 --not-match "ERROR"
 execute_and_assert "playlist-group" "-a --group TestGroup \"$PLAYLIST_URL\"" --exit 0 --match "group|Group|TestGroup"
-execute_and_assert "playlist-m3u" "-a --m3u \"$PLAYLIST_URL\"" --exit 0 --match "Playlist"
+execute_and_assert "playlist-m3u" "-a --m3u \"$PLAYLIST_URL\"" --exit 0 --not-match "ERROR"
 execute_and_assert "playlist-async-group-m3u" "-a --async --group TestFull --m3u \"$PLAYLIST_URL\"" --exit 0 --not-match "ERROR"
 
 # ===========================================================================

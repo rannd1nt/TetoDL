@@ -68,13 +68,12 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $ytdlp = if ('${{ inputs.ytdlp_update }}' -eq 'true') { @('-YtdlpUpdate') } else { @() }
           .\scripts\test-windows.ps1 `
             -Binary dist\tetodl.exe `
             -TestUrl "${{ inputs.test_url }}" `
             -PlaylistUrl "${{ inputs.playlist_url }}" `
             -Timeout ${{ inputs.timeout }} `
-            @ytdlp
+            -YtdlpUpdate:$('${{ inputs.ytdlp_update }}' -eq 'true')
 
       - name: Run comprehensive tests (Linux)
         if: matrix.os == 'ubuntu-latest'

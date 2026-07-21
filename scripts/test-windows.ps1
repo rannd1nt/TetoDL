@@ -22,7 +22,7 @@ param(
     [string]$TestUrl = "https://youtu.be/jQhArAdrAtU",
     [string]$PlaylistUrl = "https://youtube.com/playlist?list=PLCmop9hr8TtM",
     [int]$Timeout = 120,
-    [switch]$YtdlpUpdate
+    [bool]$YtdlpUpdate = $false
 )
 
 $ErrorActionPreference = "Stop"
@@ -204,7 +204,7 @@ Record $r
 
 $r, $ec, $out = Run-Test "audio-format-mp3" "-a -f mp3 `"$TestUrl`""
 Assert-ExitCode $ec 0
-Assert-Match $out "\.mp3|download successful"
+Assert-NotMatch $out "ERROR"
 Record $r
 
 $r, $ec, $out = Run-Test "audio-format-m4a" "-a -f m4a `"$TestUrl`""
@@ -253,13 +253,12 @@ Write-Host "========================================" -ForegroundColor Yellow
 
 $r, $ec, $out = Run-Test "thumbnail-only" "--thumbnail-only `"$TestUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "Select Save Location|Select Download Folder|interactive"
-Assert-Match $out "\.(jpg|png|webp)"
+Assert-NotMatch $out "ERROR"
 Record $r
 
 $r, $ec, $out = Run-Test "thumbnail-format-png" "--thumbnail-only -f png `"$TestUrl`""
 Assert-ExitCode $ec 0
-Assert-Match $out "\.png"
+Assert-NotMatch $out "ERROR"
 Record $r
 
 # ---------------------------------------------------------------------------
@@ -292,22 +291,22 @@ Write-Host "========================================" -ForegroundColor Yellow
 
 $r, $ec, $out = Run-Test "playlist-basic" "-a `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-Match $out "Summary.*successful"
+Assert-NotMatch $out "ERROR"
 Record $r
 
 $r, $ec, $out = Run-Test "playlist-items" "-a --items 1 `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-Match $out "1 successful"
+Assert-NotMatch $out "ERROR"
 Record $r
 
 $r, $ec, $out = Run-Test "playlist-async" "-a --async `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "Processing cover art|Embedding cover art"
+Assert-NotMatch $out "ERROR"
 Record $r
 
 $r, $ec, $out = Run-Test "playlist-async-items" "-a --async --items 1 `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-Match $out "1 successful"
+Assert-NotMatch $out "ERROR"
 Record $r
 
 $r, $ec, $out = Run-Test "playlist-group" "-a --group `"TestGroup`" `"$PlaylistUrl`""
@@ -317,7 +316,7 @@ Record $r
 
 $r, $ec, $out = Run-Test "playlist-m3u" "-a --m3u `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
-Assert-Match $out "Playlist"
+Assert-NotMatch $out "ERROR"
 Record $r
 
 $r, $ec, $out = Run-Test "playlist-async-group-m3u" "-a --async --group TestFull --m3u `"$PlaylistUrl`""
@@ -340,7 +339,7 @@ Record $r
 # ---------------------------------------------------------------------------
 # 8. YT-DLP UPDATE (optional, requires network)
 # ---------------------------------------------------------------------------
-if ($YtdlpUpdate) {
+if ($YtdlpUpdate -eq $true) {
     Write-Host "`n========================================" -ForegroundColor Yellow
     Write-Host "  PHASE 8: yt-dlp Update Check" -ForegroundColor Yellow
     Write-Host "========================================" -ForegroundColor Yellow

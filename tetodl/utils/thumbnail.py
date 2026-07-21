@@ -299,14 +299,7 @@ def download_thumbnail_task(url, target_format='jpg', ui=None):
         from ..ui.provider import NullUI
         ui = NullUI()
 
-    if cfg.simple_mode:
-        target_dir = cfg.thumbnail_root
-    else:
-        from ..ui.navigation import select_download_folder
-        target_dir = select_download_folder(cfg.thumbnail_root, "thumbnails")
-        if not target_dir:
-            with traced('user cancelled folder selection'):
-                return DownloadResult(success=False, reason='cancel')
+    target_dir = cfg.thumbnail_root
     if not os.path.exists(target_dir):
         try:
             os.makedirs(target_dir, exist_ok=True)
