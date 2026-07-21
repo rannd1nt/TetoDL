@@ -1,0 +1,64 @@
+name: Source Test (Linux)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "tetodl/**"
+      - "pyproject.toml"
+      - "scripts/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-source-lint-${{ hashFiles('pyproject.toml') }}
+      - run: pip install ruff mypy types-requests types-colorama types-yt-dlp types-qrcode
+      - name: Ruff check
+        run: ruff check tetodl/
+      - name: Mypy check
+        run: mypy tetodl/ --ignore-missing-imports --check-untyped-defs
+
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.12", "3.13"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-source-pytest-${{ matrix.python }}-${{ hashFiles('pyproject.toml') }}
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          pip install -e ".[windows]" pytest pytest-mock pytest-timeout
+      - name: Run unit tests
+        run: pytest -m "not slow and not network and not integration" -v --timeout=60
+      - name: Run integration tests
+        if: github.event_name != 'pull_request'
+        run: pytest -v --timeout=120
+        env:
+          TETODL_CI: "1"

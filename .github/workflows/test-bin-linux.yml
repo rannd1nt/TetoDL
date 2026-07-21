@@ -1,0 +1,70 @@
+name: Binary Test (Linux)
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_url:
+        description: "Single video URL"
+        default: "https://youtu.be/jQhArAdrAtU"
+      playlist_url:
+        description: "Playlist URL"
+        default: "https://youtube.com/playlist?list=PLCmop9hr8TtM"
+      timeout:
+        description: "Per-test timeout (seconds)"
+        default: "120"
+      ytdlp_update:
+        description: "Run yt-dlp update tests"
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-linux-bin-${{ hashFiles('pyproject.toml') }}
+
+      - name: Install system deps
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Install build deps
+        run: |
+          pip install pyinstaller
+          pip install -e ".[windows]"
+
+      - name: Build binary
+        run: pyinstaller tetodl.spec --clean
+
+      - name: Smoke test (version)
+        run: ./dist/tetodl-linux --version 2>&1 | grep -q "2.1.0"
+
+      - name: Smoke test (help)
+        run: ./dist/tetodl-linux --help 2>&1 | grep -q "usage"
+
+      - name: Run comprehensive tests
+        run: |
+          chmod +x scripts/test-linux.sh
+          bash scripts/test-linux.sh \
+            --binary ./dist/tetodl-linux \
+            --test-url "${{ inputs.test_url }}" \
+            --playlist-url "${{ inputs.playlist_url }}" \
+            --timeout ${{ inputs.timeout }} \
+            ${{ inputs.ytdlp_update == true && '--ytdlp-update' || '' }}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: linux-test-report
+          path: test-results.xml

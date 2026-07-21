@@ -1,0 +1,69 @@
+name: Binary Test (Windows)
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_url:
+        description: "Single video URL"
+        default: "https://youtu.be/jQhArAdrAtU"
+      playlist_url:
+        description: "Playlist URL"
+        default: "https://youtube.com/playlist?list=PLCmop9hr8TtM"
+      timeout:
+        description: "Per-test timeout (seconds)"
+        default: "120"
+      ytdlp_update:
+        description: "Run yt-dlp update tests"
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: pip-win-bin-${{ hashFiles('pyproject.toml') }}
+
+      - name: Install build deps
+        run: |
+          pip install pyinstaller
+          pip install -e ".[windows]"
+
+      - name: Build binary
+        run: pyinstaller tetodl.spec --clean
+
+      - name: Smoke test (version)
+        shell: bash
+        run: ./dist/tetodl.exe --version 2>&1 | grep -q "2.1.0"
+
+      - name: Smoke test (help)
+        shell: bash
+        run: ./dist/tetodl.exe --help 2>&1 | grep -q "usage"
+
+      - name: Run comprehensive tests
+        shell: pwsh
+        run: |
+          .\scripts\test-windows.ps1 `
+            -Binary dist\tetodl.exe `
+            -TestUrl "${{ inputs.test_url }}" `
+            -PlaylistUrl "${{ inputs.playlist_url }}" `
+            -Timeout ${{ inputs.timeout }} `
+            $(if ('${{ inputs.ytdlp_update }}' -eq 'true') { '-YtdlpUpdate' })
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-test-report
+          path: test-results.xml
