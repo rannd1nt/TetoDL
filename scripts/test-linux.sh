@@ -70,8 +70,8 @@ run_test() {
 
     if [[ $ec -eq 124 ]]; then
         echo "  TIMEOUT after ${timeout}s"
-        FAILED+=("$name")
-        return 1
+        printf "%d\n" "$ec"
+        return 0
     fi
 
     # Return: exit_code output
@@ -149,10 +149,8 @@ execute_and_assert() {
     shift 2
 
     local result
-    result="$(run_test "$name" "$args" "$TIMEOUT")"
-    local ec=$?
+    result="$(run_test "$name" "$args" "$TIMEOUT")" || true  # ignore subshell exit
 
-    # Check exit code pattern
     local expected_ec=0
     local match_pattern=""
     local not_match_pattern=""
@@ -166,11 +164,14 @@ execute_and_assert() {
         esac
     done
 
-    local ok=0
-    assert_exit_code "$ec" "$expected_ec" || ok=1
-
+    # Extract exit code (first line) and output (rest)
+    local ec
+    ec="$(echo "$result" | head -1)"
     local output
     output="$(echo "$result" | tail -n +2)"
+
+    local ok=0
+    assert_exit_code "$ec" "$expected_ec" || ok=1
 
     if [[ -n "$match_pattern" ]]; then
         assert_match "$output" "$match_pattern" || ok=1
