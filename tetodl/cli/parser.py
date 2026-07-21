@@ -5,7 +5,7 @@ from typing import Tuple, Optional, Literal, cast
 
 from ..constants import (
     APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS,
-    IS_TERMUX, VALID_THUMBNAIL_FORMATS
+    VALID_THUMBNAIL_FORMATS
 )
 from ..core import config as cfg
 from ..utils.console import console

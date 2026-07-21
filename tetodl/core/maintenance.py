@@ -136,35 +136,31 @@ def perform_uninstall():
     console.warn(Keys.maint.uninstall_details)
     print()
 
-    # Opsi Cleanup Data User
-    print(f"{color('Do you want to delete configuration & data files?', 'y')}")
-    print(f"  {color('[1]', 'y')} No, keep everything (Safe for reinstall)")
-    print(f"  {color('[2]', 'y')} Delete Config & Cache ONLY (Keep Registry/Stats)")
-    print(f"  {color('[3]', 'r')} Delete EVERYTHING (Full Wipe inc. Registry)")
-    print()
-
     try:
-        choice = input(f"{color('Choice (1/2/3) > ', 'y')}").strip()
-    except KeyboardInterrupt:
+        # Opsi Cleanup Data User
+        print(f"{color('Do you want to delete configuration & data files?', 'y')}")
+        print(f"  {color('[1]', 'y')} No, keep everything (Safe for reinstall)")
+        print(f"  {color('[2]', 'y')} Delete Config & Cache ONLY (Keep Registry/Stats)")
+        print(f"  {color('[3]', 'r')} Delete EVERYTHING (Full Wipe inc. Registry)")
         print()
-        return
 
-    wipe_mode = "none"
-    if choice == '2':
-        wipe_mode = "partial"
-    elif choice == '3':
-        wipe_mode = "full"
-    elif choice != '1':
-        console.neutral(Keys.maint.invalid_choice_aborting)
-        return
+        choice = input(f"{color('Choice (1/2/3) > ', 'y')}").strip()
 
-    print()
-    if wipe_mode == "full":
-        console.warn(Keys.maint.alert_permanent_delete)
-    
-    try:
+        wipe_mode = "none"
+        if choice == '2':
+            wipe_mode = "partial"
+        elif choice == '3':
+            wipe_mode = "full"
+        elif choice != '1':
+            console.neutral(Keys.maint.invalid_choice_aborting)
+            return
+
+        print()
+        if wipe_mode == "full":
+            console.warn(Keys.maint.alert_permanent_delete)
+
         confirm = input(f"{color('Are you sure you want to proceed? (y/N) > ', 'y')}").strip().lower()
-    except KeyboardInterrupt:
+    except (EOFError, KeyboardInterrupt):
         print()
         return
 
@@ -212,7 +208,8 @@ def perform_uninstall():
 def _spawn_self_destruct():
     """Delete the running binary via a temp script, then exit."""
     current_exe = sys.executable
-    import platform, tempfile
+    import platform
+    import tempfile
 
     if platform.system() == "Windows":
         bat = Path(tempfile.mktemp(suffix=".uninstall.bat"))
