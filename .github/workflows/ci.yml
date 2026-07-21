@@ -207,7 +207,10 @@ jobs:
           $env:TETODL_FORCE = "1"
           & .\install.ps1 -Force
       - name: Verify installed binary
-        run: tetodl --version
+        run: |
+          $tetodl = "$env:LOCALAPPDATA\TetoDL\tetodl.exe"
+          & $tetodl --version
+          & $tetodl --help
 
   verify-installer-linux:
     name: Install Script (Linux)
