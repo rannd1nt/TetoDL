@@ -12,7 +12,7 @@ from ..core.config import save_config, update_language
 from ..ui.navigation import navigate_folders
 from ..constants import (
     DEFAULT_MUSIC_ROOT, DEFAULT_VIDEO_ROOT,
-    IS_WSL, IS_TERMUX, 
+    IS_WSL, IS_TERMUX, IS_BINARY,
 )
 from ..core import config as cfg
 from ..utils.display import wait_and_clear_prompt
@@ -66,7 +66,15 @@ def _prompt_and_update_ytdlp(current, latest):
         print()
         console.warn(Keys.ui.updating_ytdlp)
         try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"])
+            if IS_BINARY:
+                from ..core.dependency import _update_ytdlp_binary_mode
+                updated = _update_ytdlp_binary_mode(latest)
+                if not updated:
+                    console.err(Keys.ui.update_failed_check_connection)
+                    time.sleep(2)
+                    return False
+            else:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp"])
             console.ok(Keys.ui.update_complete)
             time.sleep(1)
             return True

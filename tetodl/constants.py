@@ -131,6 +131,9 @@ else:
         else:
             SPOTDL_CMD = shutil.which("spotdl") or "spotdl"
 
+# ==== YT-DLP OVERRIDE (binary mode) ====
+YTDLP_OVERRIDE_DIR = DATA_DIR / "yt-dlp-override"
+
 # ==== CONFIG FILES ====
 CONFIG_PATH = str(CONFIG_DIR / "config.json")
 CACHE_PATH = str(CACHE_DIR / "cache.json")
