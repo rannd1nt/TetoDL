@@ -5,7 +5,7 @@ from typing import Tuple, Optional, Literal, cast
 
 from ..constants import (
     APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS,
-    IS_TERMUX, VALID_THUMBNAIL_FORMATS
+    VALID_THUMBNAIL_FORMATS
 )
 from ..core import config as cfg
 from ..utils.console import console
@@ -102,7 +102,6 @@ class CLIHandler:
         cfg_group.add_argument('--lang', choices=['en', 'id'], help="Set language")
         cfg_group.add_argument('--delay', type=float, metavar='SEC', help="Set delay")
         cfg_group.add_argument('--retries', type=int, metavar='NUM', help="Set retries")
-        cfg_group.add_argument('--media-scanner', choices=['on', 'off'], help="Set Media Scanner")
 
     def _handle_daemon_subcommand(self):
         daemon_parser = argparse.ArgumentParser(
@@ -207,7 +206,7 @@ class CLIHandler:
     def _handle_config_changes(self, args) -> bool:
         """Handle configuration flags."""
         if not (args.header or args.progress_style or args.lang or
-                args.delay or args.retries or args.media_scanner):
+                args.delay or args.retries):
             return False
 
         config_mgr.load_config()
@@ -231,15 +230,6 @@ class CLIHandler:
                 console.ok(Keys.cli.delay_set(delay=args.delay))
             if args.retries:
                 console.ok(Keys.cli.retries_set(retries=args.retries))
-            changed = True
-
-        if args.media_scanner:
-            state = (args.media_scanner == 'on')
-            config_mgr.set_media_scanner(state)
-            status = "Enabled" if state else "Disabled"
-            console.ok(Keys.cli.media_scanner_status(status=status))
-            if not IS_TERMUX and state:
-                console.warn(Keys.cli.media_scanner_note)
             changed = True
 
         return changed

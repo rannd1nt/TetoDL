@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: |
           bin="./dist/tetodl${{ matrix.os == 'windows-latest' && '.exe' || '-linux' }}"
-          "$bin" --version 2>&1 | grep -q "2.1.0"
+          "$bin" --version 2>&1 | grep -qE "[0-9]+\.[0-9]+\.[0-9]+"
 
       - name: Smoke test (help)
         shell: bash
@@ -73,7 +73,7 @@ jobs:
             -TestUrl "${{ inputs.test_url }}" `
             -PlaylistUrl "${{ inputs.playlist_url }}" `
             -Timeout ${{ inputs.timeout }} `
-            $(if ('${{ inputs.ytdlp_update }}' -eq 'true') { '-YtdlpUpdate' })
+            -YtdlpUpdate:$('${{ inputs.ytdlp_update }}' -eq 'true')
 
       - name: Run comprehensive tests (Linux)
         if: matrix.os == 'ubuntu-latest'

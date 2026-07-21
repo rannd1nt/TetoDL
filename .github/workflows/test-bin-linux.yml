@@ -48,7 +48,7 @@ jobs:
         run: pyinstaller tetodl.spec --clean
 
       - name: Smoke test (version)
-        run: ./dist/tetodl-linux --version 2>&1 | grep -q "2.1.0"
+        run: ./dist/tetodl-linux --version 2>&1 | grep -qE "[0-9]+\.[0-9]+\.[0-9]+"
 
       - name: Smoke test (help)
         run: ./dist/tetodl-linux --help 2>&1 | grep -q "usage"

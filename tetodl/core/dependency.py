@@ -97,6 +97,10 @@ def check_ffmpeg():
         bundled = os.path.join(os.path.dirname(sys.executable), 'ffmpeg.exe')
         if os.path.exists(bundled):
             ffmpeg_path = bundled
+    if not ffmpeg_path and hasattr(sys, '_MEIPASS'):
+        bundled = os.path.join(sys._MEIPASS, 'ffmpeg.exe')
+        if os.path.exists(bundled):
+            ffmpeg_path = bundled
 
     if ffmpeg_path:
         try:

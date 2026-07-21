@@ -4,6 +4,7 @@ PyInstaller spec — single binary with all features.
 """
 
 import platform
+import time
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -22,7 +23,15 @@ if IS_WIN_BUILD:
     if not bundled_ffmpeg.exists():
         print("[spec] Downloading ffmpeg.exe for Windows bundle...")
         URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-        urllib.request.urlretrieve(URL, "ffmpeg.zip")
+        for attempt in range(3):
+            try:
+                urllib.request.urlretrieve(URL, "ffmpeg.zip")
+                break
+            except Exception:
+                if attempt == 2:
+                    raise
+                print(f"[spec] Download failed (attempt {attempt+1}/3), retrying in 3s...")
+                time.sleep(3)
         with zipfile.ZipFile("ffmpeg.zip") as z:
             for f in z.namelist():
                 if f.endswith("ffmpeg.exe"):
@@ -30,7 +39,7 @@ if IS_WIN_BUILD:
                         dst.write(src.read())
                     break
         Path("ffmpeg.zip").unlink()
-    datas.append(("ffmpeg.exe", "."))
+    _ffmpeg_data = "ffmpeg.exe"
 
 # ── Hidden imports (all features) ──────────────────────────────
 HIDDEN = [
@@ -50,8 +59,10 @@ if not IS_WIN_BUILD:
     EXCLUDES += ["av", "win32api", "win32con", "pywin32"]
 
 # ── Data files ─────────────────────────────────────────────────
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__spec__.origin).resolve().parent if __spec__ else Path.cwd()
 datas = []
+if IS_WIN_BUILD and _ffmpeg_data:
+    datas.append((_ffmpeg_data, "."))
 for pattern, dest in [("tetodl/locales/*.json", "tetodl/locales"),
                        ("tetodl/utils/share_static/*", "tetodl/utils/share_static"),
                        ("tetodl/daemon/static/*", "tetodl/daemon/static"),

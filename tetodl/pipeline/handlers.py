@@ -661,7 +661,7 @@ def _playlist_sequential(
 
         if i < total:
             delay = config.download_delay
-            console.proc(Keys.download.youtube.wait_delay(delay=delay))
+            console.proc(Keys.download.youtube.wait_delay(delay=int(delay)))
             time.sleep(delay)
 
     if config.create_m3u and ordered_files:

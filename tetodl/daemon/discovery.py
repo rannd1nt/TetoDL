@@ -22,7 +22,7 @@ class MDNSBroadcaster:
                 addresses=[ip_bytes],
                 port=self.port,
                 server=self.hostname,
-                properties={"version": "1.3.0", "description": "TetoDL Daemon"}
+                properties={"version": "2.1.0", "description": "TetoDL Daemon"}
             )
             self.zeroconf = Zeroconf()
             assert self.zeroconf is not None

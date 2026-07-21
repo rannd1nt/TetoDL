@@ -77,7 +77,7 @@ async def lifespan(app: FastAPI):
 # --- APP INITIALIZATION ---
 app = FastAPI(
     title="TetoDL Service API", 
-    version="1.3.0", 
+    version="2.1.0", 
     description="Full-Featured Web Services for TetoDL",
     lifespan=lifespan
 )

@@ -53,7 +53,7 @@ header_style: str = "default"
 progress_style: str = "minimal"
 
 media_scanner_enabled: bool = False
-download_delay: int = 2
+download_delay: float = 2.0
 max_retries: int = 3
 retry_delay: int = 2
 async_workers: int = 3
@@ -132,7 +132,7 @@ def load_config():
         skip_existing_files = data.get("skip_existing_files", skip_existing_files)
         verified_dependencies = data.get("verified_dependencies", verified_dependencies)
         smart_cover_mode = data.get("smart_cover_mode", smart_cover_mode)
-        download_delay = data.get("download_delay", 2)
+        download_delay = data.get("download_delay", 2.0)
         max_retries = data.get("max_retries", 3)
         media_scanner_enabled = data.get("media_scanner_enabled", False)
         daemon_default_temp = data.get("daemon_default_temp", True)
@@ -709,41 +709,11 @@ def set_header_style(style_name):
     return True
 
 def set_network_config(delay=None, retries=None):
-    """Configure network-level download parameters.
-
-    Sets the delay between consecutive requests and/or the maximum number
-    of retry attempts on failure.  Modifies module-level state and persists
-    the change.
-
-    Parameters
-    ----------
-    delay : float or None, optional
-        Download delay in seconds.  ``None`` leaves the current value
-        unchanged.
-    retries : int or None, optional
-        Maximum retry attempts on failure.  ``None`` leaves the current
-        value unchanged.
-
-    Returns
-    -------
-    bool
-        Always ``True``.
-
-    Example
-    -------
-    >>> from tetodl.core.config import set_network_config
-    >>> set_network_config(delay=3.0, retries=5)
-    True
-
-    See Also
-    --------
-    :data:`download_delay` : Module-level state variable.
-    :data:`max_retries` : Module-level state variable.
-    """
+    global download_delay, max_retries
     if delay is not None:
-        float(delay)
+        download_delay = float(delay)
     if retries is not None:
-        int(retries)
+        max_retries = int(retries)
     save_config()
     return True
 

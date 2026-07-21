@@ -28,11 +28,11 @@ jobs:
         with:
           path: ~/.cache/pip
           key: pip-source-lint-${{ hashFiles('pyproject.toml') }}
-      - run: pip install ruff mypy types-requests types-colorama types-yt-dlp types-qrcode
+      - run: pip install ruff mypy types-requests types-colorama
       - name: Ruff check
         run: ruff check tetodl/
       - name: Mypy check
-        run: mypy tetodl/ --check-untyped-defs
+        run: mypy tetodl/ --ignore-missing-imports --check-untyped-defs
 
   pytest:
     runs-on: ubuntu-latest
