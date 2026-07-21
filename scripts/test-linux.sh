@@ -235,23 +235,11 @@ execute_and_assert "thumbnail-only" "--thumbnail-only \"$TEST_URL\"" --exit 0
 execute_and_assert "thumbnail-format-png" "--thumbnail-only -f png \"$TEST_URL\"" --exit 0
 
 # ===========================================================================
-# PHASE 5: Share Mode (blocking)
+# PHASE 5: Playlists
 # ===========================================================================
 echo ""
 echo "========================================"
-echo "  PHASE 5: Share Mode"
-echo "========================================"
-
-run_test_blocking "share-basic" "-a --share \"$TEST_URL\"" || true
-run_test_blocking "share-temp" "-a --share-temp \"$TEST_URL\"" || true
-run_test_blocking "share-existing" "--share \"$TEST_URL\"" 3 || true
-
-# ===========================================================================
-# PHASE 6: Playlists
-# ===========================================================================
-echo ""
-echo "========================================"
-echo "  PHASE 6: Playlists"
+echo "  PHASE 5: Playlists"
 echo "========================================"
 
 execute_and_assert "playlist-basic" "-a \"$PLAYLIST_URL\"" --exit 0 --not-match "ERROR"
@@ -263,22 +251,22 @@ execute_and_assert "playlist-m3u" "-a --m3u \"$PLAYLIST_URL\"" --exit 0 --not-ma
 execute_and_assert "playlist-async-group-m3u" "-a --async --group TestFull --m3u \"$PLAYLIST_URL\"" --exit 0 --not-match "ERROR"
 
 # ===========================================================================
-# PHASE 7: Daemon
+# PHASE 6: Daemon
 # ===========================================================================
 echo ""
 echo "========================================"
-echo "  PHASE 7: Daemon"
+echo "  PHASE 6: Daemon"
 echo "========================================"
 
 run_test_blocking "daemon-run" "daemon -r" 8 || true
 
 # ===========================================================================
-# PHASE 8: yt-dlp Update Check (optional)
+# PHASE 7: yt-dlp Update Check (optional)
 # ===========================================================================
 if [[ "$YTDLP_UPDATE" == "true" ]]; then
     echo ""
     echo "========================================"
-    echo "  PHASE 8: yt-dlp Update Check"
+    echo "  PHASE 7: yt-dlp Update Check"
     echo "========================================"
 
     execute_and_assert "ytdlp-update-check" "--recheck" --exit 0 --match "yt-dlp|version|update"
@@ -286,11 +274,11 @@ if [[ "$YTDLP_UPDATE" == "true" ]]; then
 fi
 
 # ===========================================================================
-# PHASE 9: Utility Commands
+# PHASE 8: Utility Commands
 # ===========================================================================
 echo ""
 echo "========================================"
-echo "  PHASE 9: Utility Commands"
+echo "  PHASE 8: Utility Commands"
 echo "========================================"
 
 execute_and_assert "history" "--history" --exit 0

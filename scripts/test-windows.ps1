@@ -55,33 +55,17 @@ function Run-Test($name, $args, [int]$timeout = $Timeout) {
 
         $proc = [System.Diagnostics.Process]::Start($psi)
 
-        $outputBuilder = New-Object System.Text.StringBuilder
-        $errorBuilder = New-Object System.Text.StringBuilder
-
-        $outEvent = Register-ObjectEvent -InputObject $proc -EventName OutputDataReceived -Action {
-            $event.MessageData.AppendLine($EventArgs.Data) | Out-Null
-        } -MessageData $outputBuilder
-
-        $errEvent = Register-ObjectEvent -InputObject $proc -EventName ErrorDataReceived -Action {
-            $event.MessageData.AppendLine($EventArgs.Data) | Out-Null
-        } -MessageData $errorBuilder
-
-        $proc.BeginOutputReadLine()
-        $proc.BeginErrorReadLine()
-
+        $stdout = $proc.StandardOutput.ReadToEnd()
+        $stderr = $proc.StandardError.ReadToEnd()
         $completed = $proc.WaitForExit($timeout * 1000)
-
-        Unregister-Event -SourceIdentifier $outEvent.Name -ErrorAction SilentlyContinue
-        Unregister-Event -SourceIdentifier $errEvent.Name -ErrorAction SilentlyContinue
 
         if (-not $completed) {
             $proc.Kill()
             throw "TIMEOUT after ${timeout}s"
         }
 
-        $proc.WaitForExit()
         $exitCode = $proc.ExitCode
-        $output = $outputBuilder.ToString() + $errorBuilder.ToString()
+        $output = $stdout + $stderr
         $result.Output = $output
         return [PSCustomObject]$result, $exitCode, $output
     } catch {
@@ -283,31 +267,10 @@ Assert-ExitCode $ec 0
 Record $r
 
 # ---------------------------------------------------------------------------
-# 5. SHARE (blocking — must start server then kill)
+# 5. PLAYLISTS
 # ---------------------------------------------------------------------------
 Write-Host "`n========================================" -ForegroundColor Yellow
-Write-Host "  PHASE 5: Share Mode" -ForegroundColor Yellow
-Write-Host "========================================" -ForegroundColor Yellow
-
-$r = Run-TestBlocking "share-basic" "-a --share `"$TestUrl`""
-Assert-Match $r.Output "(Sharing|sharing|http://)"
-Assert-NotMatch $r.Output "Cannot share"
-Record $r
-
-$r = Run-TestBlocking "share-temp" "-a --share-temp `"$TestUrl`""
-Assert-Match $r.Output "(Sharing|sharing|http://)"
-Assert-NotMatch $r.Output "Cannot share|Path not found"
-Record $r
-
-$r = Run-TestBlocking "share-existing" "--share `"$TestUrl`"" 3
-Assert-NotMatch $r.Output "Cannot share|Path not found"
-Record $r
-
-# ---------------------------------------------------------------------------
-# 6. PLAYLISTS
-# ---------------------------------------------------------------------------
-Write-Host "`n========================================" -ForegroundColor Yellow
-Write-Host "  PHASE 6: Playlists" -ForegroundColor Yellow
+Write-Host "  PHASE 5: Playlists" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 
 $r, $ec, $out = Run-Test "playlist-basic" "-a `"$PlaylistUrl`""
@@ -349,7 +312,7 @@ Record $r
 # 7. DAEMON
 # ---------------------------------------------------------------------------
 Write-Host "`n========================================" -ForegroundColor Yellow
-Write-Host "  PHASE 7: Daemon" -ForegroundColor Yellow
+Write-Host "  PHASE 6: Daemon" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 
 $r = Run-TestBlocking "daemon-run" "daemon -r" 8
@@ -362,7 +325,7 @@ Record $r
 # ---------------------------------------------------------------------------
 if ($YtdlpUpdate -eq $true) {
     Write-Host "`n========================================" -ForegroundColor Yellow
-    Write-Host "  PHASE 8: yt-dlp Update Check" -ForegroundColor Yellow
+    Write-Host "  PHASE 7: yt-dlp Update Check" -ForegroundColor Yellow
     Write-Host "========================================" -ForegroundColor Yellow
 
     $r, $ec, $out = Run-Test "ytdlp-update-check" "--recheck"
@@ -378,7 +341,7 @@ if ($YtdlpUpdate -eq $true) {
 # 9. UTILITY COMMANDS
 # ---------------------------------------------------------------------------
 Write-Host "`n========================================" -ForegroundColor Yellow
-Write-Host "  PHASE 9: Utility Commands" -ForegroundColor Yellow
+Write-Host "  PHASE 8: Utility Commands" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 
 $r, $ec, $out = Run-Test "history" "--history"

@@ -60,7 +60,7 @@ class App:
 
         # --- TUI MENU ---
         if isinstance(result, CliMenu):
-            bootstrap.setup_application()
+            bootstrap.setup_application(force_recheck=result.force_recheck)
             bootstrap.start_update_checker(self)
             self._loop_menu()
 

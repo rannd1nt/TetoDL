@@ -485,7 +485,7 @@ class CLIHandler:
                 force_recheck=args.recheck,
             )
 
-        return CliMenu()
+        return CliMenu(force_recheck=args.recheck)
 
     def _detect_type_and_format(self, args) -> Tuple[Literal['audio', 'video', 'thumbnail'], Optional[str]]:
         """Detect media type and validate format."""

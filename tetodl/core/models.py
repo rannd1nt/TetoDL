@@ -1744,6 +1744,7 @@ class CliMenu(BaseModel):
     :class:`CliExit` : Exit action parse result.
     """
     mode: Literal['menu'] = 'menu'
+    force_recheck: bool = False
 
 
 class CliExit(BaseModel):
