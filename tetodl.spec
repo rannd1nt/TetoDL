@@ -53,6 +53,7 @@ if not IS_WIN_BUILD:
 datas = []
 for pattern, dest in [("tetodl/locales/*.json", "tetodl/locales"),
                        ("tetodl/utils/share_static/*", "tetodl/utils/share_static"),
+                       ("tetodl/daemon/static/*", "tetodl/daemon/static"),
                        ("assets/*", "assets")]:
     matches = [str(f) for f in Path().glob(pattern) if f.is_file()]
     datas += [(m, dest) for m in matches]
