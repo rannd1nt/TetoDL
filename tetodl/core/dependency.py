@@ -16,7 +16,7 @@ import shutil
 import requests
 import importlib.util
 import time
-from ..constants import IS_WINDOWS, IS_BINARY
+from ..constants import IS_WINDOWS, IS_BINARY, YTDLP_OVERRIDE_DIR
 from ..utils.i18n_keys import Keys
 from ..utils.console import console
 from . import config as cfg
@@ -237,6 +237,79 @@ def get_ytdlp_version_info():
         pass
     
     return False, "unknown", "unknown"
+
+def _update_ytdlp_binary_mode(latest_version: str) -> bool:
+    """Download yt-dlp wheel from PyPI, extract to override dir, activate it."""
+    import zipfile
+    import io
+    import shutil
+
+    try:
+        print()
+        console.proc("Downloading yt-dlp update (binary mode)...")
+
+        resp = requests.get("https://pypi.org/pypi/yt-dlp/json", timeout=10)
+        if resp.status_code != 200:
+            console.err("Failed to fetch yt-dlp release info from PyPI")
+            return False
+
+        data = resp.json()
+        pypi_latest = data['info']['version']
+
+        if pypi_latest != latest_version:
+            console.err(f"Version mismatch from PyPI: expected {latest_version}, got {pypi_latest}")
+            return False
+
+        wheel_url = None
+        for url_info in data.get('urls', []):
+            if url_info.get('packagetype') == 'bdist_wheel':
+                py_ver = url_info.get('python_version', '')
+                if py_ver in ('py2.py3', 'py3', 'none', 'py3-none-any'):
+                    wheel_url = url_info['url']
+                    break
+
+        if not wheel_url:
+            console.err("No compatible wheel found for yt-dlp on PyPI")
+            return False
+
+        wheel_resp = requests.get(wheel_url, timeout=30)
+        if wheel_resp.status_code != 200:
+            console.err("Failed to download yt-dlp wheel")
+            return False
+
+        if YTDLP_OVERRIDE_DIR.exists():
+            shutil.rmtree(YTDLP_OVERRIDE_DIR)
+        YTDLP_OVERRIDE_DIR.mkdir(parents=True, exist_ok=True)
+
+        with zipfile.ZipFile(io.BytesIO(wheel_resp.content)) as zf:
+            zf.extractall(path=str(YTDLP_OVERRIDE_DIR))
+
+        if str(YTDLP_OVERRIDE_DIR) not in sys.path:
+            sys.path.insert(0, str(YTDLP_OVERRIDE_DIR))
+
+        for key in list(sys.modules.keys()):
+            if key.startswith('yt_dlp') or key.startswith('yt-dlp'):
+                del sys.modules[key]
+
+        import yt_dlp
+        new_version = getattr(yt_dlp.version, '__version__', 'unknown')
+
+        if new_version == latest_version:
+            console.ok(f"yt-dlp updated to {new_version}")
+        else:
+            console.warn(f"yt-dlp override installed (version: {new_version}, expected: {latest_version})")
+
+        return True
+
+    except Exception as e:
+        console.err(f"yt-dlp update failed: {e}")
+        if YTDLP_OVERRIDE_DIR.exists():
+            try:
+                shutil.rmtree(YTDLP_OVERRIDE_DIR)
+            except Exception:
+                pass
+        return False
+
 
 def verify_core_dependencies(check_updates: bool = True):
     """

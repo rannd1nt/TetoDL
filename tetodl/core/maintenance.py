@@ -19,21 +19,28 @@ def get_project_root() -> Path:
     return Path(__file__).resolve().parent.parent.parent
 
 def perform_update() -> bool:
-    """Update the application — pip mode or binary self-destructive update."""
+    """Update the application — git pull (source) or binary self-destructive update."""
 
     if IS_BINARY:
         return _perform_binary_update()
 
-    # ── Pip mode ──
+    # ── Source mode (git clone / git pull) ──
     try:
-        import subprocess
+        root_dir = get_project_root()
         console.proc(Keys.cli.checking_for_updates)
         result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--upgrade", "tetodl"],
-            capture_output=True, text=True
+            ["git", "pull"], cwd=root_dir, capture_output=True, text=True
         )
         if result.returncode == 0:
             console.ok(Keys.maint.update_successful)
+            # Re-install dependencies if venv exists
+            pip_exe = str(root_dir / ".venv" / "bin" / "pip")
+            if os.path.exists(pip_exe):
+                console.proc("Updating dependencies...")
+                subprocess.run(
+                    [pip_exe, "install", "-r", str(root_dir / "requirements.txt")],
+                    cwd=root_dir, capture_output=True
+                )
             return True
         else:
             console.err(Keys.maint.update_failed(error=result.stderr))
