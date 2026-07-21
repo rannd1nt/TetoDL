@@ -123,11 +123,11 @@ exec "{old_exe}" --version
     sys.exit(0)
 
 def perform_uninstall():
-    """Trigger the bash uninstaller script and manage user data cleanup."""
+    """Trigger the uninstaller — bash script (source) or self-destruct (binary)."""
     root_dir = get_project_root()
     script_path = root_dir / "uninstall.sh"
 
-    if not script_path.exists():
+    if not IS_BINARY and not script_path.exists():
         console.err(Keys.maint.uninstaller_script_not_found(path=script_path))
         return
 
@@ -176,44 +176,68 @@ def perform_uninstall():
     if wipe_mode != "none":
         console.warn(Keys.maint.cleaning_user_data)
         try:
-            # Delete Cache
             if CACHE_DIR.exists():
                 shutil.rmtree(CACHE_DIR)
                 console.ok(Keys.maint.cache_dir_removed)
-
-            # Delete Config
             if CONFIG_DIR.exists():
                 shutil.rmtree(CONFIG_DIR)
                 console.ok(Keys.maint.config_dir_removed)
-
-            # Logic Data Dir (History & Registry)
             if DATA_DIR.exists():
                 if wipe_mode == "full":
                     shutil.rmtree(DATA_DIR)
                     console.ok(Keys.maint.data_dir_removed)
                 else:
-                    # Partial: Delete history.json but kept registry.json
                     history_file = DATA_DIR / "history.json"
                     if history_file.exists():
                         os.remove(history_file)
                         console.ok(Keys.maint.history_file_removed)
-                    
                     console.warn(Keys.maint.registry_kept_safe)
-
         except Exception as e:
             console.err(Keys.maint.failed_clean_data(error=e))
 
-    # --- EXECUTE BASH UNINSTALLER ---
-    console.warn(Keys.maint.launching_uninstaller)
-    
-    try:
-        subprocess.run(["chmod", "+x", str(script_path)], check=False)
-        sys.stdout.flush()
-        subprocess.call(["bash", str(script_path)])
-        sys.exit(0)
-        
-    except Exception as e:
-        console.err(Keys.maint.error_executing_uninstaller(error=e))
+    # --- FINAL STEP: binary self-destruct or bash uninstaller ---
+    if IS_BINARY:
+        _spawn_self_destruct()
+    else:
+        console.warn(Keys.maint.launching_uninstaller)
+        try:
+            subprocess.run(["chmod", "+x", str(script_path)], check=False)
+            sys.stdout.flush()
+            subprocess.call(["bash", str(script_path)])
+            sys.exit(0)
+        except Exception as e:
+            console.err(Keys.maint.error_executing_uninstaller(error=e))
+
+
+def _spawn_self_destruct():
+    """Delete the running binary via a temp script, then exit."""
+    current_exe = sys.executable
+    import platform, tempfile
+
+    if platform.system() == "Windows":
+        bat = Path(tempfile.mktemp(suffix=".uninstall.bat"))
+        bat.write_text(
+            f"""@echo off
+timeout /t 1 /nobreak >nul
+del /f /q "{current_exe}" >nul
+del "%~f0"
+"""
+        )
+        subprocess.Popen(["cmd.exe", "/c", str(bat)],
+                         shell=True, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    else:
+        script = Path(tempfile.mktemp(suffix=".uninstall.sh"))
+        script.write_text(
+            f"""#!/bin/sh
+sleep 1
+rm -f "{current_exe}"
+rm -f "$0"
+"""
+        )
+        os.chmod(script, 0o755)
+        subprocess.Popen([str(script)], shell=False)
+
+    sys.exit(0)
 
 def reset_data(targets: list[str]):
     """

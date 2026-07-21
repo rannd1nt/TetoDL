@@ -281,7 +281,7 @@ class SystemConfig(BaseModel):
     :class:`AppConfig.system` : AppConfig property that builds this.
     """
     media_scanner_enabled: bool = False
-    download_delay: int = 2
+    download_delay: float = 2.0
     max_retries: int = 3
     retry_delay: int = 2
     async_workers: int = 3
@@ -496,7 +496,7 @@ class AppConfig(BaseModel):
     # System
     media_scanner_enabled: bool = False
     """Enable the local media file scanner."""
-    download_delay: int = 2
+    download_delay: float = 2.0
     """Seconds to wait between successive downloads."""
     max_retries: int = 3
     """Maximum retry attempts on download failure."""
