@@ -39,24 +39,24 @@ $failed = @()
 $skipped = @()
 $startTime = Get-Date
 
-function Run-Test($name, $args, [int]$timeout = $Timeout) {
+function Run-Test($name, $cliArgs, [int]$timeout = $Timeout) {
     Write-Host "`n=== $name ===" -ForegroundColor Cyan
 
     $result = [ordered]@{ Name = $name; Status = "pass"; Message = ""; Output = "" }
 
     try {
         $psi = New-Object System.Diagnostics.ProcessStartInfo
-        $psi.FileName = $Binary
-        $psi.Arguments = $args
+        $psi.FileName = "cmd.exe"
+        $psi.Arguments = "/c `"$Binary $cliArgs`""
         $psi.RedirectStandardOutput = $true
         $psi.RedirectStandardError = $true
         $psi.UseShellExecute = $false
         $psi.CreateNoWindow = $true
+        $psi.StandardOutputEncoding = [System.Text.Encoding]::UTF8
+        $psi.StandardErrorEncoding = [System.Text.Encoding]::UTF8
 
         $proc = [System.Diagnostics.Process]::Start($psi)
-
-        $stdout = $proc.StandardOutput.ReadToEnd()
-        $stderr = $proc.StandardError.ReadToEnd()
+        $output = $proc.StandardOutput.ReadToEnd() + $proc.StandardError.ReadToEnd()
         $completed = $proc.WaitForExit($timeout * 1000)
 
         if (-not $completed) {
@@ -65,7 +65,6 @@ function Run-Test($name, $args, [int]$timeout = $Timeout) {
         }
 
         $exitCode = $proc.ExitCode
-        $output = $stdout + $stderr
         $result.Output = $output
         return [PSCustomObject]$result, $exitCode, $output
     } catch {
@@ -76,7 +75,7 @@ function Run-Test($name, $args, [int]$timeout = $Timeout) {
     }
 }
 
-function Run-TestBlocking($name, $args, [int]$waitSec = 5) {
+function Run-TestBlocking($name, $cliArgs, [int]$waitSec = 5) {
     Write-Host "`n=== $name ===" -ForegroundColor Cyan
 
     $result = [ordered]@{ Name = $name; Status = "pass"; Message = ""; Output = "" }
@@ -84,7 +83,7 @@ function Run-TestBlocking($name, $args, [int]$waitSec = 5) {
     try {
         $psi = New-Object System.Diagnostics.ProcessStartInfo
         $psi.FileName = $Binary
-        $psi.Arguments = $args
+        $psi.Arguments = $cliArgs
         $psi.RedirectStandardOutput = $true
         $psi.RedirectStandardError = $true
         $psi.UseShellExecute = $false

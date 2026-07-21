@@ -62,6 +62,8 @@ class App:
         if isinstance(result, CliMenu):
             bootstrap.setup_application(force_recheck=result.force_recheck)
             bootstrap.start_update_checker(self)
+            if result.force_recheck:
+                return
             self._loop_menu()
 
     def _loop_menu(self):
