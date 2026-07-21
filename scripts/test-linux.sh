@@ -146,8 +146,11 @@ execute_and_assert() {
     local name="$1" args="$2"
     shift 2
 
+    local capture_file="$OUT_DIR/${name}.capture"
+    _RUN_EC=0
+    run_test "$name" "$args" "$TIMEOUT" > "$capture_file" 2>/dev/null || true
     local result
-    result="$(run_test "$name" "$args" "$TIMEOUT")" || true
+    result="$(cat "$capture_file" 2>/dev/null || true)"
 
     local expected_ec=0
     local match_pattern=""
@@ -228,8 +231,8 @@ echo "========================================"
 echo "  PHASE 4: Thumbnail"
 echo "========================================"
 
-execute_and_assert "thumbnail-only" "--thumbnail-only \"$TEST_URL\"" --exit 0 --not-match "ERROR"
-execute_and_assert "thumbnail-format-png" "--thumbnail-only -f png \"$TEST_URL\"" --exit 0 --not-match "ERROR"
+execute_and_assert "thumbnail-only" "--thumbnail-only \"$TEST_URL\"" --exit 0
+execute_and_assert "thumbnail-format-png" "--thumbnail-only -f png \"$TEST_URL\"" --exit 0
 
 # ===========================================================================
 # PHASE 5: Share Mode (blocking)

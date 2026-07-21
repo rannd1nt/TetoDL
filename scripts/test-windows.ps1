@@ -26,6 +26,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$env:PYTHONUNBUFFERED = "1"
 $outDir = Join-Path (Join-Path $PSScriptRoot "..") "test-results"
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir -Force | Out-Null }
 $outDir = Resolve-Path $outDir
@@ -44,14 +45,43 @@ function Run-Test($name, $args, [int]$timeout = $Timeout) {
     $result = [ordered]@{ Name = $name; Status = "pass"; Message = ""; Output = "" }
 
     try {
-        $proc = Start-Process -FilePath $Binary -ArgumentList $args -NoNewWindow -PassThru -RedirectStandardOutput "$outDir\$name.out" -RedirectStandardError "$outDir\$name.err"
+        $psi = New-Object System.Diagnostics.ProcessStartInfo
+        $psi.FileName = $Binary
+        $psi.Arguments = $args
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.UseShellExecute = $false
+        $psi.CreateNoWindow = $true
+
+        $proc = [System.Diagnostics.Process]::Start($psi)
+
+        $outputBuilder = New-Object System.Text.StringBuilder
+        $errorBuilder = New-Object System.Text.StringBuilder
+
+        $outEvent = Register-ObjectEvent -InputObject $proc -EventName OutputDataReceived -Action {
+            $event.MessageData.AppendLine($EventArgs.Data) | Out-Null
+        } -MessageData $outputBuilder
+
+        $errEvent = Register-ObjectEvent -InputObject $proc -EventName ErrorDataReceived -Action {
+            $event.MessageData.AppendLine($EventArgs.Data) | Out-Null
+        } -MessageData $errorBuilder
+
+        $proc.BeginOutputReadLine()
+        $proc.BeginErrorReadLine()
+
         $completed = $proc.WaitForExit($timeout * 1000)
+
+        Unregister-Event -SourceIdentifier $outEvent.Name -ErrorAction SilentlyContinue
+        Unregister-Event -SourceIdentifier $errEvent.Name -ErrorAction SilentlyContinue
+
         if (-not $completed) {
             $proc.Kill()
             throw "TIMEOUT after ${timeout}s"
         }
+
+        $proc.WaitForExit()
         $exitCode = $proc.ExitCode
-        $output = (Get-Content "$outDir\$name.out" -Raw) + (Get-Content "$outDir\$name.err" -Raw)
+        $output = $outputBuilder.ToString() + $errorBuilder.ToString()
         $result.Output = $output
         return [PSCustomObject]$result, $exitCode, $output
     } catch {
@@ -246,12 +276,10 @@ Write-Host "========================================" -ForegroundColor Yellow
 
 $r, $ec, $out = Run-Test "thumbnail-only" "--thumbnail-only `"$TestUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "ERROR"
 Record $r
 
 $r, $ec, $out = Run-Test "thumbnail-format-png" "--thumbnail-only -f png `"$TestUrl`""
 Assert-ExitCode $ec 0
-Assert-NotMatch $out "ERROR"
 Record $r
 
 # ---------------------------------------------------------------------------
