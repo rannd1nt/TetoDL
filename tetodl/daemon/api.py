@@ -94,7 +94,8 @@ app.add_middleware(
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 
-app.mount("/web", StaticFiles(directory=str(STATIC_DIR), html=True), name="static_web")
+if STATIC_DIR.is_dir():
+    app.mount("/web", StaticFiles(directory=str(STATIC_DIR), html=True), name="static_web")
 
 @app.get("/")
 @app.get("/web")

@@ -14,7 +14,7 @@ from ..utils.i18n_keys import Keys
 from ..utils.console import console
 from ..core.metadata_fetcher import fetcher
 from ..utils.network import check_internet
-from tetodl.utils.tracer import trace, traced
+from tetodl.utils.tracer import trace
 
 try:
     import yt_dlp as yt
@@ -299,14 +299,7 @@ def download_thumbnail_task(url, target_format='jpg', ui=None):
         from ..ui.provider import NullUI
         ui = NullUI()
 
-    if cfg.simple_mode:
-        target_dir = cfg.thumbnail_root
-    else:
-        from ..ui.navigation import select_download_folder
-        target_dir = select_download_folder(cfg.thumbnail_root, "thumbnails")
-        if not target_dir:
-            with traced('user cancelled folder selection'):
-                return DownloadResult(success=False, reason='cancel')
+    target_dir = cfg.thumbnail_root
     if not os.path.exists(target_dir):
         try:
             os.makedirs(target_dir, exist_ok=True)

@@ -30,7 +30,7 @@ if IS_WIN_BUILD:
                         dst.write(src.read())
                     break
         Path("ffmpeg.zip").unlink()
-    binaries.append(("ffmpeg.exe", "."))
+    datas.append(("ffmpeg.exe", "."))
 
 # ── Hidden imports (all features) ──────────────────────────────
 HIDDEN = [
@@ -50,13 +50,15 @@ if not IS_WIN_BUILD:
     EXCLUDES += ["av", "win32api", "win32con", "pywin32"]
 
 # ── Data files ─────────────────────────────────────────────────
+ROOT = Path(__file__).resolve().parent
 datas = []
 for pattern, dest in [("tetodl/locales/*.json", "tetodl/locales"),
                        ("tetodl/utils/share_static/*", "tetodl/utils/share_static"),
                        ("tetodl/daemon/static/*", "tetodl/daemon/static"),
                        ("assets/*", "assets")]:
-    matches = [str(f) for f in Path().glob(pattern) if f.is_file()]
-    datas += [(m, dest) for m in matches]
+    for f in ROOT.glob(pattern):
+        if f.is_file():
+            datas.append((str(f), dest))
 
 # ── Analysis ───────────────────────────────────────────────────
 a = Analysis(

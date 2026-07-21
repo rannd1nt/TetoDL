@@ -49,18 +49,18 @@ class App:
             if url:
                 session = result.session.model_copy(update={'url': url})
                 from tetodl.cli.dispatch import execute_download as _exec
-                _exec(session, result.force_recheck)
+                _exec(session)
             return
 
         # --- DIRECT DOWNLOAD ---
         if isinstance(result, CliDownload):
             from tetodl.cli.dispatch import execute_download as _exec
-            _exec(result.session, result.force_recheck)
+            _exec(result.session)
             return
 
         # --- TUI MENU ---
         if isinstance(result, CliMenu):
-            bootstrap.setup_application()
+            bootstrap.setup_application(force_recheck=result.force_recheck)
             bootstrap.start_update_checker(self)
             self._loop_menu()
 

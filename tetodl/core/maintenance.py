@@ -123,20 +123,19 @@ exec "{old_exe}" --version
     sys.exit(0)
 
 def perform_uninstall():
-    """Trigger the bash uninstaller script and manage user data cleanup."""
-    root_dir = get_project_root()
-    script_path = root_dir / "uninstall.sh"
+    """Uninstall TetoDL — source (pip/venv) or binary (Windows/Linux)."""
+    if IS_BINARY:
+        _perform_binary_uninstall()
+    else:
+        _perform_source_uninstall()
 
-    if not script_path.exists():
-        console.err(Keys.maint.uninstaller_script_not_found(path=script_path))
-        return
 
-    # Warning Header
+def _confirm_uninstall() -> str:
+    """Shared prompt: ask user for wipe mode. Returns 'none', 'partial', or 'full'."""
     console.warn(Keys.maint.uninstall_warning)
     console.warn(Keys.maint.uninstall_details)
     print()
 
-    # Opsi Cleanup Data User
     print(f"{color('Do you want to delete configuration & data files?', 'y')}")
     print(f"  {color('[1]', 'y')} No, keep everything (Safe for reinstall)")
     print(f"  {color('[2]', 'y')} Delete Config & Cache ONLY (Keep Registry/Stats)")
@@ -147,7 +146,7 @@ def perform_uninstall():
         choice = input(f"{color('Choice (1/2/3) > ', 'y')}").strip()
     except KeyboardInterrupt:
         print()
-        return
+        return ''
 
     wipe_mode = "none"
     if choice == '2':
@@ -156,64 +155,141 @@ def perform_uninstall():
         wipe_mode = "full"
     elif choice != '1':
         console.neutral(Keys.maint.invalid_choice_aborting)
-        return
+        return ''
 
     print()
     if wipe_mode == "full":
         console.warn(Keys.maint.alert_permanent_delete)
-    
+
     try:
         confirm = input(f"{color('Are you sure you want to proceed? (y/N) > ', 'y')}").strip().lower()
     except KeyboardInterrupt:
         print()
-        return
+        return ''
 
     if confirm != 'y':
         console.neutral(Keys.maint.uninstall_cancelled)
+        return ''
+
+    return wipe_mode
+
+
+def _execute_data_cleanup(wipe_mode: str) -> None:
+    """Delete user data according to wipe_mode (shared by source & binary)."""
+    if wipe_mode == "none":
         return
 
-    # --- EXECUTE CLEANUP DATA ---
-    if wipe_mode != "none":
-        console.warn(Keys.maint.cleaning_user_data)
-        try:
-            # Delete Cache
-            if CACHE_DIR.exists():
-                shutil.rmtree(CACHE_DIR)
-                console.ok(Keys.maint.cache_dir_removed)
+    console.warn(Keys.maint.cleaning_user_data)
+    try:
+        if CACHE_DIR.exists():
+            shutil.rmtree(CACHE_DIR)
+            console.ok(Keys.maint.cache_dir_removed)
 
-            # Delete Config
-            if CONFIG_DIR.exists():
-                shutil.rmtree(CONFIG_DIR)
-                console.ok(Keys.maint.config_dir_removed)
+        if CONFIG_DIR.exists():
+            shutil.rmtree(CONFIG_DIR)
+            console.ok(Keys.maint.config_dir_removed)
 
-            # Logic Data Dir (History & Registry)
-            if DATA_DIR.exists():
-                if wipe_mode == "full":
-                    shutil.rmtree(DATA_DIR)
-                    console.ok(Keys.maint.data_dir_removed)
-                else:
-                    # Partial: Delete history.json but kept registry.json
-                    history_file = DATA_DIR / "history.json"
-                    if history_file.exists():
-                        os.remove(history_file)
-                        console.ok(Keys.maint.history_file_removed)
-                    
-                    console.warn(Keys.maint.registry_kept_safe)
+        if DATA_DIR.exists():
+            if wipe_mode == "full":
+                shutil.rmtree(DATA_DIR)
+                console.ok(Keys.maint.data_dir_removed)
+            else:
+                history_file = DATA_DIR / "history.json"
+                if history_file.exists():
+                    os.remove(history_file)
+                    console.ok(Keys.maint.history_file_removed)
+                console.warn(Keys.maint.registry_kept_safe)
 
-        except Exception as e:
-            console.err(Keys.maint.failed_clean_data(error=e))
+    except Exception as e:
+        console.err(Keys.maint.failed_clean_data(error=e))
+
+
+def _perform_source_uninstall():
+    """Source/pip install: run uninstall.sh to remove symlink, venv, etc."""
+    root_dir = get_project_root()
+    script_path = root_dir / "uninstall.sh"
+
+    if not script_path.exists():
+        console.err(Keys.maint.uninstaller_script_not_found(path=script_path))
+        return
+
+    wipe_mode = _confirm_uninstall()
+    if wipe_mode == '':
+        return
+
+    _execute_data_cleanup(wipe_mode)
 
     # --- EXECUTE BASH UNINSTALLER ---
     console.warn(Keys.maint.launching_uninstaller)
-    
     try:
         subprocess.run(["chmod", "+x", str(script_path)], check=False)
         sys.stdout.flush()
         subprocess.call(["bash", str(script_path)])
         sys.exit(0)
-        
     except Exception as e:
         console.err(Keys.maint.error_executing_uninstaller(error=e))
+
+
+def _perform_binary_uninstall():
+    """Binary mode (Windows & Linux): prompt → cleanup → self-delete executable."""
+    import platform
+
+    wipe_mode = _confirm_uninstall()
+    if wipe_mode == '':
+        return
+
+    _execute_data_cleanup(wipe_mode)
+
+    binary_path = Path(sys.executable).resolve()
+    if not binary_path.exists():
+        console.err(f"Binary not found at: {binary_path}")
+        return
+
+    console.warn(Keys.maint.launching_uninstaller)
+
+    if platform.system() == "Windows":
+        _spawn_binary_self_delete_windows(binary_path)
+    else:
+        _spawn_binary_self_delete_linux(binary_path)
+
+    sys.exit(0)
+
+
+def _spawn_binary_self_delete_windows(binary_path: Path) -> None:
+    """Create a .bat helper that deletes the running .exe and itself."""
+    bat_path = binary_path.with_suffix(".uninstall.bat")
+    bat_content = f"""@echo off
+echo Removing TetoDL...
+timeout /t 1 /nobreak >nul
+del /f /q "{binary_path}" >nul 2>&1
+if exist "{binary_path.parent}" (
+    rmdir "{binary_path.parent}" 2>nul
+)
+echo TetoDL has been removed.
+del "%~f0"
+"""
+    bat_path.write_text(bat_content)
+    subprocess.Popen(
+        ["cmd.exe", "/c", str(bat_path)],
+        shell=True,
+        creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
+    )
+
+
+def _spawn_binary_self_delete_linux(binary_path: Path) -> None:
+    """Create a shell script that deletes the running binary and itself."""
+    import tempfile
+    script_content = f"""#!/bin/sh
+sleep 1
+rm -f "{binary_path}"
+rmdir "{binary_path.parent}" 2>/dev/null
+echo "TetoDL has been removed."
+rm -f "$0"
+"""
+    script = Path(tempfile.mktemp(suffix=".uninstall.sh"))
+    script.write_text(script_content)
+    os.chmod(script, 0o755)
+    subprocess.Popen([str(script)], shell=False)
 
 def reset_data(targets: list[str]):
     """

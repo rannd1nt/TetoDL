@@ -28,7 +28,7 @@ if not IS_WINDOWS and not IS_TERMUX:
         pass
 
 APP_NAME = "TetoDL"
-APP_VERSION = "2.0.0"
+APP_VERSION = "2.1.0"
 
 # ==== BINARY ROOT (PyInstaller) ====
 _BINARY_DIR: Path | None
@@ -58,7 +58,7 @@ elif IS_WINDOWS:
 
     # FFmpeg — bundled binary first, fallback to PATH
     if IS_BINARY:
-        bundled_ffmpeg = Path(sys._MEIPASS) / "ffmpeg.exe"
+        bundled_ffmpeg = Path(sys._MEIPASS) / "ffmpeg.exe"  # type: ignore[attr-defined]
         FFMPEG_CMD = str(bundled_ffmpeg) if bundled_ffmpeg.exists() else "ffmpeg"
     else:
         FFMPEG_CMD = shutil.which("ffmpeg") or "ffmpeg"
