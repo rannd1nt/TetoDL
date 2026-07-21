@@ -14,7 +14,7 @@ from ..utils.i18n_keys import Keys
 from ..utils.console import console
 from ..core.metadata_fetcher import fetcher
 from ..utils.network import check_internet
-from tetodl.utils.tracer import trace, traced
+from tetodl.utils.tracer import trace
 
 try:
     import yt_dlp as yt
