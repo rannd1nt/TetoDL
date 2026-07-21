@@ -15,7 +15,7 @@ from tetodl.pipeline.handlers import download_audio_youtube, download_video_yout
 from tetodl.utils.thumbnail import download_thumbnail_task
 
 @trace
-def execute_download(session: DownloadSession, force_recheck: bool = False):
+def execute_download(session: DownloadSession):
     """Main entry for headless download. Accepts typed DownloadSession."""
     base_config = load_app_config()
     app_config = ConfigResolver(base=base_config).resolve(session)
@@ -75,8 +75,8 @@ def execute_download(session: DownloadSession, force_recheck: bool = False):
                                             console.ok(Keys.dispatch.moved_files_and_updated(count=len(moved_files)))
                                         else:
                                             console.neutral(Keys.dispatch.no_files_moved)
-                                else:
-                                    console.err(Keys.dispatch.cannot_share_path_not_found)
+                            else:
+                                console.err(Keys.dispatch.cannot_share_path_not_found)
                     else:
                         if not result.suppress_error:
                             if not result.success and not is_existing:

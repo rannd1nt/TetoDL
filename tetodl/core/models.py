@@ -1732,6 +1732,9 @@ class CliMenu(BaseModel):
     ----------
     mode : Literal['menu'], optional
         Discriminant tag (default ``'menu'``).
+    force_recheck : bool, optional
+        Force a registry recheck before entering the menu
+        (default ``False``).
 
     Example
     -------

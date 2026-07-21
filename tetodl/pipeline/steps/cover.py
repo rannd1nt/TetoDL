@@ -121,7 +121,8 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
             console.warn(Keys.download.youtube.skip_cover)
             return ctx
 
-        console.proc(Keys.download.youtube.processing_cover)
+        if not ctx.config.quiet:
+            console.proc(Keys.download.youtube.processing_cover)
 
         info = ctx.media_info
         target_dir = ctx.target_dir
@@ -142,11 +143,13 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
                 console.err(Keys.download.youtube.cover_process_failed)
                 return ctx
 
-        console.proc(Keys.download.youtube.embedding_cover)
+        if not ctx.config.quiet:
+            console.proc(Keys.download.youtube.embedding_cover)
         meta = self._build_metadata(info, fetched, is_art)
 
         if embed_metadata(ctx.downloaded_file.path, path, ctx.config.audio_quality, meta):
-            console.ok(Keys.download.youtube.cover_success)
+            if not ctx.config.quiet:
+                console.ok(Keys.download.youtube.cover_success)
         else:
             console.err(Keys.download.youtube.cover_failed)
 

@@ -507,6 +507,7 @@ def _handle_playlist(
             is_youtube_music=is_youtube_music,
             ui=ui,
             cut_range=cut_range,
+            playlist_items=playlist_items,
         )
     else:
         success, skipped, failed = _playlist_sequential(
@@ -684,6 +685,7 @@ def _playlist_concurrent(
     is_youtube_music: bool,
     ui: UIProvider,
     cut_range: Optional[tuple[float, float]] = None,
+    playlist_items: set[int] | None = None,
 ) -> tuple[int, int, int]:
     """Download playlist items concurrently via a thread pool.
 
@@ -730,6 +732,9 @@ def _playlist_concurrent(
     results_store: list[Optional[str]] = [None] * total
 
     def _task(index: int, url: str) -> dict:
+        if playlist_items is not None and (index + 1) not in playlist_items:
+            return {"status": "success", "skipped": True, "index": index}
+
         import random
         time.sleep(random.uniform(0.1, 1.0))
 
@@ -753,8 +758,9 @@ def _playlist_concurrent(
             "title": result.get("title"),
         }
 
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_map = {executor.submit(_task, i, url): i for i, url in enumerate(urls)}
+    with console.context(is_quiet=True):
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_map = {executor.submit(_task, i, url): i for i, url in enumerate(urls)}
 
         try:
             for future in as_completed(future_map):
