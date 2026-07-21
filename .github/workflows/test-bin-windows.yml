@@ -55,12 +55,13 @@ jobs:
       - name: Run comprehensive tests
         shell: pwsh
         run: |
+          $ytdlp = if ('${{ inputs.ytdlp_update }}' -eq 'true') { @('-YtdlpUpdate') } else { @() }
           .\scripts\test-windows.ps1 `
             -Binary dist\tetodl.exe `
             -TestUrl "${{ inputs.test_url }}" `
             -PlaylistUrl "${{ inputs.playlist_url }}" `
             -Timeout ${{ inputs.timeout }} `
-            $(if ('${{ inputs.ytdlp_update }}' -eq 'true') { '-YtdlpUpdate' })
+            @ytdlp
 
       - uses: actions/upload-artifact@v4
         if: always()
