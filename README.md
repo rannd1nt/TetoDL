@@ -1,5 +1,5 @@
 <div align="center">
-
+  <h1>THIS README IS OUTDATED!</h1>
   <img src="docs/hmm-teto.gif" alt="TetoDL Banner" width="100%">
 
   <h1>TetoDL - Hybrid CLI/TUI Media Suite</h1>
