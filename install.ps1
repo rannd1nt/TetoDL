@@ -11,12 +11,13 @@ param(
     [switch]$Force
 )
 
+$ProgressPreference = 'SilentlyContinue'
 $Host.UI.RawUI.WindowTitle = "TetoDL Installer"
 
-Write-Host "╔══════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║       TetoDL Installer           ║" -ForegroundColor Cyan
-Write-Host "║          (Windows)               ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "----------------------------------" -ForegroundColor Cyan
+Write-Host "         TetoDL Installer         " -ForegroundColor Cyan
+Write-Host "            (Windows)             " -ForegroundColor Cyan
+Write-Host "----------------------------------" -ForegroundColor Cyan
 Write-Host ""
 
 # ─────────────────────────────────────────────────
@@ -63,7 +64,8 @@ Write-Host ""
 Write-Host "  Downloading tetodl.exe ..." -ForegroundColor Yellow
 
 try {
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $outputPath -UseBasicParsing
+    $wc = [System.Net.WebClient]::new()
+    $wc.DownloadFile($downloadUrl, $outputPath)
 }
 catch {
     Write-Host "  [!] Download failed: $_" -ForegroundColor Red
@@ -85,15 +87,14 @@ Write-Host ""
 Write-Host "  TetoDL installed successfully!" -ForegroundColor Green
 Write-Host "  Location: $outputPath" -ForegroundColor Gray
 Write-Host ""
-Write-Host "  Run 'tetodl --help' to get started." -ForegroundColor Cyan
 
 # ─────────────────────────────────────────────────
 # 6. Post-install prompt
 # ─────────────────────────────────────────────────
 if (-not $Force) {
     Write-Host ""
-    $runNow = Read-Host "  Run tetodl --help now? (Y/n)"
+    $runNow = Read-Host "  Run tetodl now? (Y/n)"
     if ($runNow -ne "n") {
-        & "$installDir\tetodl.exe" --help
+        & "$installDir\tetodl.exe"
     }
 }
