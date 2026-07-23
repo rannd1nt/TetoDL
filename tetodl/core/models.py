@@ -257,14 +257,13 @@ class SystemConfig(BaseModel):
     ----------
     media_scanner_enabled : bool, optional
         Enable the local media file scanner (default ``False``).
-    download_delay : int, optional
-        Delay in seconds between successive downloads
-        (default ``2``).
+    jitter_min : float, optional
+        Minimum jitter seconds between downloads (default ``3.0``).
+    jitter_max : float, optional
+        Maximum jitter seconds between downloads (default ``5.0``).
     max_retries : int, optional
         Maximum number of retries on download failure
         (default ``3``).
-    retry_delay : int, optional
-        Delay in seconds between retry attempts (default ``2``).
     async_workers : int, optional
         Number of concurrent asynchronous workers
         (default ``3``).
@@ -281,9 +280,9 @@ class SystemConfig(BaseModel):
     :class:`AppConfig.system` : AppConfig property that builds this.
     """
     media_scanner_enabled: bool = False
-    download_delay: float = 2.0
+    jitter_min: float = 3.0
+    jitter_max: float = 5.0
     max_retries: int = 3
-    retry_delay: int = 2
     async_workers: int = 3
 
 
@@ -390,12 +389,12 @@ class AppConfig(BaseModel):
         Interface language code (default ``'en'``).
     media_scanner_enabled : bool, optional
         Enable the local media file scanner (default ``False``).
-    download_delay : int, optional
-        Seconds to wait between successive downloads (default ``2``).
+    jitter_min : float, optional
+        Minimum jitter seconds between downloads (default ``3.0``).
+    jitter_max : float, optional
+        Maximum jitter seconds between downloads (default ``5.0``).
     max_retries : int, optional
         Maximum retry attempts on download failure (default ``3``).
-    retry_delay : int, optional
-        Seconds to wait between retry attempts (default ``2``).
     async_workers : int, optional
         Number of concurrent async workers (default ``3``).
     daemon_default_temp : bool, optional
@@ -496,12 +495,12 @@ class AppConfig(BaseModel):
     # System
     media_scanner_enabled: bool = False
     """Enable the local media file scanner."""
-    download_delay: float = 2.0
-    """Seconds to wait between successive downloads."""
+    jitter_min: float = 3.0
+    """Minimum jitter seconds between downloads."""
+    jitter_max: float = 5.0
+    """Maximum jitter seconds between downloads."""
     max_retries: int = 3
     """Maximum retry attempts on download failure."""
-    retry_delay: int = 2
-    """Seconds to wait between retry attempts."""
     async_workers: int = 3
     """Number of concurrent async workers."""
 
@@ -706,9 +705,9 @@ class AppConfig(BaseModel):
         """
         return SystemConfig(
             media_scanner_enabled=self.media_scanner_enabled,
-            download_delay=self.download_delay,
+            jitter_min=self.jitter_min,
+            jitter_max=self.jitter_max,
             max_retries=self.max_retries,
-            retry_delay=self.retry_delay,
             async_workers=self.async_workers,
         )
 
@@ -918,6 +917,7 @@ class DownloadSession(BaseModel):
 
     url: str = ''
     media_type: Literal['audio', 'video', 'thumbnail'] = 'audio'
+    is_spotify: bool = False
     share_after_download: bool = False
     is_temp_session: bool = False
 
@@ -1462,6 +1462,10 @@ class PipelineContext:
     is_youtube_music: bool = False
     cut_range: Optional[tuple[float, float]] = None
     download_type_label: str = "Download"
+    cover_url: Optional[str] = None
+    spotify_title: Optional[str] = None
+    spotify_artist: Optional[str] = None
+    spotify_id: Optional[str] = None
 
     # Populated by steps
     media_info: Optional[MediaInfo] = None

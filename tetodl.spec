@@ -47,7 +47,7 @@ HIDDEN = [
     "mutagen", "mutagen.mp3", "mutagen.mp4", "mutagen.flac", "mutagen.id3",
     "pydantic", "requests", "bs4", "colorama", "rich",
     "questionary", "qrcode",
-    "fastapi", "uvicorn", "zeroconf",
+    "fastapi", "uvicorn",
 ]
 
 # ── Excludes ───────────────────────────────────────────────────

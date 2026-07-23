@@ -5,8 +5,7 @@ CoverStep — fetch, process, and embed cover art into audio files.
 import os
 from typing import Optional
 
-import requests
-
+from ...core.image_cache import fetch_image
 from ...core.models import CoverResult, LyricsMetadata, MediaInfo, PipelineContext
 from ...core.step import PipelineStep
 from ...core.tagger import embed_metadata
@@ -16,14 +15,6 @@ from tetodl.utils.tracer import trace, traced
 from ...core.metadata_fetcher import fetcher
 from ...utils.files import clean_temp_files
 from ...utils.thumbnail import crop_thumbnail_to_square, convert_thumbnail_format
-
-FAKE_HEADERS = {
-    "User-Agent": (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-        "AppleWebKit/537.36 (KHTML, like Gecko) "
-        "Chrome/91.0.4472.124 Safari/537.36"
-    ),
-}
 
 
 class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
@@ -129,19 +120,32 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
         is_art = self._is_art_track(info)
         path = None
         fetched = None
+        spotify_cover = False
 
-        if ctx.config.smart_cover_mode:
+        if ctx.cover_url:
+            with traced('trying Spotify cover art'):
+                path = self._download_url(ctx.cover_url, target_dir, info.id)
+            if path is None:
+                with traced('Spotify cover failed, falling back to smart download'):
+                    path, fetched = self._smart_download(info, target_dir, ctx)
+            else:
+                spotify_cover = True
+        elif ctx.config.smart_cover_mode:
             with traced('trying smart download (iTunes/Genius)'):
-                path, fetched = self._smart_download(info, target_dir)
+                path, fetched = self._smart_download(info, target_dir, ctx)
 
-        if path is None:
+        if path is None and not ctx.cover_url:
             with traced('falling back to YouTube thumbnail'):
-                path = self._youtube_fallback(info, target_dir, is_art, ctx.config.force_crop)
+                path = self._youtube_fallback(info, target_dir, is_art, ctx.config.force_crop, ctx.config.smart_cover_mode)
 
         if path is None or not os.path.exists(path):
             with traced('no cover art obtained'):
                 console.err(Keys.download.youtube.cover_process_failed)
                 return ctx
+
+        if ctx.config.smart_cover_mode and not fetched and spotify_cover:
+            with traced('fetching metadata from iTunes/Genius'):
+                fetched = self._fetch_metadata_only(info, ctx)
 
         if not ctx.config.quiet:
             console.proc(Keys.download.youtube.embedding_cover)
@@ -155,17 +159,44 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
 
         clean_temp_files(target_dir, info.id)
         cropped = is_art or ctx.config.force_crop
+        source = "spotify" if spotify_cover else ("smart" if fetched else "youtube")
         ctx.cover_result = CoverResult(
             thumbnail_path=path,
             metadata=self._to_lyrics_metadata(fetched),
-            source="smart" if fetched else "youtube",
+            source=source,
             cropped=cropped,
         )
         return ctx
 
     # ------------------------------------------------------------------
-    # Internal helpers — unchanged from original
+    # Internal helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _download_url(url: str, target_dir: str, file_id: str) -> Optional[str]:
+        path = os.path.join(target_dir, f"{file_id}.jpg")
+        data = fetch_image(url)
+        if data is None:
+            return None
+        with open(path, "wb") as f:
+            f.write(data)
+        return path
+
+    @staticmethod
+    def _fetch_metadata_only(
+        info: MediaInfo,
+        ctx: PipelineContext | None = None,
+    ) -> Optional[dict]:
+        if ctx and ctx.spotify_title:
+            artist = ctx.spotify_artist or ""
+            title = ctx.spotify_title
+        else:
+            artist = info.artist or info.uploader.replace(" - Topic", "")
+            title = info.track or info.title
+        try:
+            return fetcher.fetch_metadata(artist, title)
+        except Exception:
+            return None
 
     @staticmethod
     def _is_art_track(info: MediaInfo) -> bool:
@@ -179,6 +210,7 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
     def _smart_download(
         info: MediaInfo,
         target_dir: str,
+        ctx: PipelineContext | None = None,
     ) -> tuple[Optional[str], Optional[dict]]:
         """Query iTunes / Genius for high-quality cover artwork.
 
@@ -188,6 +220,9 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
             Media metadata for artist and title resolution.
         target_dir : str
             Directory to save the downloaded thumbnail.
+        ctx : PipelineContext or None
+            Pipeline context; ``spotify_title`` / ``spotify_artist``
+            override YouTube metadata when set.
 
         Returns
         -------
@@ -195,8 +230,12 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
             ``(file_path, metadata_dict)`` on success, ``(None, None)``
             on failure.
         """
-        artist = info.artist or info.uploader.replace(" - Topic", "")
-        title = info.track or info.title
+        if ctx and ctx.spotify_title:
+            artist = ctx.spotify_artist or ""
+            title = ctx.spotify_title
+        else:
+            artist = info.artist or info.uploader.replace(" - Topic", "")
+            title = info.track or info.title
 
         try:
             data = fetcher.fetch_metadata(artist, title)
@@ -207,16 +246,13 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
             return None, None
 
         image_url: str = data["url"]
-        try:
-            resp = requests.get(image_url, headers=FAKE_HEADERS, timeout=10)
-            if resp.status_code != 200:
-                return None, None
-        except requests.RequestException:
+        img_data = fetch_image(image_url)
+        if img_data is None:
             return None, None
 
         thumb_path = os.path.join(target_dir, f"{info.id}.jpg")
         with open(thumb_path, "wb") as f:
-            f.write(resp.content)
+            f.write(img_data)
 
         source_name = data.get("source", "iTunes")
         console.ok(Keys.download.youtube.fetch_success)
@@ -229,6 +265,7 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
         target_dir: str,
         is_art: bool,
         force_crop: bool = False,
+        smart_mode: bool = False,
     ) -> Optional[str]:
         """Download the best available YouTube thumbnail as cover art.
 
@@ -264,21 +301,17 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
         downloaded = False
 
         for url in candidates:
-            try:
-                resp = requests.get(url, headers=FAKE_HEADERS, timeout=10)
-                if resp.status_code != 200:
-                    continue
+            data = fetch_image(url)
+            if data is not None:
                 with open(thumb_path, "wb") as f:
-                    f.write(resp.content)
+                    f.write(data)
                 downloaded = True
                 break
-            except requests.RequestException:
-                continue
 
         if not downloaded:
             return None
 
-        perform_crop = is_art or force_crop
+        perform_crop = is_art or force_crop or smart_mode
         if perform_crop:
             crop_thumbnail_to_square(thumb_path)
         else:

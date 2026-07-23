@@ -7,6 +7,7 @@ try:
 except ImportError:
     yt = None
 
+from ..constants import YTDLP_CACHE_DIR
 from ..core.extractor import Extractor, register_extractor
 from ..core.models import MediaInfo
 from ..core.step import PipelineError
@@ -48,7 +49,7 @@ class YouTubeExtractor(Extractor):
             raise PipelineError("yt-dlp is not available", "extract")
 
         try:
-            with yt.YoutubeDL({"quiet": True, "no_warnings": True, "extract_flat": False}) as ydl:
+            with yt.YoutubeDL({"quiet": True, "no_warnings": True, "extract_flat": False, "cachedir": YTDLP_CACHE_DIR}) as ydl:
                 raw = ydl.extract_info(url, download=False)
         except Exception as exc:
             with traced(f'extract failed — {exc}'):
@@ -59,18 +60,18 @@ class YouTubeExtractor(Extractor):
             entries = [
                 MediaInfo(
                     id=e.get("id", ""),
-                    title=e.get("title", ""),
-                    url=e.get("webpage_url", ""),
-                    duration=e.get("duration", 0),
-                    uploader=e.get("uploader", ""),
+                    title=e.get("title", ""), # pyright: ignore[reportArgumentType]
+                    url=e.get("webpage_url", ""), # pyright: ignore[reportArgumentType]
+                    duration=e.get("duration", 0), # pyright: ignore[reportArgumentType]
+                    uploader=e.get("uploader", ""), # pyright: ignore[reportArgumentType]
                     artist=e.get("artist"),
                     track=e.get("track"),
                     album=e.get("album"),
-                    description=e.get("description", ""),
+                    description=e.get("description", ""), # pyright: ignore[reportArgumentType]
                     thumbnail=e.get("thumbnail"),
-                    thumbnails=e.get("thumbnails", []),
+                    thumbnails=e.get("thumbnails", []), # pyright: ignore[reportArgumentType]
                 )
-                for e in raw["entries"]
+                for e in raw["entries"] # pyright: ignore[reportTypedDictNotRequiredAccess]
                 if e
             ]
 
@@ -78,17 +79,17 @@ class YouTubeExtractor(Extractor):
         with traced(f'is_playlist={is_pl}, entries={len(entries) if entries else 0}'):
             return MediaInfo(
                 id=raw.get("id", ""),
-                title=raw.get("title", ""),
-                url=raw.get("webpage_url", url),
-                duration=raw.get("duration", 0),
-                uploader=raw.get("uploader", ""),
+                title=raw.get("title", ""), # pyright: ignore[reportArgumentType]
+                url=raw.get("webpage_url", url), # pyright: ignore[reportArgumentType]
+                duration=raw.get("duration", 0), # pyright: ignore[reportArgumentType]
+                uploader=raw.get("uploader", ""), # pyright: ignore[reportArgumentType]
                 artist=raw.get("artist"),
                 track=raw.get("track"),
                 album=raw.get("album"),
-                description=raw.get("description", ""),
+                description=raw.get("description", ""), # pyright: ignore[reportArgumentType]
                 thumbnail=raw.get("thumbnail"),
-                thumbnails=raw.get("thumbnails", []),
-                webpage_url=raw.get("webpage_url", url),
+                thumbnails=raw.get("thumbnails", []), # pyright: ignore[reportArgumentType]
+                webpage_url=raw.get("webpage_url", url), # pyright: ignore[reportArgumentType]
                 is_playlist=is_pl,
                 entries=entries,
             )

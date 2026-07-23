@@ -4,7 +4,8 @@ TetoDL - An User Friendly and Configurable TUI/CLI Media Downloader
 import sys
 import os
 
-__version__ = "2.1.0"
+from .constants import APP_VERSION
+__version__ = APP_VERSION
 __author__ = "rannd1nt"
 
 if sys.platform == "win32":

@@ -514,43 +514,6 @@ class _DaemonFailedRemoveSystemdCallable:
         """
         return ("daemon.failed_remove_systemd", {"error": error})
 
-class _DaemonMdnsBroadcastActiveCallable:
-    """
-    [Callable Props Type] MdnsBroadcastActive
-    
-    Original template: "mDNS Broadcast active. You can access via: http://{hostname}:{port}"
-    """
-    def __call__(self, *, hostname: str | int, port: str | int) -> tuple[str, dict]:
-        """
-        Formats the translation string.
-        
-        Args:
-            hostname (str | int): Dynamic value for {hostname}.
-            port (str | int): Dynamic value for {port}.
-        
-        Returns:
-            tuple[str, dict]: Key path and formatting dictionary.
-        """
-        return ("daemon.mdns_broadcast_active", {"hostname": hostname, "port": port})
-
-class _DaemonMdnsBroadcastFailedCallable:
-    """
-    [Callable Props Type] MdnsBroadcastFailed
-    
-    Original template: "mDNS Broadcast failed (Zeroconf might not be supported on this network): {error}"
-    """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
-        """
-        Formats the translation string.
-        
-        Args:
-            error (Exception | str | int): Dynamic value for {error}.
-        
-        Returns:
-            tuple[str, dict]: Key path and formatting dictionary.
-        """
-        return ("daemon.mdns_broadcast_failed", {"error": error})
-
 class _DaemonK:
     """
     [Key Type] Daemon
@@ -614,18 +577,6 @@ class _DaemonK:
     [Callable Props Type] FailedRemoveSystemd
     
     Original template: "Failed to remove systemd service: {error}"
-    """
-    mdns_broadcast_active: _DaemonMdnsBroadcastActiveCallable = _DaemonMdnsBroadcastActiveCallable()
-    """
-    [Callable Props Type] MdnsBroadcastActive
-    
-    Original template: "mDNS Broadcast active. You can access via: http://{hostname}:{port}"
-    """
-    mdns_broadcast_failed: _DaemonMdnsBroadcastFailedCallable = _DaemonMdnsBroadcastFailedCallable()
-    """
-    [Callable Props Type] MdnsBroadcastFailed
-    
-    Original template: "mDNS Broadcast failed (Zeroconf might not be supported on this network): {error}"
     """
 
 class _FilesFailedToMoveCallable:
@@ -1729,23 +1680,24 @@ class _CliLanguageSetCallable:
         """
         return ("cli.language_set", {"name": name})
 
-class _CliDelaySetCallable:
+class _CliJitterSetCallable:
     """
-    [Callable Props Type] DelaySet
+    [Callable Props Type] JitterSet
     
-    Original template: "Delay: {delay}s"
+    Original template: "Jitter: {jitter_min}-{jitter_max}s"
     """
-    def __call__(self, *, delay: str | int) -> tuple[str, dict]:
+    def __call__(self, *, jitter_min: str | int, jitter_max: str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            delay (str | int): Dynamic value for {delay}.
+            jitter_min (str | int): Dynamic value for {jitter_min}.
+            jitter_max (str | int): Dynamic value for {jitter_max}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
         """
-        return ("cli.delay_set", {"delay": delay})
+        return ("cli.jitter_set", {"jitter_min": jitter_min, "jitter_max": jitter_max})
 
 class _CliRetriesSetCallable:
     """
@@ -1939,11 +1891,11 @@ class _CliK:
     
     Original template: "Language: {name}"
     """
-    delay_set: _CliDelaySetCallable = _CliDelaySetCallable()
+    jitter_set: _CliJitterSetCallable = _CliJitterSetCallable()
     """
-    [Callable Props Type] DelaySet
+    [Callable Props Type] JitterSet
     
-    Original template: "Delay: {delay}s"
+    Original template: "Jitter: {jitter_min}-{jitter_max}s"
     """
     retries_set: _CliRetriesSetCallable = _CliRetriesSetCallable()
     """
@@ -3417,6 +3369,8 @@ class _DownloadSpotifyK:
     """
     classification_failed: str = "download.spotify.classification_failed"
     """[Props Type] ClassificationFailed"""
+    searching_ytmusic: str = "download.spotify.searching_ytmusic"
+    """[Props Type] SearchingYtmusic"""
     downloading: str = "download.spotify.downloading"
     """[Props Type] Downloading"""
     success: str = "download.spotify.success"
@@ -3731,23 +3685,24 @@ class _DownloadYoutubeFailedCallable:
         """
         return ("download.youtube.failed", {"title": title})
 
-class _DownloadYoutubeWaitDelayCallable:
+class _DownloadYoutubeWaitJitterCallable:
     """
-    [Callable Props Type] WaitDelay
+    [Callable Props Type] WaitJitter
     
-    Original template: "Waiting {delay} seconds before next download..."
+    Original template: "Waiting {jitter_min}-{jitter_max}s before next download..."
     """
-    def __call__(self, *, delay: str | int) -> tuple[str, dict]:
+    def __call__(self, *, jitter_min: str | int, jitter_max: str | int) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            delay (str | int): Dynamic value for {delay}.
+            jitter_min (str | int): Dynamic value for {jitter_min}.
+            jitter_max (str | int): Dynamic value for {jitter_max}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
         """
-        return ("download.youtube.wait_delay", {"delay": delay})
+        return ("download.youtube.wait_jitter", {"jitter_min": jitter_min, "jitter_max": jitter_max})
 
 class _DownloadYoutubeSummaryCallable:
     """
@@ -4003,11 +3958,11 @@ class _DownloadYoutubeK:
     
     Original template: "Failed: {title}"
     """
-    wait_delay: _DownloadYoutubeWaitDelayCallable = _DownloadYoutubeWaitDelayCallable()
+    wait_jitter: _DownloadYoutubeWaitJitterCallable = _DownloadYoutubeWaitJitterCallable()
     """
-    [Callable Props Type] WaitDelay
+    [Callable Props Type] WaitJitter
     
-    Original template: "Waiting {delay} seconds before next download..."
+    Original template: "Waiting {jitter_min}-{jitter_max}s before next download..."
     """
     summary: _DownloadYoutubeSummaryCallable = _DownloadYoutubeSummaryCallable()
     """

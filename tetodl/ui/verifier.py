@@ -12,7 +12,7 @@ from ..core.config import save_config, update_language
 from ..ui.navigation import navigate_folders
 from ..constants import (
     DEFAULT_MUSIC_ROOT, DEFAULT_VIDEO_ROOT,
-    IS_WSL, IS_TERMUX, IS_BINARY,
+    IS_WSL, IS_TERMUX, IS_BINARY, IS_WINDOWS
 )
 from ..core import config as cfg
 from ..utils.display import wait_and_clear_prompt
@@ -189,7 +189,9 @@ def verify_dependencies(header_title=None):
         if IS_TERMUX:
             env_display = "TERMUX (Android)"
         elif IS_WSL:
-            env_display = "WSL (Windows)"
+            env_display = "Windows Subsystem Linux (WSL)"
+        elif IS_WINDOWS:
+            env_display = "Windows"
         
         console.warn(f"Environment Detected: {color(env_display, 'c')}")
         print()
@@ -268,8 +270,10 @@ def verify_dependencies(header_title=None):
         console.ok(Keys.ui.verification_completed)
     
     save_config()
-    clear()
-    verification_header()
+
+    if not header_title:
+        clear()
+        verification_header()
 
     if not header_title:
         wait_and_clear_prompt(msg="Setup Complete! Press enter to start TetoDL...")

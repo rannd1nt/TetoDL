@@ -105,3 +105,29 @@ class TestDispatch:
 
         assert result.success is False
         assert result.cancelled is True
+
+    def test_execute_download_spotify(self, mocker):
+        """execute_download calls download_spotify when is_spotify is True."""
+        mock_spotify = mocker.patch(
+            "tetodl.cli.dispatch.download_spotify",
+            return_value=DownloadResult(success=True, file_path="/music/song.mp3"),
+        )
+        mock_config = mocker.patch("tetodl.cli.dispatch.load_app_config")
+        mock_resolver = mocker.patch("tetodl.cli.dispatch.ConfigResolver")
+        mock_resolver.return_value.resolve.return_value = mock_config.return_value
+
+        from tetodl.cli.dispatch import execute_download
+
+        session = DownloadSession(
+            url="https://open.spotify.com/track/abc",
+            media_type="audio",
+            is_spotify=True,
+        )
+        result = execute_download(session)
+
+        mock_spotify.assert_called_once_with(
+            "https://open.spotify.com/track/abc",
+            session=session,
+            config=mock_config.return_value,
+        )
+        assert result.success is True

@@ -14,10 +14,11 @@ param(
 $ProgressPreference = 'SilentlyContinue'
 $Host.UI.RawUI.WindowTitle = "TetoDL Installer"
 
-Write-Host "----------------------------------" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "  ------------------------------" -ForegroundColor Cyan
 Write-Host "         TetoDL Installer         " -ForegroundColor Cyan
 Write-Host "            (Windows)             " -ForegroundColor Cyan
-Write-Host "----------------------------------" -ForegroundColor Cyan
+Write-Host "  ------------------------------" -ForegroundColor Cyan
 Write-Host ""
 
 # ─────────────────────────────────────────────────
@@ -61,15 +62,26 @@ $downloadUrl = "https://github.com/$repo/releases/download/$tag/tetodl.exe"
 $outputPath = "$installDir\tetodl.exe"
 
 Write-Host ""
-Write-Host "  Downloading tetodl.exe ..." -ForegroundColor Yellow
+Write-Host "  Downloading tetodl.exe" -NoNewline -ForegroundColor Yellow
+
+$wc = [System.Net.WebClient]::new()
+$task = $wc.DownloadFileTaskAsync($downloadUrl, $outputPath)
+$dots = 0
+
+while (-not $task.IsCompleted) {
+    Write-Host "`r  Downloading tetodl.exe$('.' * $dots)$(' ' * (3 - $dots))" -NoNewline
+    $dots = ($dots + 1) % 4
+    Start-Sleep -Milliseconds 500
+}
 
 try {
-    $wc = [System.Net.WebClient]::new()
-    $wc.DownloadFile($downloadUrl, $outputPath)
-}
-catch {
-    Write-Host "  [!] Download failed: $_" -ForegroundColor Red
+    $task.GetAwaiter().GetResult()
+    Write-Host "`r  Downloading tetodl.exe ... Done!" -ForegroundColor Green
+} catch {
+    Write-Host "`r  [!] Download failed: $_" -ForegroundColor Red
     exit 1
+} finally {
+    $wc.Dispose()
 }
 
 # ─────────────────────────────────────────────────

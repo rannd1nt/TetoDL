@@ -19,11 +19,23 @@ from .config import (
 )
 
 from .cache import (
-    load_cache,
-    save_cache,
+    get_cache,
     get_url_hash,
     get_cached_metadata,
-    cache_metadata
+    cache_metadata,
+    get_cache_size,
+    reset_cache,
+    evict_cache,
+    Cache,
+    CacheStats,
+)
+
+from .image_cache import (
+    fetch_image,
+    clear_img_cache,
+    evict_img_cache,
+    img_cache_size,
+    IMG_TTL,
 )
 
 from .history import (
@@ -59,11 +71,15 @@ __all__ = [
     'update_language',
     'get_video_format_string',
     'get_fallback_format_string',
-    'load_cache',
-    'save_cache',
+    'get_cache',
     'get_url_hash',
     'get_cached_metadata',
     'cache_metadata',
+    'get_cache_size',
+    'reset_cache',
+    'evict_cache',
+    'Cache',
+    'CacheStats',
     'load_history',
     'save_history',
     'add_to_history',
@@ -71,5 +87,10 @@ __all__ = [
     'verify_core_dependencies',
     'reset_verification',
     'RegistryManager',
-    'registry'
+    'registry',
+    'fetch_image',
+    'clear_img_cache',
+    'evict_img_cache',
+    'img_cache_size',
+    'IMG_TTL',
 ]

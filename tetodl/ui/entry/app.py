@@ -27,7 +27,7 @@ class App:
     def __init__(self):
         self.update_status = None
 
-    def run(self):
+    def launch(self):
         """Initialize resources and start the main application loop."""
         try:
             handled, result = cli.parse()

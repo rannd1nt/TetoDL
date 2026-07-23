@@ -6,9 +6,9 @@ from __future__ import annotations
 import os
 import abc
 import subprocess
-import requests
-from ..constants import FFMPEG_CMD, IS_WINDOWS, IS_BINARY
+from ..constants import FFMPEG_CMD, IS_WINDOWS, IS_BINARY, YTDLP_CACHE_DIR
 from ..core import config as cfg
+from ..core.image_cache import fetch_image
 from ..core.models import DownloadResult
 from ..utils.i18n_keys import Keys
 from ..utils.console import console
@@ -21,10 +21,6 @@ try:
     from yt_dlp.utils import sanitize_filename
 except Exception:
     yt = None
-
-FAKE_HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-}
 
 
 class ThumbnailProcessor(abc.ABC):
@@ -200,19 +196,16 @@ def download_and_process_thumbnail(info_dict, download_folder, should_crop=True,
             except Exception:
                 pass
             if fetched_data:
-                try:
-                    image_url = fetched_data.get('url')
-                    if image_url:
-                        response = requests.get(image_url, headers=FAKE_HEADERS, timeout=10)
-                        if response.status_code == 200:
-                            source = 'Genius' if fetched_data.get('source') == 'Genius' else 'iTunes'
-                            console.ok(Keys.download.youtube.fetch_success)
-                            console.ok(Keys.media.cover_art_found_via(source=source))
-                            with open(thumbnail_path, 'wb') as f:
-                                f.write(response.content)
-                            return thumbnail_path, fetched_data
-                except Exception:
-                    pass
+                image_url = fetched_data.get('url')
+                if image_url:
+                    img_data = fetch_image(image_url)
+                    if img_data is not None:
+                        source = 'Genius' if fetched_data.get('source') == 'Genius' else 'iTunes'
+                        console.ok(Keys.download.youtube.fetch_success)
+                        console.ok(Keys.media.cover_art_found_via(source=source))
+                        with open(thumbnail_path, 'wb') as f:
+                            f.write(img_data)
+                        return thumbnail_path, fetched_data
 
         candidate_urls = []
         if info_dict.get('thumbnail'):
@@ -224,15 +217,12 @@ def download_and_process_thumbnail(info_dict, download_folder, should_crop=True,
 
         downloaded = False
         for url in candidate_urls:
-            try:
-                response = requests.get(url, headers=FAKE_HEADERS, timeout=10)
-                if response.status_code == 200:
-                    with open(thumbnail_path, 'wb') as f:
-                        f.write(response.content)
-                    downloaded = True
-                    break
-            except Exception:
-                continue
+            img_data = fetch_image(url)
+            if img_data is not None:
+                with open(thumbnail_path, 'wb') as f:
+                    f.write(img_data)
+                downloaded = True
+                break
 
         if downloaded:
             perform_crop = should_crop or (force_crop or cfg.force_crop)
@@ -316,7 +306,7 @@ def download_thumbnail_task(url, target_format='jpg', ui=None):
 
     try:
         with console.spin("Extracting information..."):
-            with yt.YoutubeDL({'quiet': True, 'no_warnings': True}) as ydl:
+            with yt.YoutubeDL({'quiet': True, 'no_warnings': True, 'cachedir': YTDLP_CACHE_DIR}) as ydl:
                 info = ydl.extract_info(url, download=False)
     except Exception as e:
         console.err(Keys.media.extraction_failed(error=str(e)))

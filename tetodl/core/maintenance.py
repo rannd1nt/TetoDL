@@ -53,6 +53,7 @@ def perform_update() -> bool:
 def _perform_binary_update() -> bool:
     """Self-destructive binary update: download → rename → spawn updater."""
     import tempfile
+    from ..constants import APP_VERSION
 
     repo = "rannd1nt/tetodl"
     current_exe = sys.executable
@@ -64,6 +65,11 @@ def _perform_binary_update() -> bool:
             release = json.loads(resp.read())
 
         tag = release["tag_name"]
+        latest_ver = tag.lstrip("v")
+        if latest_ver == APP_VERSION:
+            console.ok(f"TetoDL is already up to date ({APP_VERSION})")
+            return True
+
         asset_name = _binary_asset_name()
         asset_url = None
         for a in release["assets"]:
@@ -253,11 +259,17 @@ def reset_data(targets: list[str]):
 
     # 2. Handle CACHE first
     if 'cache' in targets:
+        from ..core.cache import reset_cache as _reset_cache
+
         has_garbage = False
-        
-        if os.path.exists(CACHE_PATH):
+        cache_root = Path(CACHE_DIR) / "cache"
+
+        if cache_root.is_dir():
             has_garbage = True
-            
+
+        if not has_garbage and os.path.exists(CACHE_PATH):
+            has_garbage = True
+
         if not has_garbage and os.path.exists(TEMP_DIR):
             try:
                 if len(os.listdir(TEMP_DIR)) > 0:
@@ -265,38 +277,24 @@ def reset_data(targets: list[str]):
             except OSError:
                 pass
 
-        if not has_garbage and os.path.exists(CACHE_DIR):
-            try:
-                for item in os.listdir(CACHE_DIR):
-                    os.path.join(CACHE_DIR, item)
-
-                    if item == "temp":
-                        continue
-                    if item == "cache.json":
-                        continue
-
-                    has_garbage = True
-                    break
-            except OSError:
-                pass
-
         if not has_garbage:
             console.warn(Keys.maint.cache_nothing_to_clean)
         else:
+            _reset_cache()
             TempManager.cleanup()
-            
+
+            if cache_root.is_dir():
+                try:
+                    shutil.rmtree(cache_root)
+                except OSError:
+                    pass
+
             if os.path.exists(CACHE_PATH):
                 try:
                     os.remove(CACHE_PATH)
                 except OSError:
                     pass
 
-            if os.path.exists(CACHE_DIR):
-                try:
-                    shutil.rmtree(CACHE_DIR)
-                except OSError:
-                    pass
-                
             console.ok(Keys.maint.cache_cleared)
 
         if len(targets) == 1:

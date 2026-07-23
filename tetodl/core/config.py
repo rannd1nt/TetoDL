@@ -15,7 +15,8 @@ import os
 import json
 from ..constants import (
     CONFIG_PATH, VALID_CONTAINERS, VALID_RESOLUTIONS, REGISTRY_PATH,
-    DEFAULT_MUSIC_ROOT, DEFAULT_VIDEO_ROOT, DEFAULT_THUMBNAIL_ROOT, VALID_CODECS
+    DEFAULT_MUSIC_ROOT, DEFAULT_VIDEO_ROOT, DEFAULT_THUMBNAIL_ROOT, VALID_CODECS,
+    JITTER
 )
 from ..core.models import AppConfig
 from ..utils.console import console
@@ -53,9 +54,9 @@ header_style: str = "default"
 progress_style: str = "minimal"
 
 media_scanner_enabled: bool = False
-download_delay: float = 2.0
+jitter_min: float = JITTER[0]
+jitter_max: float = JITTER[1]
 max_retries: int = 3
-retry_delay: int = 2
 async_workers: int = 3
 daemon_default_temp: bool = True
 daemon_cleanup_interval: int = 3600
@@ -104,7 +105,8 @@ def load_config():
     global music_root, video_root, user_subfolders, simple_mode
     global max_video_resolution, video_container, video_codec, audio_quality
     global progress_style, header_style, skip_existing_files
-    global verified_dependencies, smart_cover_mode, download_delay, max_retries
+    global verified_dependencies, smart_cover_mode, max_retries
+    global jitter_min, jitter_max
     global media_scanner_enabled, daemon_default_temp
     global daemon_cleanup_interval, language
 
@@ -132,7 +134,8 @@ def load_config():
         skip_existing_files = data.get("skip_existing_files", skip_existing_files)
         verified_dependencies = data.get("verified_dependencies", verified_dependencies)
         smart_cover_mode = data.get("smart_cover_mode", smart_cover_mode)
-        download_delay = data.get("download_delay", 2.0)
+        jitter_min = data.get("jitter_min", JITTER[0])
+        jitter_max = data.get("jitter_max", JITTER[1])
         max_retries = data.get("max_retries", 3)
         media_scanner_enabled = data.get("media_scanner_enabled", False)
         daemon_default_temp = data.get("daemon_default_temp", True)
@@ -207,9 +210,9 @@ def load_app_config() -> AppConfig:
         progress_style=progress_style,
         language=language,
         media_scanner_enabled=media_scanner_enabled,
-        download_delay=download_delay,
+        jitter_min=jitter_min,
+        jitter_max=jitter_max,
         max_retries=max_retries,
-        retry_delay=retry_delay,
         async_workers=async_workers,
         daemon_default_temp=daemon_default_temp,
         daemon_cleanup_interval=daemon_cleanup_interval,
@@ -254,7 +257,8 @@ def save_config():
         "progress_style": progress_style,
         "header_style": header_style,
         "skip_existing_files": skip_existing_files,
-        "download_delay": download_delay,
+        "jitter_min": jitter_min,
+        "jitter_max": jitter_max,
         "max_retries": max_retries,
         "media_scanner_enabled": media_scanner_enabled,
         "smart_cover_mode": smart_cover_mode,
@@ -708,10 +712,12 @@ def set_header_style(style_name):
     save_config()
     return True
 
-def set_network_config(delay=None, retries=None):
-    global download_delay, max_retries
-    if delay is not None:
-        download_delay = float(delay)
+def set_jitter_config(min_=None, max_=None, retries=None):
+    global jitter_min, jitter_max, max_retries
+    if min_ is not None:
+        jitter_min = float(min_)
+    if max_ is not None:
+        jitter_max = float(max_)
     if retries is not None:
         max_retries = int(retries)
     save_config()
@@ -842,39 +848,22 @@ def get_fallback_format_string():
 
 
 def clear_cache():
-    """Delete the cache file from disk.
+    """Delete all cache storage (memory + disk).
 
-    Removes the file at :data:`~tetodl.constants.CACHE_PATH` if it exists.
-
-    Parameters
-    ----------
-    None
+    Resets every cache namespace, clearing both in-memory entries
+    and the per-key JSON files on disk.
 
     Returns
     -------
     bool
-        ``True`` if the file was successfully deleted, ``False`` if it did
-        not exist or if an error occurred.
-
-    Example
-    -------
-    >>> from tetodl.core.config import clear_cache
-    >>> clear_cache()
-    True
+        ``True`` if all cache namespaces were successfully cleared.
 
     See Also
     --------
-    :func:`tetodl.core.cache.reset_cache` : In-memory cache reset.
-    :data:`~tetodl.constants.CACHE_PATH` : Cache file location.
+    :func:`tetodl.core.cache.reset_cache` : Low-level cache reset.
     """
-    from ..constants import CACHE_PATH
-    try:
-        if os.path.exists(CACHE_PATH):
-            os.remove(CACHE_PATH)
-            return True
-    except Exception:
-        pass
-    return False
+    from .cache import reset_cache as _reset
+    return _reset()
 
 
 def clear_history():

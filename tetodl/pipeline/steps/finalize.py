@@ -97,9 +97,9 @@ class FinalizeStep(PipelineStep[PipelineContext, PipelineContext]):
             "title": downloaded.title,
             "duration": downloaded.duration,
             "uploader": info.uploader,
-            "artist": info.artist or "",
+            "artist": ctx.spotify_artist or info.artist or "",
             "album": info.album or "",
-            "track": info.track or "",
+            "track": ctx.spotify_title or info.track or "",
             "thumbnails": info.thumbnails,
         })
 
@@ -110,7 +110,7 @@ class FinalizeStep(PipelineStep[PipelineContext, PipelineContext]):
         assert downloaded is not None
         info = downloaded.info
         video_id = info.id if info else extract_video_id(ctx.url)
-        artist = (info.artist or info.uploader or "Unknown Artist") if info else "Unknown Artist"
+        artist = ctx.spotify_artist or ((info.artist or info.uploader or "Unknown Artist") if info else "Unknown Artist")
         album = info.album if info else None
 
         platform = "YouTube Music" if ctx.is_youtube_music else "YouTube Audio"
@@ -129,6 +129,7 @@ class FinalizeStep(PipelineStep[PipelineContext, PipelineContext]):
             download_type=download_type,
             duration=downloaded.duration,
             metadata={"artist": artist, "album": album, "title": downloaded.title},
+            spotify_id=ctx.spotify_id,
         )
 
     @staticmethod

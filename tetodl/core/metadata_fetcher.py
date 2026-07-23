@@ -1,4 +1,3 @@
-import requests
 import re
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
@@ -6,7 +5,9 @@ from typing import Optional, Dict, Any, Generator
 
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
+from ..utils.network import get_session
 from tetodl.utils.tracer import trace, traced
+
 
 class MetadataFetcher:
     """
@@ -16,10 +17,15 @@ class MetadataFetcher:
     utilizing iTunes as the primary source for high-quality cover art and tags, 
     and Genius as a fallback or enrichment source for lyrics and additional details.
     """
+
+    @property
+    def _session(self):
+        return get_session()
     
     HEADERS = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     }
+
 
     @staticmethod
     def _clean_title(title: str, artist: str = "") -> str:
@@ -173,7 +179,7 @@ class MetadataFetcher:
             url = "https://itunes.apple.com/search"
             params = {'term': term, 'media': 'music', 'entity': 'song', 'limit': '10'}
             
-            response = requests.get(url, params=params, timeout=5)
+            response = self._session.get(url, params=params, timeout=5)
             data = response.json()
             
             if data['resultCount'] > 0:
@@ -220,7 +226,7 @@ class MetadataFetcher:
                 search_url = "https://genius.com/api/search/multi"
                 params = {'per_page': '5', 'q': query}
                 
-                resp = requests.get(search_url, params=params, headers=self.HEADERS, timeout=10)
+                resp = self._session.get(search_url, params=params, headers=self.HEADERS, timeout=10)
                 data = resp.json()
                 
                 hits = []
@@ -256,7 +262,7 @@ class MetadataFetcher:
                 song_id = best_hit_summary['id']
                 details_url = f"https://genius.com/api/songs/{song_id}"
                 
-                details_resp = requests.get(details_url, headers=self.HEADERS, timeout=10)
+                details_resp = self._session.get(details_url, headers=self.HEADERS, timeout=10)
                 details_data = details_resp.json()
                 
                 song_details = {}
@@ -313,6 +319,14 @@ class MetadataFetcher:
         2. If iTunes succeeds, attempts to enrich data (composers, dates) via Genius.
         3. If iTunes fails, falls back completely to Genius.
         """
+        from .cache import get_cache
+
+        cache = get_cache("cover")
+        ck = f"meta:{artist}||{title}"
+        cached = cache.get(ck)
+        if cached is not None:
+            return cached
+
         itunes_data = self.fetch_cover_itunes(artist, title)
 
         if itunes_data:
@@ -337,10 +351,12 @@ class MetadataFetcher:
                 pass
 
             with traced('iTunes success'):
+                cache.set(ck, itunes_data)
                 return itunes_data
 
         with traced('iTunes failed, fallback to Genius'):
             result = self.fetch_cover_genius(artist, title)
+            cache.set(ck, result)
             return result
 
     @trace
@@ -356,6 +372,14 @@ class MetadataFetcher:
         Features strict validation to ensure the lyrics match the requested
         artist/title, and supports Romanized lyrics search for non-English tracks.
         """
+        from .cache import get_cache
+
+        cache = get_cache("lyrics")
+        ck = f"lyr:{artist}||{title}||{romaji}"
+        cached = cache.get(ck)
+        if cached is not None:
+            return cached
+
         target_compare_title = self._clean_title(title, artist)
         clean_artist = artist.replace(' - Topic', '').strip()
         
@@ -364,7 +388,7 @@ class MetadataFetcher:
                 search_url = "https://genius.com/api/search/multi"
                 params = {'per_page': '5', 'q': query}
                 
-                resp = requests.get(search_url, params=params, headers=self.HEADERS, timeout=10)
+                resp = self._session.get(search_url, params=params, headers=self.HEADERS, timeout=10)
                 data = resp.json()
                 
                 hits = []
@@ -411,7 +435,7 @@ class MetadataFetcher:
                     target_url = valid_hits[0]['result']['url']
                     console.warn(Keys.media.fetching_lyrics_from(title=valid_hits[0]['result']['title']))
 
-                page_resp = requests.get(target_url, headers=self.HEADERS, timeout=10)
+                page_resp = self._session.get(target_url, headers=self.HEADERS, timeout=10)
                 soup = BeautifulSoup(page_resp.text, 'html.parser')
                 lyrics_divs = soup.find_all("div", attrs={"data-lyrics-container": "true"})
                 
@@ -424,12 +448,14 @@ class MetadataFetcher:
 
                     cleaned = self._clean_genius_lyrics(lyrics_text)
                     with traced(f'lyrics found ({len(cleaned)} chars)'):
+                        cache.set(ck, cleaned)
                         return cleaned
 
             except Exception:
                 continue
 
         with traced('no lyrics found'):
+            cache.set(ck, None)
             return None
 
 fetcher = MetadataFetcher()

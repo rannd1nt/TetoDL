@@ -98,7 +98,7 @@ class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
         if info is None:
             return ctx
 
-        artist, title = self._resolve_search_terms(info, ctx.cover_result)
+        artist, title = self._resolve_search_terms(info, ctx.cover_result, ctx)
 
         console.proc(Keys.media.searching_lyrics_for(artist=artist, title=title))
         with traced(f'fetching from Genius (romaji={ctx.config.romaji_mode})'):
@@ -131,12 +131,15 @@ class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
     def _resolve_search_terms(
         info: MediaInfo,
         cover_result: Optional[CoverResult],
+        ctx: Optional[PipelineContext] = None,
     ) -> tuple[str, str]:
         """Extract artist and title for the Genius lyrics search.
 
-        Prefers :class:`LyricsMetadata` from the cover step, falls
-        back to parsing the title for a ``"Artist - Title"`` pattern,
-        and finally uses ``info.artist`` / ``info.track``.
+        Priority:
+        1. :class:`LyricsMetadata` from the cover step (iTunes/Genius).
+        2. ``ctx.spotify_title`` / ``ctx.spotify_artist`` (Spotify origin).
+        3. Parse ``info.title`` for a ``"Artist - Title"`` pattern.
+        4. ``info.artist`` / ``info.track``.
 
         Parameters
         ----------
@@ -144,6 +147,8 @@ class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
             Media metadata with artist, track, uploader fields.
         cover_result : Optional[CoverResult]
             Result from the cover step with optional metadata.
+        ctx : Optional[PipelineContext]
+            Pipeline context with Spotify overrides.
 
         Returns
         -------
@@ -152,6 +157,9 @@ class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
         """
         if cover_result and cover_result.metadata:
             return cover_result.metadata.artist, cover_result.metadata.title
+
+        if ctx and ctx.spotify_title:
+            return (ctx.spotify_artist or ""), ctx.spotify_title
 
         raw = info.title or ""
         match = re.match(r"^(.*?)\s+-\s+(.*)$", raw)

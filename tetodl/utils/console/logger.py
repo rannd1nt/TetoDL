@@ -284,7 +284,7 @@ class Console:
         """
         self._print(self.theme.proc, self.theme.proc_color, message, **kwargs)
 
-    @deprecated("Use trace() and traced() instead.")
+    @deprecated("Use `@trace()` and `with traced()` instead.")
     def debug(self, message: str | I18nKey, **kwargs):
         """Print a debug-level message.
 

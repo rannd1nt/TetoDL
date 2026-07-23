@@ -4,6 +4,7 @@ Absorbs logic from old 'yt_helpers' and 'extract_video_id'.
 """
 import re
 
+from ..constants import YTDLP_CACHE_DIR
 from ..core import config as cfg
 from ..utils.network import is_youtube_music_url
 from tetodl.utils.tracer import trace, traced
@@ -64,7 +65,7 @@ def build_audio_postprocessors(audio_format, is_youtube_music=False):
 def extract_all_urls_from_content(url):
     """Extract URLs from Playlist/Album/Single"""
     is_yt_music = is_youtube_music_url(url)
-    ydl_opts = {'extract_flat': True, 'quiet': True, 'no_warnings': True}
+    ydl_opts = {'extract_flat': True, 'quiet': True, 'no_warnings': True, 'cachedir': YTDLP_CACHE_DIR}
 
     try:
         with yt.YoutubeDL(ydl_opts) as ydl:

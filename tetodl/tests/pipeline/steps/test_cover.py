@@ -1,4 +1,3 @@
-from unittest.mock import MagicMock
 
 
 from tetodl.core.models import (
@@ -144,8 +143,8 @@ class TestCoverStep:
         thumb_path.write_text("fake image")
 
         mocker.patch(
-            "tetodl.pipeline.steps.cover.requests.get",
-            return_value=MagicMock(status_code=200, content=b"fake image"),
+            "tetodl.pipeline.steps.cover.fetch_image",
+            return_value=b"fake image",
         )
         mocker.patch(
             "tetodl.pipeline.steps.cover.crop_thumbnail_to_square",

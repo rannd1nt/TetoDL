@@ -15,8 +15,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
+from ..constants import APP_VERSION, YTDLP_CACHE_DIR
 from .models import DownloadRequest, PreviewRequest
-from .discovery import MDNSBroadcaster
 from ..cli.dispatch import execute_download
 from ..core.models import DownloadSession, DownloadResult
 from ..core import config as cfg
@@ -33,7 +33,6 @@ from ..utils.formatters import console as rich_console
 share_launchers: dict[str, Any] = {}
 
 active_tasks: dict[str, Any] = {}
-broadcaster = None
 
 # --- BACKGROUND WORKERS ---
 async def cleanup_worker():
@@ -60,24 +59,14 @@ async def cleanup_worker():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     os.makedirs(TempManager.get_temp_dir(), exist_ok=True)
-    
     cleanup_task = asyncio.create_task(cleanup_worker())
-    
-    global broadcaster
-    port = int(os.getenv("TETODL_PORT", 7370))
-    broadcaster = MDNSBroadcaster(port=port)
-    broadcaster.start()
-    
     yield
-    
-    if broadcaster:
-        broadcaster.stop()
     cleanup_task.cancel()
 
 # --- APP INITIALIZATION ---
 app = FastAPI(
     title="TetoDL Service API", 
-    version="2.1.0", 
+    version=APP_VERSION, 
     description="Full-Featured Web Services for TetoDL",
     lifespan=lifespan
 )
@@ -273,6 +262,8 @@ async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
         except ValueError:
             pass
 
+    is_spotify = bool(req.spotify or (req.url and "spotify.com" in req.url.lower()))
+
     session = DownloadSession(
         url=req.url or '',
         media_type=media_type,
@@ -291,6 +282,7 @@ async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
         romaji=req.romaji,
         async_mode=req.async_mode or False,
         is_temp_session=False,
+        is_spotify=is_spotify,
     )
 
     mode = 'cli_download' if req.url else 'cli_search'
@@ -319,6 +311,47 @@ async def get_task_logs(task_id: str):
 # --- 3. PREVIEW (via yt-dlp extract_info) ---
 @app.post("/api/v1/preview")
 async def preview_media(req: PreviewRequest):
+    # --- Spotify preview path ---
+    if req.url and "spotify.com" in req.url.lower():
+        from ..core.spotify import SpotifyResolver
+        resolver = SpotifyResolver()
+        try:
+            container_name, tracks = resolver.resolve_meta(req.url)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Spotify extraction failed: {e}")
+
+        if not tracks:
+            raise HTTPException(status_code=400, detail="No tracks found")
+
+        entries = [
+            {
+                "id": t.spotify_id,
+                "title": t.title,
+                "artist": t.artist,
+                "artists": t.artists,
+                "album": t.album,
+                "duration": t.duration_ms // 1000,
+                "thumbnail": t.cover_url,
+            }
+            for t in tracks
+        ]
+
+        return {
+            "id": container_name or tracks[0].spotify_id,
+            "title": container_name or f"{tracks[0].title} - {tracks[0].artist}",
+            "duration": sum(t.duration_ms for t in tracks) // 1000,
+            "uploader": tracks[0].artist if tracks else None,
+            "thumbnail": tracks[0].cover_url or None,
+            "description": None,
+            "webpage_url": req.url,
+            "formats": [],
+            "is_playlist": len(tracks) > 1,
+            "available_resolutions": [],
+            "entries": entries,
+            "source": "spotify",
+        }
+
+    # --- YouTube / general preview path ---
     import asyncio as _asyncio
 
     try:
@@ -328,6 +361,7 @@ async def preview_media(req: PreviewRequest):
             'quiet': True,
             'no_warnings': True,
             'extract_flat': 'in_playlist',
+            'cachedir': YTDLP_CACHE_DIR,
         }) as ydl:
             try:
                 info = await _asyncio.wait_for(
@@ -346,7 +380,7 @@ async def preview_media(req: PreviewRequest):
 
     formats = []
     resolutions = set()
-    for f in info.get('formats', []):
+    for f in info.get('formats', []): # pyright: ignore[reportOptionalIterable]
         fmt = {
             'format_id': f.get('format_id'),
             'ext': f.get('ext'),
@@ -441,7 +475,7 @@ async def share_download(request: Request):
     if not os.path.isfile(real):
         raise HTTPException(404, "File not found")
     filename = os.path.basename(real)
-    safe_name = filename.replace('\\', '\\\\').replace('"', '\\"')
+    safe_name = filename.encode('ascii', 'ignore').decode('ascii') or 'download'
     encoded_name = urllib.parse.quote(filename, safe='')
     return FileResponse(
         real,
@@ -784,7 +818,74 @@ async def share_launch(request: Request):
     return {"url": url, "port": port, "ip": ip}
 
 
-def run_server(host: str, port: int):
-    """Fungsi entry point untuk uvicorn dari CLI"""
+def run_server(host: str, port: int, verbose: bool = False):
+    """Run the API daemon with spinner + barcode display.
+
+    Parameters
+    ----------
+    host : str
+        Bind address.
+    port : int
+        Bind port.
+    verbose : bool
+        Show uvicorn request logs (default: quiet).
+    """
+    import asyncio as _asyncio
+    import time as _time
+    import threading as _threading
+
+    from ..utils.console import console as _console
+    from ..utils.formatters import color as _color
+    from .display import _get_ip_from_ip_a
+
     os.environ["TETODL_PORT"] = str(port)
-    uvicorn.run(app, host=host, port=port)
+
+    config = uvicorn.Config(
+        app,
+        host=host,
+        port=port,
+        log_level="warning" if not verbose else "info",
+        access_log=verbose,
+    )
+    server = uvicorn.Server(config)
+
+    def _run():
+        _asyncio.run(server.serve())
+
+    thread = _threading.Thread(target=_run, name="uvicorn-server", daemon=True)
+    thread.start()
+
+    with _console.spin("Starting API server..."):
+        while not server.started:
+            _time.sleep(0.05)
+
+    ip = _get_ip_from_ip_a()
+    url = f"http://{ip}:{port}" if ip else f"http://{host}:{port}"
+
+    print()
+    _console.ok(f"TetoDL Daemon URL: {_color(url, 'c')}")
+    _console.warn(f"Port: {port}")
+    print()
+
+    try:
+        import qrcode as _qr
+
+        _qr_code = _qr.QRCode(version=1, box_size=1, border=1)
+        _qr_code.add_data(url)
+        _qr_code.make(fit=True)
+        _qr_code.print_ascii(invert=True)
+        print()
+        _console.warn("Scan the QR code or open the URL in your browser.")
+    except ImportError:
+        _console.warn(f"Open {url} in your browser.")
+
+    _console.warn("Press Ctrl+C to stop the server.")
+
+    try:
+        while thread.is_alive():
+            _time.sleep(1)
+    except KeyboardInterrupt:
+        print()
+        _console.warn("Shutting down server...")
+        server.should_exit = True
+        thread.join(timeout=5)

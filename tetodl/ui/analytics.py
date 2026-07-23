@@ -20,7 +20,7 @@ from ..utils.processing import get_platform_badge
 def render_analytics_view():
     """Hanya menampilkan output Visual Analytics (Tanpa Loop/Clear)"""
     
-    if not registry.data:
+    if not registry.data.get("youtube"):
         console.print(Panel("[red]Registry database is empty. Download something first![/red]", title="No Data", border_style="red"))
         return False
 

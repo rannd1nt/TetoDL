@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+import pytest
 
 from tetodl.core.models import CliDownload, CliExit, CliMenu, CliSearch
 
@@ -106,3 +107,87 @@ class TestCLIParser:
         assert isinstance(result, CliSearch)
         assert result.query == "never gonna give you up"
         assert result.limit == 5
+
+    # --- Spotify flag tests ---
+
+    @patch("tetodl.cli.parser.sys.argv", ["tetodl", "https://open.spotify.com/track/abc", "--spotify"])
+    def test_spotify_flag_explicit(self):
+        """--spotify flag + Spotify URL produces is_spotify=True."""
+        from tetodl.cli.parser import CLIHandler
+
+        handler = CLIHandler()
+        handled, result = handler.parse()
+
+        assert handled is False
+        assert isinstance(result, CliDownload)
+        assert result.session.is_spotify is True
+        assert result.session.media_type == "audio"
+
+    @patch("tetodl.cli.parser.sys.argv", ["tetodl", "https://open.spotify.com/track/abc"])
+    def test_spotify_auto_detect(self):
+        """Spotify URL without --spotify flag auto-detects is_spotify=True."""
+        from tetodl.cli.parser import CLIHandler
+
+        handler = CLIHandler()
+        handled, result = handler.parse()
+
+        assert handled is False
+        assert isinstance(result, CliDownload)
+        assert result.session.is_spotify is True
+        assert result.session.media_type == "audio"
+
+    @patch("tetodl.cli.parser.sys.argv", ["tetodl", "https://open.spotify.com/track/abc", "--video"])
+    def test_spotify_video_conflict(self):
+        """--spotify + --video should error."""
+        from tetodl.cli.parser import CLIHandler
+
+        handler = CLIHandler()
+        with pytest.raises(SystemExit):
+            handler.parse()
+
+    @patch("tetodl.cli.parser.sys.argv", ["tetodl", "--spotify"])
+    def test_spotify_without_url(self):
+        """--spotify without URL or search should error."""
+        from tetodl.cli.parser import CLIHandler
+
+        handler = CLIHandler()
+        with pytest.raises(SystemExit):
+            handler.parse()
+
+    @patch("tetodl.cli.parser.sys.argv", ["tetodl", "https://open.spotify.com/playlist/pl", "--lyrics", "--group"])
+    def test_spotify_with_other_flags(self):
+        """--spotify works with --lyrics and --group."""
+        from tetodl.cli.parser import CLIHandler
+
+        handler = CLIHandler()
+        handled, result = handler.parse()
+
+        assert handled is False
+        assert isinstance(result, CliDownload)
+        assert result.session.is_spotify is True
+        assert result.session.lyrics is True
+        assert result.session.group_folder is not False
+
+    @patch("tetodl.cli.parser.sys.argv", ["tetodl", "https://open.spotify.com/album/al", "--spotify", "--format", "mp3"])
+    def test_spotify_with_format(self):
+        """--spotify works with --format."""
+        from tetodl.cli.parser import CLIHandler
+
+        handler = CLIHandler()
+        handled, result = handler.parse()
+
+        assert handled is False
+        assert isinstance(result, CliDownload)
+        assert result.session.is_spotify is True
+
+    @patch("tetodl.cli.parser.sys.argv", ["tetodl", "https://open.spotify.com/track/abc", "--thumbnail-only"])
+    def test_spotify_thumbnail_conflict(self):
+        """--spotify + --thumbnail-only should produce thumbnail session."""
+        from tetodl.cli.parser import CLIHandler
+
+        handler = CLIHandler()
+        handled, result = handler.parse()
+        assert handled is False
+        assert isinstance(result, CliDownload)
+        assert result.session.is_spotify is True
+        assert result.session.media_type == "thumbnail"
