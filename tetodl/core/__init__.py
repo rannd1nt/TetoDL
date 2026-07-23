@@ -3,94 +3,76 @@ Core application logic managing configuration, session history, dependency, regi
 and global state.
 """
 
-from .config import (
-    load_config,
-    save_config,
-    cleanup_ghost_subfolders,
-    initialize_config,
-    reset_to_defaults,
-    update_language,
-    toggle_simple_mode,
-    toggle_skip_existing,
-    set_progress_style,
-    set_video_resolution,
-    get_video_format_string,
-    get_fallback_format_string
-)
-
 from .cache import (
-    get_cache,
-    get_url_hash,
-    get_cached_metadata,
-    cache_metadata,
-    get_cache_size,
-    reset_cache,
-    evict_cache,
     Cache,
     CacheStats,
+    cache_metadata,
+    evict_cache,
+    get_cache,
+    get_cache_size,
+    get_cached_metadata,
+    get_url_hash,
+    reset_cache,
 )
-
+from .config import (
+    cleanup_ghost_subfolders,
+    get_fallback_format_string,
+    get_video_format_string,
+    initialize_config,
+    load_config,
+    reset_to_defaults,
+    save_config,
+    set_progress_style,
+    set_video_resolution,
+    toggle_simple_mode,
+    toggle_skip_existing,
+    update_language,
+)
+from .dependency import reset_verification, verify_core_dependencies
+from .history import add_to_history, get_history_stats, load_history, save_history
 from .image_cache import (
-    fetch_image,
+    IMG_TTL,
     clear_img_cache,
     evict_img_cache,
+    fetch_image,
     img_cache_size,
-    IMG_TTL,
 )
-
-from .history import (
-    load_history,
-    save_history,
-    add_to_history,
-    get_history_stats
-)
-
-from .dependency import (
-    verify_core_dependencies,
-    reset_verification
-)
-
-from .registry import (
-    RegistryManager,
-    registry
-)
-
-
+from .registry import RegistryManager, registry
 
 __all__ = [
-    'load_config',
-    'save_config',
-    'cleanup_ghost_subfolders',
-    'initialize_config',
-    'reset_to_defaults',
-    'toggle_simple_mode',
-    'toggle_skip_existing',
-    'toggle_media_scanner',
-    'set_progress_style',
-    'set_video_resolution',
-    'update_language',
-    'get_video_format_string',
-    'get_fallback_format_string',
-    'get_cache',
-    'get_url_hash',
-    'get_cached_metadata',
-    'cache_metadata',
-    'get_cache_size',
-    'reset_cache',
-    'evict_cache',
+    'IMG_TTL',
     'Cache',
     'CacheStats',
-    'load_history',
-    'save_history',
-    'add_to_history',
-    'get_history_stats',
-    'verify_core_dependencies',
-    'reset_verification',
     'RegistryManager',
-    'registry',
-    'fetch_image',
+    'add_to_history',
+    'cache_metadata',
+    'cleanup_ghost_subfolders',
     'clear_img_cache',
+    'evict_cache',
     'evict_img_cache',
+    'fetch_image',
+    'get_cache',
+    'get_cache_size',
+    'get_cached_metadata',
+    'get_fallback_format_string',
+    'get_history_stats',
+    'get_url_hash',
+    'get_video_format_string',
     'img_cache_size',
-    'IMG_TTL',
+    'initialize_config',
+    'load_config',
+    'load_history',
+    'registry',
+    'reset_cache',
+    'reset_to_defaults',
+    'reset_verification',
+    'save_config',
+    'save_history',
+    'set_progress_style',
+    'set_video_resolution',
+    'toggle_media_scanner',
+    'toggle_simple_mode',
+    'toggle_skip_existing',
+    'update_language',
+    'verify_core_dependencies',
 ]

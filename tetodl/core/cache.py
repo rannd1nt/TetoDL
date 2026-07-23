@@ -2,13 +2,13 @@
 Multi-layer cache system: in-memory LRU + disk file-per-key with TTL.
 """
 
+import atexit
 import gc
-import json
-import time
 import hashlib
+import json
 import shutil
 import threading
-import atexit
+import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,7 +16,6 @@ from typing import Any
 
 from ..constants import CACHE_DIR
 from ..utils.console import console
-
 
 # ── data types ──────────────────────────────────────────────────────────
 
@@ -28,7 +27,7 @@ class CacheStats:
 
 
 class _MemEntry:
-    __slots__ = ("value", "created", "ttl")
+    __slots__ = ("created", "ttl", "value")
     def __init__(self, value: Any, created: float, ttl: float) -> None:
         self.value = value
         self.created = created

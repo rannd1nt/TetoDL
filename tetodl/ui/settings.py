@@ -1,28 +1,38 @@
 import os
 import time
+
 import questionary
+from questionary import Choice, Separator
 from rich import box
 from rich.table import Table
-from questionary import Choice, Separator
 
+from ..constants import AUDIO_QUALITY_OPTIONS, VALID_CODECS, VALID_RESOLUTIONS
+from ..core import config as cfg
 from ..core.cache import get_cache_size
+from ..core.config import (
+    clear_cache,
+    get_audio_quality_info,
+    get_language_name,
+    reset_to_defaults,
+    save_config,
+    set_video_codec,
+    set_video_resolution,
+    toggle_audio_quality,
+    toggle_simple_mode,
+    toggle_skip_existing,
+    toggle_smart_cover,
+    toggle_video_container,
+    update_language,
+)
 from ..ui.navigation import navigate_folders, remove_nomedia_file
 from ..utils.console import console
-from ..utils.formatters import (
-    clear, color, menu_style, colored_switch, console as rich_console
-)
-from ..utils.i18n import get_language_display_name, get_available_languages, get_text as _
-from ..utils.i18n_keys import Keys
 from ..utils.display import formatted_video_codec
-from ..constants import AUDIO_QUALITY_OPTIONS, VALID_RESOLUTIONS, VALID_CODECS
-from ..core import config as cfg
 from ..utils.files import get_free_space
-from ..core.config import (
-    save_config, reset_to_defaults, toggle_video_container,
-    toggle_simple_mode, toggle_skip_existing, set_video_resolution,
-    clear_cache, get_language_name, update_language, toggle_audio_quality,
-    get_audio_quality_info, toggle_smart_cover, set_video_codec
-)
+from ..utils.formatters import clear, color, colored_switch, menu_style
+from ..utils.formatters import console as rich_console
+from ..utils.i18n import get_available_languages, get_language_display_name
+from ..utils.i18n import get_text as _
+from ..utils.i18n_keys import Keys
 
 
 def menu_audio_quality():

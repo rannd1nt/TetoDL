@@ -3,11 +3,11 @@ ExtractStep — fetch media metadata using the registered extractor.
 """
 
 import tetodl.extractors  # noqa: F401 — auto-registers extractors
+from tetodl.utils.tracer import trace, traced
 
 from ...core.extractor import resolve_extractor
 from ...core.models import PipelineContext
-from ...core.step import PipelineStep, PipelineError
-from tetodl.utils.tracer import trace, traced
+from ...core.step import PipelineError, PipelineStep
 
 
 class ExtractStep(PipelineStep[PipelineContext, PipelineContext]):

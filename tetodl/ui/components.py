@@ -1,11 +1,12 @@
 import sys
-from threading import Thread
 import threading
+from threading import Thread
 
 from ..core import config as cfg
-from ..utils.i18n import get_text as _
 from ..utils.display import show_ascii
-from ..utils.formatters import Colors, console, clear
+from ..utils.formatters import Colors, clear, console
+from ..utils.i18n import get_text as _
+
 
 def run_in_thread(fn, *args, **kwargs):
     """Run function in a separate thread"""

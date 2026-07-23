@@ -97,7 +97,6 @@ def pytest_runtest_call(item: pytest.Item) -> None:
     """
     # The fixture is automatically injected — no extra work needed here.
     # The fixture itself lives in conftest.py and provides the traced() wrapper.
-    pass
 
 
 # ---------------------------------------------------------------------------

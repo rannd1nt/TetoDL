@@ -1,6 +1,5 @@
 from unittest.mock import MagicMock, patch
 
-
 from tetodl.core.models import MediaInfo, PipelineContext
 from tetodl.core.step import PipelineError
 from tetodl.pipeline.steps.extract import ExtractStep

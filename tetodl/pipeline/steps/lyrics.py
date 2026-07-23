@@ -4,15 +4,15 @@ LyricsStep — fetch and embed lyrics into an audio file via Genius.
 
 import os
 import re
-from typing import Optional
 
+from tetodl.utils.tracer import trace, traced
+
+from ...core.metadata_fetcher import fetcher
 from ...core.models import CoverResult, MediaInfo, PipelineContext
 from ...core.step import PipelineStep
 from ...core.tagger import embed_lyrics
-from ...utils.i18n_keys import Keys
 from ...utils.console import console
-from tetodl.utils.tracer import trace, traced
-from ...core.metadata_fetcher import fetcher
+from ...utils.i18n_keys import Keys
 
 
 class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
@@ -130,8 +130,8 @@ class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
     @staticmethod
     def _resolve_search_terms(
         info: MediaInfo,
-        cover_result: Optional[CoverResult],
-        ctx: Optional[PipelineContext] = None,
+        cover_result: CoverResult | None,
+        ctx: PipelineContext | None = None,
     ) -> tuple[str, str]:
         """Extract artist and title for the Genius lyrics search.
 

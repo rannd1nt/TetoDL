@@ -14,7 +14,6 @@ Usage::
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Type
 
 from .models import MediaInfo
 from .step import PipelineError
@@ -52,10 +51,10 @@ class Extractor(ABC):
         """
 
 
-_registry: List[Type[Extractor]] = []
+_registry: list[type[Extractor]] = []
 
 
-def register_extractor(cls: Type[Extractor]) -> None:
+def register_extractor(cls: type[Extractor]) -> None:
     """Register an extractor class in the global registry.
 
     Parameters

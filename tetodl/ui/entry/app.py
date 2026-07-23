@@ -3,22 +3,20 @@ App: The main application controller.
 """
 import sys
 
+from tetodl.cli.parser import cli
 from tetodl.constants import IS_TERMUX
-
-from . import bootstrap
-from . import menu
-
-from tetodl.ui.components import header, thread_cancel_handle, run_in_thread
+from tetodl.core.config import load_app_config, save_config
+from tetodl.core.models import CliDownload, CliMenu, CliSearch, DownloadSession
+from tetodl.core.search import perform_youtube_search
+from tetodl.ui.components import header, run_in_thread, thread_cancel_handle
 from tetodl.ui.provider import TUIProvider
 from tetodl.utils.console import console
-from tetodl.utils.formatters import clear
 from tetodl.utils.display import wait_and_clear_prompt
+from tetodl.utils.formatters import clear
 from tetodl.utils.i18n_keys import Keys
 
-from tetodl.cli.parser import cli
-from tetodl.core.models import CliDownload, CliSearch, CliMenu, DownloadSession
-from tetodl.core.config import save_config, load_app_config
-from tetodl.core.search import perform_youtube_search
+from . import bootstrap, menu
+
 
 class App:
     """

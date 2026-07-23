@@ -2,17 +2,23 @@
 Dispatch: Handles CLI Execution Logic (Headless Mode).
 """
 import os
-from tetodl.utils.console import console
-from tetodl.utils.i18n_keys import Keys
-from tetodl.utils.tracer import trace, traced
-from tetodl.utils.files import TempManager, move_contents_and_cleanup
-from tetodl.utils.network import start_share_server
-from tetodl.core.models import DownloadSession, DownloadResult
-from tetodl.core.config import load_app_config
-from tetodl.core.resolver import ConfigResolver
 
-from tetodl.pipeline.handlers import download_audio_youtube, download_spotify, download_spotify_thumbnail, download_video_youtube
+from tetodl.core.config import load_app_config
+from tetodl.core.models import DownloadResult, DownloadSession
+from tetodl.core.resolver import ConfigResolver
+from tetodl.pipeline.handlers import (
+    download_audio_youtube,
+    download_spotify,
+    download_spotify_thumbnail,
+    download_video_youtube,
+)
+from tetodl.utils.console import console
+from tetodl.utils.files import TempManager, move_contents_and_cleanup
+from tetodl.utils.i18n_keys import Keys
+from tetodl.utils.network import start_share_server
 from tetodl.utils.thumbnail import download_thumbnail_task
+from tetodl.utils.tracer import trace, traced
+
 
 @trace
 def execute_download(session: DownloadSession):
@@ -64,7 +70,6 @@ def execute_download(session: DownloadSession):
                                     start_share_server(path_to_share)
                                 except KeyboardInterrupt:
                                     print()
-                                    pass
 
                                 if result.is_staging and not session.is_temp_session:
                                     with traced('moving files from staging'):

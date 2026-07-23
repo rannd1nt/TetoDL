@@ -10,15 +10,17 @@ See Also
 :func:`verify_core_dependencies` : Orchestrate all dependency checks.
 :class:`tetodl.core.resolver.ConfigResolver` : Configuration resolution.
 """
-import sys
+import importlib.util
 import os
 import shutil
-import requests
-import importlib.util
+import sys
 import time
-from ..constants import IS_WINDOWS, IS_BINARY, YTDLP_OVERRIDE_DIR
-from ..utils.i18n_keys import Keys
+
+import requests
+
+from ..constants import IS_BINARY, IS_WINDOWS, YTDLP_OVERRIDE_DIR
 from ..utils.console import console
+from ..utils.i18n_keys import Keys
 from . import config as cfg
 
 
@@ -240,9 +242,9 @@ def get_ytdlp_version_info():
 
 def _update_ytdlp_binary_mode(latest_version: str) -> bool:
     """Download yt-dlp wheel from PyPI, extract to override dir, activate it."""
-    import zipfile
     import io
     import shutil
+    import zipfile
 
     try:
         print()

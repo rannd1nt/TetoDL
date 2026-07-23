@@ -1,12 +1,12 @@
 from ..constants import IS_TERMUX, YTDLP_CACHE_DIR
 from ..utils.console import console
-from ..utils.i18n_keys import Keys
 from ..utils.formatters import (
     color,
+    format_duration_digital,
     search_style,
     truncate_title,
-    format_duration_digital
 )
+from ..utils.i18n_keys import Keys
 
 try:
     import yt_dlp as yt

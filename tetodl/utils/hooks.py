@@ -3,7 +3,9 @@ Hooks Utility
 Provides logging handlers and progress hooks for different UI styles.
 """
 import sys
-from typing import Any, Dict, Optional, Union, Callable
+from collections.abc import Callable
+from typing import Any, Optional, Union
+
 from ..utils.console import console
 
 _ACTIVE_RICH: Optional['RichProgressManager'] = None
@@ -32,7 +34,7 @@ class QuietLogger:
             return 
         print(msg)
 
-def _hook_minimal(d: Dict[str, Any]) -> None:
+def _hook_minimal(d: dict[str, Any]) -> None:
     """Provides a simple text-based progress output."""
     if d['status'] == 'downloading':
         p = d.get('_percent_str', '0%').strip()
@@ -46,7 +48,7 @@ def _hook_minimal(d: Dict[str, Any]) -> None:
         sys.stdout.write('\r\033[K')
         sys.stdout.flush()
 
-def _hook_classic(d: Dict[str, Any]) -> None:
+def _hook_classic(d: dict[str, Any]) -> None:
     """Provides a classic progress bar output."""
     if d['status'] == 'downloading':
         try:
@@ -76,13 +78,19 @@ def _hook_classic(d: Dict[str, Any]) -> None:
         sys.stdout.flush()
 
 try:
-    from rich.progress import Progress, BarColumn, TextColumn, TransferSpeedColumn, TimeRemainingColumn
+    from rich.progress import (
+        BarColumn,
+        Progress,
+        TextColumn,
+        TimeRemainingColumn,
+        TransferSpeedColumn,
+    )
     
     class RichProgressManager:
         """Manages modern progress bars using the Rich library."""
         
         def __init__(self) -> None:
-            self.progress: Optional[Progress] = None
+            self.progress: Progress | None = None
             self.task_id: Any = None
             global _ACTIVE_RICH
             _ACTIVE_RICH = self
@@ -93,7 +101,7 @@ try:
                 self.progress.stop()
                 self.progress = None
 
-        def __call__(self, d: Dict[str, Any]) -> None:
+        def __call__(self, d: dict[str, Any]) -> None:
             if d['status'] == 'downloading':
                 total = d.get('total_bytes') or d.get('total_bytes_estimate') or 0
                 downloaded = d.get('downloaded_bytes', 0)
@@ -131,7 +139,7 @@ class EncodingSpinnerHook:
         self.text = text
         self.is_running: bool = False 
 
-    def __call__(self, d: Dict[str, Any]) -> None:
+    def __call__(self, d: dict[str, Any]) -> None:
         if d['status'] == 'started':
             if not self.is_running:
                 console.proc(self.text)
@@ -143,7 +151,7 @@ class EncodingSpinnerHook:
                 sys.stdout.flush()
                 self.is_running = False
 
-def get_progress_hook(style_name: str = 'minimal') -> Union[Callable[[Dict[str, Any]], None], 'RichProgressManager']:
+def get_progress_hook(style_name: str = 'minimal') -> Union[Callable[[dict[str, Any]], None], 'RichProgressManager']:
     """Factory function to select the progress hook style."""
     if style_name == 'modern' and _HAS_RICH:
         return RichProgressManager()

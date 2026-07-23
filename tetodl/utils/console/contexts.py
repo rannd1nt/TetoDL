@@ -15,10 +15,11 @@ See Also
 :meth:`Console.spin`
 """
 import sys
-import time
 import threading
-from typing import Any
+import time
 from contextlib import AbstractContextManager
+from typing import Any
+
 
 class ConsoleStateContext(AbstractContextManager):
     """Temporarily override console state attributes within a ``with`` block.

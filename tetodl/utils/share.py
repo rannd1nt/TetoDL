@@ -2,12 +2,13 @@
 FastAPI-based file sharing & media player for TetoDL.
 Replaces the legacy http.server implementation (server_styles.py).
 """
+import html
 import os
 import re
-import html
 import urllib.parse
 from pathlib import Path
-from fastapi import APIRouter, Request, HTTPException
+
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 
 _STATIC_DIR = Path(__file__).parent / "share_static"

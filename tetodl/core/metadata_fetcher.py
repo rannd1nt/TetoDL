@@ -1,12 +1,15 @@
 import re
-from bs4 import BeautifulSoup
+from collections.abc import Generator
 from difflib import SequenceMatcher
-from typing import Optional, Dict, Any, Generator
+from typing import Any
+
+from bs4 import BeautifulSoup
+
+from tetodl.utils.tracer import trace, traced
 
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
 from ..utils.network import get_session
-from tetodl.utils.tracer import trace, traced
 
 
 class MetadataFetcher:
@@ -93,8 +96,8 @@ class MetadataFetcher:
         self, 
         search_title: str, 
         result_title: str, 
-        search_artist: Optional[str] = None, 
-        result_artist: Optional[str] = None, 
+        search_artist: str | None = None, 
+        result_artist: str | None = None, 
         threshold: float = 0.4
     ) -> bool:
         """
@@ -111,9 +114,7 @@ class MetadataFetcher:
             return False
         
         title_match = False
-        if s1 in s2 or s2 in s1:
-            title_match = True
-        elif SequenceMatcher(None, s1, s2).ratio() >= threshold:
+        if s1 in s2 or s2 in s1 or SequenceMatcher(None, s1, s2).ratio() >= threshold:
             title_match = True
             
         if not title_match:
@@ -127,9 +128,7 @@ class MetadataFetcher:
                 return True
             
             is_artist_match = False
-            if a1 in a2 or a2 in a1:
-                is_artist_match = True
-            elif SequenceMatcher(None, a1, a2).ratio() >= 0.6:
+            if a1 in a2 or a2 in a1 or SequenceMatcher(None, a1, a2).ratio() >= 0.6:
                 is_artist_match = True
             
             if not is_artist_match:
@@ -162,7 +161,7 @@ class MetadataFetcher:
         return lyrics_text
 
     
-    def fetch_cover_itunes(self, artist: str, title: str) -> Optional[Dict[str, Any]]:
+    def fetch_cover_itunes(self, artist: str, title: str) -> dict[str, Any] | None:
         """
         Queries iTunes API for High-Res Cover Art and detailed metadata.
         Returns a dictionary containing artwork URL and tags if found.
@@ -212,7 +211,7 @@ class MetadataFetcher:
         except Exception:
             return None
 
-    def fetch_cover_genius(self, artist: str, title: str) -> Optional[Dict[str, Any]]:
+    def fetch_cover_genius(self, artist: str, title: str) -> dict[str, Any] | None:
         """
         Fallback/Enrichment: Searches Genius API for metadata.
         Useful when iTunes fails or to gather extra fields like Composers.
@@ -311,7 +310,7 @@ class MetadataFetcher:
         return None
 
     @trace
-    def fetch_metadata(self, artist: str, title: str) -> Optional[Dict[str, Any]]:
+    def fetch_metadata(self, artist: str, title: str) -> dict[str, Any] | None:
         """
         Orchestrates the metadata fetching strategy.
 
@@ -365,7 +364,7 @@ class MetadataFetcher:
         artist: str,
         title: str,
         romaji: bool = False
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Scrapes lyrics from Genius.com.
 

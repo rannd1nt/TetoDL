@@ -1,22 +1,24 @@
 """
 Network utilities: internet check, URL validation, FastAPI file sharing
 """
-import re
 import os
-import socket
+import re
 import shutil
-from urllib.parse import quote
-from pathlib import Path
+import socket
 import subprocess
 import webbrowser
+from pathlib import Path
+from urllib.parse import quote
+
 import requests
 from requests.adapters import HTTPAdapter
-from ..utils.i18n_keys import Keys
-from tetodl.utils.tracer import trace
-from .formatters import console as rich_console
-from ..utils.console import console
-from ..constants import IS_TERMUX, IS_WSL
 
+from tetodl.utils.tracer import trace
+
+from ..constants import IS_TERMUX, IS_WSL
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
+from .formatters import console as rich_console
 
 _DEFAULT_HEADERS = {
     "User-Agent": (
@@ -153,6 +155,7 @@ def start_share_server(file_path_str: str, start_port=8989):
     import qrcode
     import uvicorn
     from fastapi import FastAPI
+
     from ..utils.share import create_share_router
 
     path = Path(file_path_str).resolve()

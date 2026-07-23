@@ -4,12 +4,13 @@ FinalizeStep — post-processing bookkeeping after a successful download.
 
 import os
 
+from tetodl.utils.tracer import trace, traced
+
 from ...core.cache import cache_metadata
 from ...core.history import add_to_history
 from ...core.models import PipelineContext
 from ...core.step import PipelineStep
 from ...utils.processing import extract_video_id
-from tetodl.utils.tracer import trace, traced
 
 
 class FinalizeStep(PipelineStep[PipelineContext, PipelineContext]):

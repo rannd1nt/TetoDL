@@ -3,18 +3,22 @@ Folder navigation system
 """
 import os
 import time
+
 import questionary
 from questionary import Choice, Separator
 from rich.padding import Padding
 from rich.text import Text
+
 from ..core import config as cfg
+from ..core.config import cleanup_ghost_subfolders, save_config
 from ..ui.components import header
-from ..utils.i18n import get_text as _
 from ..utils.console import console
-from ..utils.i18n_keys import Keys
-from ..utils.formatters import clear, menu_style, console as rich_console
 from ..utils.files import remove_nomedia_file
-from ..core.config import save_config, cleanup_ghost_subfolders
+from ..utils.formatters import clear, menu_style
+from ..utils.formatters import console as rich_console
+from ..utils.i18n import get_text as _
+from ..utils.i18n_keys import Keys
+
 
 def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
     """

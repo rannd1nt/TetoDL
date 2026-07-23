@@ -5,7 +5,7 @@ Layer: ui
 Imports: core/, utils/, tetodl/ root (allowed for ui layer)
 """
 
-from typing import Protocol, Optional
+from typing import Protocol
 
 
 class UIProvider(Protocol):
@@ -21,7 +21,7 @@ class UIProvider(Protocol):
     def clear(self) -> None:
         """Clear the terminal screen."""
 
-    def wait_and_clear_prompt(self, msg: Optional[str] = None) -> None:
+    def wait_and_clear_prompt(self, msg: str | None = None) -> None:
         """Wait for user input then clear."""
 
 
@@ -40,7 +40,7 @@ class NullUI:
         pass
 
     @staticmethod
-    def wait_and_clear_prompt(msg: Optional[str] = None) -> None:
+    def wait_and_clear_prompt(msg: str | None = None) -> None:
         pass
 
 
@@ -58,6 +58,6 @@ class TUIProvider:
         _tui_clear()
 
     @staticmethod
-    def wait_and_clear_prompt(msg: Optional[str] = None) -> None:
+    def wait_and_clear_prompt(msg: str | None = None) -> None:
         from tetodl.utils.display import wait_and_clear_prompt as _tui_wait
         _tui_wait(msg)

@@ -32,7 +32,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key: pip-lint-${{ hashFiles('pyproject.toml') }}
-      - run: pip install ruff mypy types-requests
+      - run: pip install 'ruff>=0.15,<0.16' mypy types-requests
       - run: ruff check tetodl/
       - run: mypy tetodl/ --ignore-missing-imports --check-untyped-defs
 

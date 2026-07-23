@@ -4,24 +4,25 @@ DownloadStep — download media via yt-dlp.
 
 import glob
 import os
-from typing import Optional
 
 try:
     import yt_dlp as yt
 except ImportError:
     yt = None
 
+from yt_dlp.utils import sanitize_filename
+
+from tetodl.utils.tracer import trace
+
 from ...constants import FFMPEG_CMD, YTDLP_CACHE_DIR
 from ...core.models import DownloadedFile, MediaInfo, PipelineContext
 from ...core.step import PipelineStep
 from ...utils.console import console
-from ...utils.hooks import QuietLogger, get_progress_hook, get_postprocessor_hook
-from tetodl.utils.tracer import trace
+from ...utils.hooks import QuietLogger, get_postprocessor_hook, get_progress_hook
 from ...utils.i18n_keys import Keys
-from yt_dlp.utils import sanitize_filename
 from ...utils.processing import (
-    get_audio_format_string,
     build_audio_postprocessors,
+    get_audio_format_string,
 )
 
 
@@ -55,7 +56,6 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
         -------
         None
         """
-        pass
 
     @trace
     def __call__(self, ctx: PipelineContext) -> PipelineContext:
@@ -307,7 +307,7 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
                     pass
 
     @staticmethod
-    def _find_file(target_dir: str, title: str) -> Optional[str]:
+    def _find_file(target_dir: str, title: str) -> str | None:
         """Search for the downloaded file when the expected path doesn't exist."""
         base = os.path.join(target_dir, title)
         for f in glob.glob(f"{base}.*"):

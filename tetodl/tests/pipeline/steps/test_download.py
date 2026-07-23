@@ -1,7 +1,6 @@
 import os
 from unittest.mock import MagicMock, patch
 
-
 from tetodl.core.models import AppConfig, MediaInfo, PipelineContext
 from tetodl.pipeline.steps.download import DownloadStep
 

@@ -18,7 +18,7 @@ responses >= 0.25
 pytest-xdist >= 3.6
 
 # ===== Code Quality =====
-ruff >= 0.9
+ruff >= 0.15, < 0.16
 
 # ===== Type Checking =====
 mypy >= 1.14

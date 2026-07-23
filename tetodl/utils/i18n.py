@@ -1,13 +1,13 @@
 """
 Internationalization (i18n) utilities
 """
-import os
-import locale
 import json
-from typing import Dict, Any
+import locale
+import os
+from typing import Any
 
 _current_lang = 'id'
-_translations: Dict[str, Any] = {}
+_translations: dict[str, Any] = {}
 _locales_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "locales")
 
 

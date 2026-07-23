@@ -4,18 +4,31 @@ Visualizing Registry Data - Clean & Professional Style
 """
 import re
 import time
-from rich.table import Table
-from rich.panel import Panel
-from rich.align import Align
-from rich import box
+
 import questionary
+from rich import box
+from rich.align import Align
+from rich.panel import Panel
+from rich.table import Table
 
 # Import Registry & Utils
 from ..constants import HISTORY_DISPLAY_LIMIT
+from ..core.history import (
+    calculate_stats,
+    get_history_stats,
+    load_history,
+    reset_history,
+)
 from ..core.registry import registry
-from ..core.history import calculate_stats, load_history, get_history_stats, reset_history
-from ..utils.formatters import clear, menu_style, format_duration, format_duration_digital, console
+from ..utils.formatters import (
+    clear,
+    console,
+    format_duration,
+    format_duration_digital,
+    menu_style,
+)
 from ..utils.processing import get_platform_badge
+
 
 def render_analytics_view():
     """Hanya menampilkan output Visual Analytics (Tanpa Loop/Clear)"""

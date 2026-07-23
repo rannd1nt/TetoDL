@@ -1,7 +1,16 @@
 """Tests for tetodl.utils.formatters."""
 
 import pytest
-from tetodl.utils.formatters import color, clear, Colors, truncate_title, format_duration, format_duration_digital, key_color
+
+from tetodl.utils.formatters import (
+    Colors,
+    clear,
+    color,
+    format_duration,
+    format_duration_digital,
+    key_color,
+    truncate_title,
+)
 
 
 class TestColor:

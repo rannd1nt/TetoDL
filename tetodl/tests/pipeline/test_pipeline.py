@@ -1,6 +1,5 @@
 from unittest.mock import MagicMock, patch
 
-
 from tetodl.core.models import AppConfig, PipelineContext
 from tetodl.pipeline.pipeline import MediaPipeline
 from tetodl.utils.console import console

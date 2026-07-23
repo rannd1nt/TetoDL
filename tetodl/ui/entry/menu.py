@@ -1,20 +1,22 @@
 """
 Menu: Handles TUI rendering, User Input, and Display Logic.
 """
+import subprocess
 import sys
 import time
-import subprocess
+
 import questionary
 from questionary import Choice
 
 from tetodl.constants import IS_TERMUX
 from tetodl.core import config as cfg
-from tetodl.utils.i18n import get_text as _
-from tetodl.utils.console import console
-from tetodl.utils.i18n_keys import Keys
-from tetodl.utils.formatters import clear, color, menu_style
 from tetodl.core.config import get_audio_quality_info
 from tetodl.ui.components import header
+from tetodl.utils.console import console
+from tetodl.utils.formatters import clear, color, menu_style
+from tetodl.utils.i18n import get_text as _
+from tetodl.utils.i18n_keys import Keys
+
 
 def get_menu_labels():
     """Generate dynamic menu labels."""

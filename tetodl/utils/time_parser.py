@@ -2,7 +2,7 @@
 Time parsing utilities for TetoDL.
 Handles flexible formats like HH:MM:SS, MM:SS, or SS.
 """
-from typing import Optional, Tuple, List
+
 
 def time_to_seconds(t_str: str) -> float:
     """
@@ -31,7 +31,7 @@ def time_to_seconds(t_str: str) -> float:
         return 0.0
 
     try:
-        parts: List[float] = [float(p) for p in reversed(t_str.split(':'))]
+        parts: list[float] = [float(p) for p in reversed(t_str.split(':'))]
 
         if len(parts) > 3:
             raise ValueError("Format too long (Max HH:MM:SS)")
@@ -52,7 +52,7 @@ def time_to_seconds(t_str: str) -> float:
             raise ValueError(f"Invalid number format in '{t_str}'")
         raise e
 
-def get_cut_seconds(cut_str: str) -> Optional[Tuple[float, float]]:
+def get_cut_seconds(cut_str: str) -> tuple[float, float] | None:
     """
     Parses the '--cut' argument string into a start and end tuple.
 

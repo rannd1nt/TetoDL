@@ -1,19 +1,31 @@
-import time
-import sys
+import json
 import os
 import shutil
 import subprocess
-import json
+import sys
+import time
 import urllib.request
 from pathlib import Path
-from ..constants import DATA_DIR, CACHE_DIR, CONFIG_DIR, HISTORY_PATH, CONFIG_PATH, REGISTRY_PATH, CACHE_PATH, TEMP_DIR, IS_BINARY
-from ..core.registry import registry
-from ..core.history import reset_history
+
+from ..constants import (
+    CACHE_DIR,
+    CACHE_PATH,
+    CONFIG_DIR,
+    CONFIG_PATH,
+    DATA_DIR,
+    HISTORY_PATH,
+    IS_BINARY,
+    REGISTRY_PATH,
+    TEMP_DIR,
+)
 from ..core.config import reset_config
-from ..utils.files import TempManager
+from ..core.history import reset_history
+from ..core.registry import registry
 from ..utils.console import console
-from ..utils.i18n_keys import Keys
+from ..utils.files import TempManager
 from ..utils.formatters import color
+from ..utils.i18n_keys import Keys
+
 
 def get_project_root() -> Path:
     return Path(__file__).resolve().parent.parent.parent
@@ -53,6 +65,7 @@ def perform_update() -> bool:
 def _perform_binary_update() -> bool:
     """Self-destructive binary update: download → rename → spawn updater."""
     import tempfile
+
     from ..constants import APP_VERSION
 
     repo = "rannd1nt/tetodl"

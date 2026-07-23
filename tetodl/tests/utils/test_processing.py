@@ -1,6 +1,7 @@
 """Tests for tetodl.utils.processing."""
 
 import pytest
+
 from tetodl.utils.processing import extract_video_id
 
 

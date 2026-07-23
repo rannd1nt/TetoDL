@@ -1,18 +1,18 @@
 """
 Download history tracking system
 """
-import os
 import json
-from typing import Any
+import os
 from collections import Counter
 from datetime import datetime
+from typing import Any
+
+from tetodl.utils.tracer import trace
 
 from ..constants import HISTORY_PATH
 from ..core.registry import registry
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
-from tetodl.utils.tracer import trace
-
 
 # Module-level history list
 _download_history: list = []

@@ -3,18 +3,18 @@ CoverStep — fetch, process, and embed cover art into audio files.
 """
 
 import os
-from typing import Optional
+
+from tetodl.utils.tracer import trace, traced
 
 from ...core.image_cache import fetch_image
+from ...core.metadata_fetcher import fetcher
 from ...core.models import CoverResult, LyricsMetadata, MediaInfo, PipelineContext
 from ...core.step import PipelineStep
 from ...core.tagger import embed_metadata
-from ...utils.i18n_keys import Keys
 from ...utils.console import console
-from tetodl.utils.tracer import trace, traced
-from ...core.metadata_fetcher import fetcher
 from ...utils.files import clean_temp_files
-from ...utils.thumbnail import crop_thumbnail_to_square, convert_thumbnail_format
+from ...utils.i18n_keys import Keys
+from ...utils.thumbnail import convert_thumbnail_format, crop_thumbnail_to_square
 
 
 class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
@@ -173,7 +173,7 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _download_url(url: str, target_dir: str, file_id: str) -> Optional[str]:
+    def _download_url(url: str, target_dir: str, file_id: str) -> str | None:
         path = os.path.join(target_dir, f"{file_id}.jpg")
         data = fetch_image(url)
         if data is None:
@@ -186,7 +186,7 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
     def _fetch_metadata_only(
         info: MediaInfo,
         ctx: PipelineContext | None = None,
-    ) -> Optional[dict]:
+    ) -> dict | None:
         if ctx and ctx.spotify_title:
             artist = ctx.spotify_artist or ""
             title = ctx.spotify_title
@@ -211,7 +211,7 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
         info: MediaInfo,
         target_dir: str,
         ctx: PipelineContext | None = None,
-    ) -> tuple[Optional[str], Optional[dict]]:
+    ) -> tuple[str | None, dict | None]:
         """Query iTunes / Genius for high-quality cover artwork.
 
         Parameters
@@ -266,7 +266,7 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
         is_art: bool,
         force_crop: bool = False,
         smart_mode: bool = False,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Download the best available YouTube thumbnail as cover art.
 
         Iterates through ``info.thumbnail`` and ``info.thumbnails``
@@ -324,7 +324,7 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
     @staticmethod
     def _build_metadata(
         info: MediaInfo,
-        fetched: Optional[dict],
+        fetched: dict | None,
         is_art_track: bool,
     ) -> dict:
         """Build a metadata dict for embedding, preferring smart-fetch data.
@@ -354,7 +354,7 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
         return {}
 
     @staticmethod
-    def _to_lyrics_metadata(fetched: Optional[dict]) -> Optional[LyricsMetadata]:
+    def _to_lyrics_metadata(fetched: dict | None) -> LyricsMetadata | None:
         """Convert a smart-fetch metadata dict to a :class:`LyricsMetadata`.
 
         Parameters

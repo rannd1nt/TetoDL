@@ -28,7 +28,7 @@ jobs:
         with:
           path: ~/.cache/pip
           key: pip-source-lint-${{ hashFiles('pyproject.toml') }}
-      - run: pip install ruff mypy types-requests types-colorama
+      - run: pip install 'ruff>=0.15,<0.16' mypy types-requests types-colorama
       - name: Ruff check
         run: ruff check tetodl/
       - name: Mypy check

@@ -2,16 +2,17 @@
 Daemon URL display utility (--display flag).
 Parses ip a for LAN IP, reads port from config/service, prints URL + QR.
 """
+import json
 import os
 import re
-import json
 import subprocess
 from pathlib import Path
 
+from ..constants import CONFIG_PATH, SERVICE_PATH
 from ..utils.console import console
 from ..utils.formatters import color
 from ..utils.i18n_keys import Keys
-from ..constants import SERVICE_PATH, CONFIG_PATH
+
 
 def _get_ip_from_ip_a():
     """Parse `ip -4 -o addr show` for non-loopback inet addresses,

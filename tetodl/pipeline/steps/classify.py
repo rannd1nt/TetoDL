@@ -3,14 +3,14 @@ ClassifyStep — determine whether extracted media is a playlist,
 and optionally check the file registry for existing downloads.
 """
 
-from typing import Optional
+
+from tetodl.utils.tracer import trace, traced
 
 from ...core.models import Classification, DownloadResult, MediaInfo, PipelineContext
 from ...core.registry import registry
 from ...core.step import PipelineStep
 from ...utils.console import console
 from ...utils.i18n_keys import Keys
-from tetodl.utils.tracer import trace, traced
 
 
 class ClassifyStep(PipelineStep[PipelineContext, PipelineContext]):
@@ -121,7 +121,7 @@ class ClassifyStep(PipelineStep[PipelineContext, PipelineContext]):
         self,
         info: MediaInfo,
         ctx: PipelineContext,
-    ) -> Optional[DownloadResult]:
+    ) -> DownloadResult | None:
         """Check the file registry for an existing download by video ID."""
         video_id = info.id
         if not video_id:

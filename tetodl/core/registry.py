@@ -1,8 +1,10 @@
 # core/registry.py
-import os
 import json
-from ..constants import REGISTRY_PATH
+import os
+
 from tetodl.utils.tracer import trace
+
+from ..constants import REGISTRY_PATH
 
 
 class RegistryManager:

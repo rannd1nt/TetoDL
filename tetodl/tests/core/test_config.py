@@ -1,7 +1,6 @@
 import json
 
 
-
 class TestConfigLoad:
     """Tests for config loading behavior."""
 

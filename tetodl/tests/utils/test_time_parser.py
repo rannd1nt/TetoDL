@@ -1,7 +1,8 @@
 """Tests for tetodl.utils.time_parser."""
 
 import pytest
-from tetodl.utils.time_parser import time_to_seconds, get_cut_seconds
+
+from tetodl.utils.time_parser import get_cut_seconds, time_to_seconds
 
 
 class TestTimeToSeconds:

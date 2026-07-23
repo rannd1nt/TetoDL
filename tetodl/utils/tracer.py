@@ -12,21 +12,21 @@ import inspect
 import threading
 import time
 import traceback as tbmod
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Iterator, Literal, ParamSpec, TypeVar, cast
+from typing import Any, Literal, ParamSpec, TypeVar, cast
 
 from .logger import get_debug_mode, is_debug
 
-
 __all__ = [
-    "trace",
-    "traced",
-    "TraceStore",
     "TraceEntry",
+    "TraceStore",
     "get_trace_store",
     "set_dump_path",
+    "trace",
+    "traced",
 ]
 
 

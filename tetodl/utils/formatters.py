@@ -2,8 +2,10 @@
 Color codes and colored print functions
 """
 import os
-from rich.console import Console
 from typing import Literal
+
+from rich.console import Console
+
 console = Console()
 
 def search_style():

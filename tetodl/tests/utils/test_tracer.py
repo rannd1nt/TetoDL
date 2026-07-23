@@ -4,14 +4,14 @@ import json
 
 import pytest
 
-from tetodl.utils.logger import set_debug, is_debug
+from tetodl.utils.logger import is_debug, set_debug
 from tetodl.utils.tracer import (
-    trace,
-    traced,
-    TraceStore,
     TraceEntry,
+    TraceStore,
     get_trace_store,
     set_dump_path,
+    trace,
+    traced,
 )
 
 

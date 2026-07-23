@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import os
 import time
-from typing import Optional
 
 from ..constants import CACHE_DIR
 from ..utils.network import get_session
@@ -29,7 +28,7 @@ def _fresh(path: str, ttl: float) -> bool:
         return False
 
 
-def fetch_image(url: str, ttl: float = IMG_TTL) -> Optional[bytes]:
+def fetch_image(url: str, ttl: float = IMG_TTL) -> bytes | None:
     """Download *url* via pooled session, cache raw bytes on disk.
 
     Returns ``None`` on any error (network, 4xx, 5xx, timeout, …).

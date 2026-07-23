@@ -3,10 +3,9 @@ Pydantic models for TetoDL data flow.
 """
 
 from dataclasses import dataclass
+from typing import Any, Literal, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, field_validator
-from typing import Any, Optional, Literal, Union
-
 
 # =============================================================================
 # Domain-specific sub-configs
@@ -800,12 +799,12 @@ class SessionOverrides(BaseModel):
     :meth:`DownloadSession.config_updates` : Produces an override dict.
     :meth:`DownloadSession.merged_overrides` : Merges flat + structured.
     """
-    output_path: Optional[str] = None
-    format: Optional[str] = None
-    codec: Optional[str] = None
-    resolution: Optional[str] = None
-    cut_range: Optional[tuple[float, float]] = None
-    playlist_items: Optional[set[int]] = None
+    output_path: str | None = None
+    format: str | None = None
+    codec: str | None = None
+    resolution: str | None = None
+    cut_range: tuple[float, float] | None = None
+    playlist_items: set[int] | None = None
     group_folder: bool | str = False
     lyrics: bool = False
     romaji: bool = False
@@ -923,12 +922,12 @@ class DownloadSession(BaseModel):
 
     # Flat fields — used by the CLI parser which passes them as
     # keyword arguments to ``DownloadSession(url=..., format=..., ...)``.
-    output_path: Optional[str] = None
-    format: Optional[str] = None
-    codec: Optional[str] = None
-    resolution: Optional[str] = None
-    cut_range: Optional[tuple[float, float]] = None
-    playlist_items: Optional[set[int]] = None
+    output_path: str | None = None
+    format: str | None = None
+    codec: str | None = None
+    resolution: str | None = None
+    cut_range: tuple[float, float] | None = None
+    playlist_items: set[int] | None = None
     group_folder: bool | str = False
     lyrics: bool = False
     romaji: bool = False
@@ -1173,15 +1172,15 @@ class MediaInfo(BaseModel):
     url: str
     duration: int = 0
     uploader: str = ''
-    artist: Optional[str] = None
-    track: Optional[str] = None
-    album: Optional[str] = None
+    artist: str | None = None
+    track: str | None = None
+    album: str | None = None
     description: str = ''
-    thumbnail: Optional[str] = None
+    thumbnail: str | None = None
     thumbnails: list[dict] = []
     webpage_url: str = ''
     is_playlist: bool = False
-    entries: Optional[list['MediaInfo']] = None
+    entries: list['MediaInfo'] | None = None
 
 
 class DownloadedFile(BaseModel):
@@ -1223,9 +1222,9 @@ class DownloadedFile(BaseModel):
     path: str
     container: str
     title: str
-    artist: Optional[str] = None
+    artist: str | None = None
     duration: int = 0
-    info: Optional[MediaInfo] = None
+    info: MediaInfo | None = None
 
 
 class LyricsMetadata(BaseModel):
@@ -1271,14 +1270,14 @@ class LyricsMetadata(BaseModel):
     """
     artist: str
     title: str
-    album: Optional[str] = None
-    album_artist: Optional[str] = None
-    genre: Optional[str] = None
-    year: Optional[int] = None
-    composer: Optional[str] = None
-    track_number: Optional[str] = None
-    disc_number: Optional[str] = None
-    cover_url: Optional[str] = None
+    album: str | None = None
+    album_artist: str | None = None
+    genre: str | None = None
+    year: int | None = None
+    composer: str | None = None
+    track_number: str | None = None
+    disc_number: str | None = None
+    cover_url: str | None = None
 
 
 class CoverResult(BaseModel):
@@ -1315,7 +1314,7 @@ class CoverResult(BaseModel):
     :class:`DownloadedFile` : The file this cover art belongs to.
     """
     thumbnail_path: str
-    metadata: Optional[LyricsMetadata] = None
+    metadata: LyricsMetadata | None = None
     source: str = 'youtube'
     cropped: bool = False
 
@@ -1358,7 +1357,7 @@ class DownloadTarget(BaseModel):
     filename_template: str
     format_string: str
     postprocessors: list[dict] = []
-    cut_range: Optional[tuple[float, float]] = None
+    cut_range: tuple[float, float] | None = None
 
 
 @dataclass
@@ -1460,20 +1459,20 @@ class PipelineContext:
     target_dir: str
     media_type: str = "audio"
     is_youtube_music: bool = False
-    cut_range: Optional[tuple[float, float]] = None
+    cut_range: tuple[float, float] | None = None
     download_type_label: str = "Download"
-    cover_url: Optional[str] = None
-    spotify_title: Optional[str] = None
-    spotify_artist: Optional[str] = None
-    spotify_id: Optional[str] = None
+    cover_url: str | None = None
+    spotify_title: str | None = None
+    spotify_artist: str | None = None
+    spotify_id: str | None = None
 
     # Populated by steps
-    media_info: Optional[MediaInfo] = None
-    classification: Optional[Classification] = None
-    downloaded_file: Optional[DownloadedFile] = None
-    cover_result: Optional[CoverResult] = None
+    media_info: MediaInfo | None = None
+    classification: Classification | None = None
+    downloaded_file: DownloadedFile | None = None
+    cover_result: CoverResult | None = None
     lyrics_embedded: bool = False
-    error: Optional[str] = None
+    error: str | None = None
 
 
 # =============================================================================
@@ -1540,22 +1539,22 @@ class DownloadResult(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     success: bool
-    file_path: Optional[str] = None
+    file_path: str | None = None
     skipped: bool = False
     suppress_error: bool = False
     cancelled: bool = False
 
     # Playlist
     is_playlist: bool = False
-    file_count: Optional[int] = None
+    file_count: int | None = None
 
     # Staging (for share-temp)
     is_staging: bool = False
-    parent_dir: Optional[str] = None
+    parent_dir: str | None = None
 
     # Metadata
-    title: Optional[str] = None
-    reason: Optional[str] = None
+    title: str | None = None
+    reason: str | None = None
 
     def __getitem__(self, key: str):
         """Dict-style attribute access via ``result[key]``.

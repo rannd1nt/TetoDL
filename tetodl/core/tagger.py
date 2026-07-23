@@ -3,24 +3,36 @@ Audio metadata tagging utilities using Mutagen.
 Handles embedding of Lyrics, Cover Art, and ID3/MP4 tags.
 """
 import os
-from typing import Optional, Dict, Any
+from typing import Any
+
+from tetodl.utils.tracer import trace, traced
 
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
-from tetodl.utils.tracer import trace, traced
 
 try:
     # Import MP3 & ID3 Handlers
-    from mutagen.mp3 import MP3
-    from mutagen.id3 import (
-        ID3, USLT, APIC, TIT2, TPE1, TALB, TPE2, TCOM, TCON, TDRC, TRCK, TPOS, ID3NoHeaderError
-    )
-    
-    # Import MP4/M4A Handlers
-    from mutagen.mp4 import MP4, MP4Cover
-    
     # Import FLAC Handlers
     from mutagen.flac import FLAC
+    from mutagen.id3 import (
+        APIC,
+        ID3,
+        TALB,
+        TCOM,
+        TCON,
+        TDRC,
+        TIT2,
+        TPE1,
+        TPE2,
+        TPOS,
+        TRCK,
+        USLT,
+        ID3NoHeaderError,
+    )
+    from mutagen.mp3 import MP3
+
+    # Import MP4/M4A Handlers
+    from mutagen.mp4 import MP4, MP4Cover
     
     HAS_MUTAGEN = True
 except ImportError:
@@ -86,7 +98,7 @@ def embed_metadata(
     audio_path: str, 
     thumbnail_path: str, 
     audio_format: str, 
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 ) -> bool:
     """
     Embeds Cover Art and Extended Metadata (Composer, Album Artist, Year, etc.).
@@ -133,7 +145,7 @@ def embed_metadata(
                                 encoding=3,        # 3 is UTF-8
                                 mime='image/jpeg', # Default yt-dlp thumb is jpg
                                 type=3,            # 3 is Cover (front)
-                                desc=u'Cover',
+                                desc='Cover',
                                 data=albumart.read()
                             )
                         )

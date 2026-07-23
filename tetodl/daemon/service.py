@@ -1,14 +1,14 @@
+import abc
 import os
-import sys
 import shutil
 import subprocess
-import abc
+import sys
 from pathlib import Path
 
+from ..constants import IS_WINDOWS
 from ..utils.console import console
 from ..utils.formatters import color
 from ..utils.i18n_keys import Keys
-from ..constants import IS_WINDOWS
 
 
 class ServiceManager(abc.ABC):

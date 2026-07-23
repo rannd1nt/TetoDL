@@ -1,23 +1,33 @@
 import argparse
+import os
 import re
 import sys
-import os
-from typing import Tuple, Optional, Literal, cast
+from typing import Literal, cast
 
 from ..constants import (
-    APP_VERSION, AUDIO_QUALITY_OPTIONS, VALID_CONTAINERS, VALID_CODECS,
-    VALID_THUMBNAIL_FORMATS
+    APP_VERSION,
+    AUDIO_QUALITY_OPTIONS,
+    VALID_CODECS,
+    VALID_CONTAINERS,
+    VALID_THUMBNAIL_FORMATS,
 )
 from ..core import config as cfg
-from ..utils.console import console
-from ..utils.i18n_keys import Keys
-from ..utils.formatters import color
 from ..core import config as config_mgr
-from ..core.models import DownloadSession, CliResult, CliDownload, CliSearch, CliMenu, CliExit
-from ..utils.files import TempManager
-from ..utils.network import start_share_server
-from ..utils.display import show_app_info
 from ..core import maintenance
+from ..core.models import (
+    CliDownload,
+    CliExit,
+    CliMenu,
+    CliResult,
+    CliSearch,
+    DownloadSession,
+)
+from ..utils.console import console
+from ..utils.display import show_app_info
+from ..utils.files import TempManager
+from ..utils.formatters import color
+from ..utils.i18n_keys import Keys
+from ..utils.network import start_share_server
 
 _DEBUG_MODES = frozenset({'all', 'errors', 'concise'})
 
@@ -289,7 +299,7 @@ class CLIHandler:
 
         if target_path == 'LATEST':
             config_mgr.load_config()
-            from ..core.history import load_history, _download_history
+            from ..core.history import _download_history, load_history
             load_history()
             if not _download_history:
                 console.err(Keys.cli.no_download_history)
@@ -317,7 +327,6 @@ class CLIHandler:
                             start_share_server(zip_path)
                         except KeyboardInterrupt:
                             print()
-                            pass
                         finally:
                             if os.path.exists(zip_path):
                                 console.warn(Keys.cli.cleaning_temp_archive)
@@ -342,7 +351,6 @@ class CLIHandler:
                 start_share_server(target_path)
             except KeyboardInterrupt:
                 print()
-                pass
         else:
             console.err("Cannot share: Path not found.")
             if target_path:
@@ -503,7 +511,7 @@ class CLIHandler:
 
         return CliMenu(force_recheck=args.recheck)
 
-    def _detect_type_and_format(self, args) -> Tuple[Literal['audio', 'video', 'thumbnail'], Optional[str]]:
+    def _detect_type_and_format(self, args) -> tuple[Literal['audio', 'video', 'thumbnail'], str | None]:
         """Detect media type and validate format."""
         detected_type = None
 
@@ -551,7 +559,7 @@ class CLIHandler:
 
         return cast(Literal['audio', 'video', 'thumbnail'], detected_type), validated_format
 
-    def parse(self) -> Tuple[bool, CliResult]:
+    def parse(self) -> tuple[bool, CliResult]:
         """Returns: (handled, result)"""
         if len(sys.argv) > 1 and sys.argv[1].lower() == 'daemon':
             self._handle_daemon_subcommand()

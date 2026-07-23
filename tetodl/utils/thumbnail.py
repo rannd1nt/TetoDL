@@ -3,18 +3,21 @@ Thumbnail processing — download, crop, convert, and smart-cover lookup.
 Merged from legacy ``media/thumbnail`` and ``downloaders/youtube/tasks``.
 """
 from __future__ import annotations
-import os
+
 import abc
+import os
 import subprocess
-from ..constants import FFMPEG_CMD, IS_WINDOWS, IS_BINARY, YTDLP_CACHE_DIR
+
+from tetodl.utils.tracer import trace
+
+from ..constants import FFMPEG_CMD, IS_BINARY, IS_WINDOWS, YTDLP_CACHE_DIR
 from ..core import config as cfg
 from ..core.image_cache import fetch_image
-from ..core.models import DownloadResult
-from ..utils.i18n_keys import Keys
-from ..utils.console import console
 from ..core.metadata_fetcher import fetcher
+from ..core.models import DownloadResult
+from ..utils.console import console
+from ..utils.i18n_keys import Keys
 from ..utils.network import check_internet
-from tetodl.utils.tracer import trace
 
 try:
     import yt_dlp as yt

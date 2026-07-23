@@ -1,8 +1,8 @@
 """AUTO-GENERATED FILE. DO NOT EDIT."""
 from pathlib import Path
-from typing import TypeAlias, Tuple, Dict, Any, Union
+from typing import Any, TypeAlias
 
-I18nKey: TypeAlias = Union[str, Tuple[str, Dict[str, Any]]]
+I18nKey: TypeAlias = str | tuple[str, dict[str, Any]]
 
 class _UiCoreEngineUpdatedToCallable:
     """

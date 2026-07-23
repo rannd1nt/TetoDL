@@ -1,30 +1,34 @@
-import time
-import sys
 import os
 import subprocess
+import sys
+import time
+
 import questionary
 from questionary import Style
-from ..core.dependency import (
-    verify_core_dependencies,
-    get_ytdlp_version_info
-)
-from ..core.config import save_config, update_language
-from ..ui.navigation import navigate_folders
+
 from ..constants import (
-    DEFAULT_MUSIC_ROOT, DEFAULT_VIDEO_ROOT,
-    IS_WSL, IS_TERMUX, IS_BINARY, IS_WINDOWS
+    DEFAULT_MUSIC_ROOT,
+    DEFAULT_VIDEO_ROOT,
+    IS_BINARY,
+    IS_TERMUX,
+    IS_WINDOWS,
+    IS_WSL,
 )
 from ..core import config as cfg
-from ..utils.display import wait_and_clear_prompt
+from ..core.config import save_config, update_language
+from ..core.dependency import get_ytdlp_version_info, verify_core_dependencies
 from ..ui.components import verification_header
+from ..ui.navigation import navigate_folders
 from ..utils.console import console
-from ..utils.i18n_keys import Keys
-from ..utils.formatters import (
-    clear, color, menu_style
-)
+from ..utils.display import wait_and_clear_prompt
+from ..utils.formatters import clear, color, menu_style
 from ..utils.i18n import (
-    set_language, detect_system_language, get_language_display_name,
+    detect_system_language,
+    get_language_display_name,
+    set_language,
 )
+from ..utils.i18n_keys import Keys
+
 
 def _verif_style():
     return Style([

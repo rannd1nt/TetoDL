@@ -11,7 +11,6 @@ import random
 import shutil
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional
 
 from yt_dlp.utils import sanitize_filename
 
@@ -19,10 +18,9 @@ from ..constants import IS_TERMUX, YTDLP_CACHE_DIR
 from ..core.config import add_user_subfolder
 from ..core.models import AppConfig, DownloadResult, DownloadSession
 from ..core.registry import registry
-from ..ui.provider import UIProvider, NullUI
+from ..ui.provider import NullUI, UIProvider
 from ..utils.console import console
 from ..utils.files import create_zip_archive, remove_nomedia_file
-from ..utils.tracer import trace, traced
 from ..utils.formatters import color
 from ..utils.i18n_keys import Keys
 from ..utils.network import (
@@ -31,7 +29,7 @@ from ..utils.network import (
     is_youtube_music_url,
 )
 from ..utils.processing import extract_all_urls_from_content, extract_video_id
-
+from ..utils.tracer import trace, traced
 from .pipeline import MediaPipeline
 
 
@@ -346,9 +344,9 @@ def download_spotify(
     ui: UIProvider = NullUI(),
 ) -> DownloadResult:
     from ..core.cache import get_cache
+    from ..core.registry import registry
     from ..core.spotify import SpotifyResolver
     from ..core.spotify.errors import SpotifyParseError
-    from ..core.registry import registry
 
     resolver = SpotifyResolver()
     try:
@@ -503,10 +501,11 @@ def download_spotify_thumbnail(
     -------
     DownloadResult
     """
-    from ..core.spotify import SpotifyResolver
-    from ..core.image_cache import fetch_image
     from yt_dlp.utils import sanitize_filename
+
     from ..core import config as cfg
+    from ..core.image_cache import fetch_image
+    from ..core.spotify import SpotifyResolver
 
     target_dir = cfg.thumbnail_root
     if not os.path.exists(target_dir):
@@ -640,9 +639,8 @@ def _execute(
         remove_nomedia_file(target_dir)
 
     # --- URL expansion (playlist / single) ---
-    with traced('expanding URLs'):
-        with console.spin(Keys.download.youtube.extracting):
-            urls, content_title, total_items = extract_all_urls_from_content(url)
+    with traced('expanding URLs'), console.spin(Keys.download.youtube.extracting):
+        urls, content_title, total_items = extract_all_urls_from_content(url)
     console.ok(Keys.download.youtube.extracted(count=total_items, type=extracted_label))
 
     if total_items > 1:
@@ -692,12 +690,12 @@ def _handle_single(
     registry_media_type: str,
     is_youtube_music: bool,
     ui: UIProvider,
-    cut_range: Optional[tuple[float, float]] = None,
+    cut_range: tuple[float, float] | None = None,
     simple: bool = False,
-    cover_url: Optional[str] = None,
-    spotify_title: Optional[str] = None,
-    spotify_artist: Optional[str] = None,
-    spotify_id: Optional[str] = None,
+    cover_url: str | None = None,
+    spotify_title: str | None = None,
+    spotify_artist: str | None = None,
+    spotify_id: str | None = None,
 ) -> DownloadResult:
     """Download a single video or audio item via :class:`MediaPipeline`.
 
@@ -782,16 +780,16 @@ def _handle_playlist(
     registry_media_type: str,
     is_youtube_music: bool,
     ui: UIProvider,
-    cut_range: Optional[tuple[float, float]] = None,
+    cut_range: tuple[float, float] | None = None,
     playlist_items: set[int] | None = None,
-    group_folder: Optional[str | bool] = None,
+    group_folder: str | bool | None = None,
     share_mode: bool = False,
     simple: bool = False,
     zip_mode: bool = False,
-    cover_urls: Optional[list[str]] = None,
-    spotify_titles: Optional[list[str]] = None,
-    spotify_artists: Optional[list[str]] = None,
-    spotify_ids: Optional[list[str]] = None,
+    cover_urls: list[str] | None = None,
+    spotify_titles: list[str] | None = None,
+    spotify_artists: list[str] | None = None,
+    spotify_ids: list[str] | None = None,
 ) -> DownloadResult:
     """Handle a playlist or multi-item download.
 
@@ -853,7 +851,7 @@ def _handle_playlist(
         console.proc(Keys.download.youtube.max_resolution(resolution=config.max_video_resolution))
 
     safe_title = sanitize_filename(content_title)
-    custom_group_name: Optional[str] = None
+    custom_group_name: str | None = None
     m3u_name = content_title
 
     if isinstance(group_folder, str):
@@ -863,7 +861,7 @@ def _handle_playlist(
         custom_group_name = safe_title
 
     final_dir = target_dir
-    parent_if_staging: Optional[str] = None
+    parent_if_staging: str | None = None
     alt_dirs: list[str] = []
     is_staging = False
 
@@ -967,14 +965,14 @@ def _playlist_sequential(
     registry_media_type: str,
     is_youtube_music: bool,
     ui: UIProvider,
-    cut_range: Optional[tuple[float, float]] = None,
+    cut_range: tuple[float, float] | None = None,
     playlist_items: set[int] | None = None,
-    alt_dirs: Optional[list[str]] = None,
+    alt_dirs: list[str] | None = None,
     m3u_name: str = "Playlist",
-    cover_urls: Optional[list[str]] = None,
-    spotify_titles: Optional[list[str]] = None,
-    spotify_artists: Optional[list[str]] = None,
-    spotify_ids: Optional[list[str]] = None,
+    cover_urls: list[str] | None = None,
+    spotify_titles: list[str] | None = None,
+    spotify_artists: list[str] | None = None,
+    spotify_ids: list[str] | None = None,
 ) -> tuple[int, int, int]:
     """Download playlist items one at a time.
 
@@ -1095,12 +1093,12 @@ def _playlist_concurrent(
     registry_media_type: str,
     is_youtube_music: bool,
     ui: UIProvider,
-    cut_range: Optional[tuple[float, float]] = None,
+    cut_range: tuple[float, float] | None = None,
     playlist_items: set[int] | None = None,
-    cover_urls: Optional[list[str]] = None,
-    spotify_titles: Optional[list[str]] = None,
-    spotify_artists: Optional[list[str]] = None,
-    spotify_ids: Optional[list[str]] = None,
+    cover_urls: list[str] | None = None,
+    spotify_titles: list[str] | None = None,
+    spotify_artists: list[str] | None = None,
+    spotify_ids: list[str] | None = None,
 ) -> tuple[int, int, int]:
     """Download playlist items concurrently via a thread pool.
 
@@ -1146,7 +1144,7 @@ def _playlist_concurrent(
     success_count = 0
     skipped_count = 0
     failed_count = 0
-    results_store: list[Optional[str]] = [None] * total
+    results_store: list[str | None] = [None] * total
 
     def _task(index: int, url: str) -> dict:
         if playlist_items is not None and (index + 1) not in playlist_items:
@@ -1225,13 +1223,13 @@ def _pipeline_item(
     registry_media_type: str,
     is_youtube_music: bool,
     ui: UIProvider,
-    cut_range: Optional[tuple[float, float]] = None,
+    cut_range: tuple[float, float] | None = None,
     download_type: str = "Single Track",
-    cover_url: Optional[str] = None,
-    spotify_title: Optional[str] = None,
-    spotify_artist: Optional[str] = None,
-    spotify_id: Optional[str] = None,
-) -> Optional[dict]:
+    cover_url: str | None = None,
+    spotify_title: str | None = None,
+    spotify_artist: str | None = None,
+    spotify_id: str | None = None,
+) -> dict | None:
     """Run :class:`MediaPipeline` for one playlist item.
 
     Parameters
@@ -1299,7 +1297,7 @@ def _check_exists(
     url: str,
     media_type: str,
     target_dir: str,
-) -> Optional[DownloadResult]:
+) -> DownloadResult | None:
     """Quick no-network registry check using URL-based video ID."""
     if "list=" in url:
         return None
@@ -1330,7 +1328,7 @@ def _skip_registry_check(
     url: str,
     registry_media_type: str,
     dirs_to_check: list[str],
-    ordered_files: Optional[list[str]] = None,
+    ordered_files: list[str] | None = None,
 ) -> bool:
     """Check the registry across directories and return ``True`` if the item exists."""
     video_id = extract_video_id(url)

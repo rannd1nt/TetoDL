@@ -11,17 +11,25 @@ See Also
     current module-level state.
 :mod:`tetodl.constants` : Default values and path constants.
 """
-import os
 import json
+import os
+
+from tetodl.utils.tracer import trace, traced
+
 from ..constants import (
-    CONFIG_PATH, VALID_CONTAINERS, VALID_RESOLUTIONS, REGISTRY_PATH,
-    DEFAULT_MUSIC_ROOT, DEFAULT_VIDEO_ROOT, DEFAULT_THUMBNAIL_ROOT, VALID_CODECS,
-    JITTER
+    CONFIG_PATH,
+    DEFAULT_MUSIC_ROOT,
+    DEFAULT_THUMBNAIL_ROOT,
+    DEFAULT_VIDEO_ROOT,
+    JITTER,
+    REGISTRY_PATH,
+    VALID_CODECS,
+    VALID_CONTAINERS,
+    VALID_RESOLUTIONS,
 )
 from ..core.models import AppConfig
 from ..utils.console import console
-from ..utils.i18n import set_language, detect_system_language
-from tetodl.utils.tracer import trace, traced
+from ..utils.i18n import detect_system_language, set_language
 from ..utils.i18n_keys import Keys
 
 # ==== MODULE-LEVEL CONFIG STATE ====

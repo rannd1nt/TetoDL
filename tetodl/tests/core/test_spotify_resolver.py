@@ -186,8 +186,8 @@ class TestTrackModelConversion:
 
 class TestSpotifyClient:
     def test_get_track(self, mocker):
-        from tetodl.core.spotify.client import SpotifyClient
         from tetodl.core.spotify.auth import SpotifyAuth
+        from tetodl.core.spotify.client import SpotifyClient
 
         auth = SpotifyAuth()
         client = SpotifyClient(auth)
@@ -206,8 +206,8 @@ class TestSpotifyClient:
         )
 
     def test_get_playlist(self, mocker):
-        from tetodl.core.spotify.client import SpotifyClient
         from tetodl.core.spotify.auth import SpotifyAuth
+        from tetodl.core.spotify.client import SpotifyClient
 
         auth = SpotifyAuth()
         client = SpotifyClient(auth)
@@ -224,8 +224,8 @@ class TestSpotifyClient:
         assert entity["trackList"][0]["title"] == "A"
 
     def test_get_album(self, mocker):
-        from tetodl.core.spotify.client import SpotifyClient
         from tetodl.core.spotify.auth import SpotifyAuth
+        from tetodl.core.spotify.client import SpotifyClient
 
         auth = SpotifyAuth()
         client = SpotifyClient(auth)
@@ -241,8 +241,8 @@ class TestSpotifyClient:
         assert len(entity["trackList"]) == 1
 
     def test_http_error_raises(self, mocker):
-        from tetodl.core.spotify.client import SpotifyClient
         from tetodl.core.spotify.auth import SpotifyAuth
+        from tetodl.core.spotify.client import SpotifyClient
 
         auth = SpotifyAuth()
         client = SpotifyClient(auth)
@@ -253,8 +253,8 @@ class TestSpotifyClient:
             client.get_track("nonexistent")
 
     def test_missing_next_data_raises(self, mocker):
-        from tetodl.core.spotify.client import SpotifyClient
         from tetodl.core.spotify.auth import SpotifyAuth
+        from tetodl.core.spotify.client import SpotifyClient
 
         auth = SpotifyAuth()
         client = SpotifyClient(auth)
@@ -266,8 +266,8 @@ class TestSpotifyClient:
             client.get_track("x")
 
     def test_invalid_json_raises(self, mocker):
-        from tetodl.core.spotify.client import SpotifyClient
         from tetodl.core.spotify.auth import SpotifyAuth
+        from tetodl.core.spotify.client import SpotifyClient
 
         auth = SpotifyAuth()
         client = SpotifyClient(auth)

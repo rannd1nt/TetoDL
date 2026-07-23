@@ -1,13 +1,15 @@
 import time
+
 import questionary
-from questionary import Separator, Choice
+from questionary import Choice, Separator
 from rich.padding import Padding
 from rich.text import Text
 
 from ..constants import APP_VERSION
 from ..utils.display import visit_github, visit_instagram
-from ..utils.formatters import clear, menu_style, console
+from ..utils.formatters import clear, console, menu_style
 from ..utils.i18n import get_text as _
+
 
 def menu_about():
     """About menu"""

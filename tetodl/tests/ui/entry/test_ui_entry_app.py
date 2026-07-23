@@ -1,6 +1,5 @@
 from unittest.mock import patch
 
-
 from tetodl.core.models import CliDownload, CliExit, CliMenu, DownloadSession
 from tetodl.ui.entry.app import App
 

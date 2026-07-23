@@ -2,14 +2,12 @@
 
 import sys
 
-
 from tetodl.utils.console.themes import (
     LogTheme,
-    RichTheme,
     PlainTheme,
+    RichTheme,
     detect_terminal_theme,
 )
-
 
 THEME_FIELDS = {"ok", "warn", "proc", "err", "exit", "panic", "debug"}
 

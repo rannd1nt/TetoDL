@@ -1,7 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 
-
 class TestNavigationImports:
     """Basic import tests for the navigation module."""
 

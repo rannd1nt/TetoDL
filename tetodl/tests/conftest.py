@@ -13,8 +13,9 @@ from __future__ import annotations
 
 import json
 import tempfile
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
 import pytest
 
@@ -217,7 +218,7 @@ def tetodl_debug(request: pytest.FixtureRequest):
         yield
         return
 
-    from tetodl.utils.logger import set_debug, is_debug, get_debug_mode
+    from tetodl.utils.logger import get_debug_mode, is_debug, set_debug
 
     prev_enabled = is_debug()
     prev_mode = get_debug_mode()

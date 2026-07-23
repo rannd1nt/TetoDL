@@ -3,7 +3,7 @@
 
 import pytest
 
-from tetodl.utils.console.contexts import ConsoleStateContext, ConsoleSpinnerContext
+from tetodl.utils.console.contexts import ConsoleSpinnerContext, ConsoleStateContext
 from tetodl.utils.console.logger import Console
 
 

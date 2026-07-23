@@ -13,14 +13,15 @@ singleton lives in :mod:`tetodl.utils.console` and is accessed as::
     from tetodl.utils.console import console
 """
 import sys
-from typing_extensions import deprecated
 from dataclasses import dataclass
-from colorama import init
 
-from .themes import detect_terminal_theme, LogTheme
-from .contexts import ConsoleStateContext, ConsoleSpinnerContext
+from colorama import init
+from typing_extensions import deprecated
+
 from ..i18n import get_text
 from ..i18n_keys import I18nKey
+from .contexts import ConsoleSpinnerContext, ConsoleStateContext
+from .themes import LogTheme, detect_terminal_theme
 
 init(autoreset=True)
 

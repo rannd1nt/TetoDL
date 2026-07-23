@@ -3,19 +3,21 @@ Display utilities and ASCII art
 """
 import sys
 from pathlib import Path
-from rich.text import Text
-from rich.table import Table
+
 from rich import box
+from rich.table import Table
+from rich.text import Text
 
 from ..constants import APP_VERSION, CONFIG_PATH, DATA_DIR, IS_BINARY
-from ..core import config as cfg
 from ..core import cache
-from ..utils.files import get_free_space
-from ..utils.network import open_url
-from .formatters import clear, console as rich_console
+from ..core import config as cfg
 from ..utils.console import console
+from ..utils.files import get_free_space
 from ..utils.i18n import get_text as _
 from ..utils.i18n_keys import Keys
+from ..utils.network import open_url
+from .formatters import clear
+from .formatters import console as rich_console
 
 
 def _assets_dir() -> Path:

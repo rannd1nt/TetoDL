@@ -4,10 +4,11 @@ Absorbs logic from old 'yt_helpers' and 'extract_video_id'.
 """
 import re
 
+from tetodl.utils.tracer import trace, traced
+
 from ..constants import YTDLP_CACHE_DIR
 from ..core import config as cfg
 from ..utils.network import is_youtube_music_url
-from tetodl.utils.tracer import trace, traced
 
 try:
     import yt_dlp as yt

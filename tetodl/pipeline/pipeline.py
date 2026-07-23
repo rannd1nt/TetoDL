@@ -6,13 +6,12 @@ from ..core.models import AppConfig, PipelineContext
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
 from ..utils.tracer import trace, traced
-
-from .steps.extract import ExtractStep
 from .steps.classify import ClassifyStep
-from .steps.download import DownloadStep
 from .steps.cover import CoverStep
-from .steps.lyrics import LyricsStep
+from .steps.download import DownloadStep
+from .steps.extract import ExtractStep
 from .steps.finalize import FinalizeStep
+from .steps.lyrics import LyricsStep
 
 
 class MediaPipeline:

@@ -15,7 +15,9 @@ See Also
 """
 import sys
 from dataclasses import dataclass
+
 from colorama import Fore, Style
+
 
 @dataclass
 class LogTheme:

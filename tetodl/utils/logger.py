@@ -5,7 +5,8 @@ See ``refactor/ADV_LOGGING.md`` for the full architecture specification.
 """
 
 import functools
-from typing import Callable, ParamSpec, TypeVar, cast
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar, cast
 
 P = ParamSpec("P")
 R = TypeVar("R")

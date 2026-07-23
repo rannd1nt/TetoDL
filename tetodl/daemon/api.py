@@ -1,34 +1,36 @@
+import asyncio
+import html as htmlmod
+import io
 import os
 import sys
-import io
-import asyncio
-import time
-import uuid
 import threading
-import html as htmlmod
+import time
 import urllib.parse
-import uvicorn
-from pathlib import Path
+import uuid
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, BackgroundTasks, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from pathlib import Path
+from typing import Any, Literal
 
-from ..constants import APP_VERSION, YTDLP_CACHE_DIR
-from .models import DownloadRequest, PreviewRequest
+import uvicorn
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+
 from ..cli.dispatch import execute_download
-from ..core.models import DownloadSession, DownloadResult
+from ..constants import APP_VERSION, YTDLP_CACHE_DIR
 from ..core import config as cfg
 from ..core import config as config_mgr
+from ..core.models import DownloadResult, DownloadSession
 from ..utils.display import get_free_space
 from ..utils.files import TempManager
-from ..utils.share import list_entries, stream_file, create_share_router, SVG as _SHARE_SVG
-from ..utils.time_parser import get_cut_seconds
-from ..utils.processing import parse_playlist_items
-from ..utils.network import find_free_port, get_best_ip
-from typing import Any, Literal
 from ..utils.formatters import console as rich_console
+from ..utils.network import find_free_port, get_best_ip
+from ..utils.processing import parse_playlist_items
+from ..utils.share import SVG as _SHARE_SVG
+from ..utils.share import create_share_router, list_entries, stream_file
+from ..utils.time_parser import get_cut_seconds
+from .models import DownloadRequest, PreviewRequest
 
 share_launchers: dict[str, Any] = {}
 
@@ -156,7 +158,7 @@ def background_task_runner(task_id: str, session: DownloadSession, mode: str = '
             if fc:
                 task["file_count"] = fc
     except Exception as e:
-        active_tasks[task_id]["status"] = f"error: {str(e)}"
+        active_tasks[task_id]["status"] = f"error: {e!s}"
         active_tasks[task_id]["file_path"] = None
     finally:
         sys.stdout = old_stdout
@@ -368,7 +370,7 @@ async def preview_media(req: PreviewRequest):
                     loop.run_in_executor(None, lambda: ydl.extract_info(req.url, download=False)),
                     timeout=45.0,
                 )
-            except _asyncio.TimeoutError:
+            except TimeoutError:
                 raise HTTPException(
                     status_code=504,
                     detail="Preview timed out. The URL may point to a very large playlist. Try a single video URL."
@@ -603,8 +605,8 @@ def _get_meta(path: str) -> dict:
     try:
         ext = os.path.splitext(path)[1].lower()
         if ext == ".mp3":
-            from mutagen.mp3 import MP3
             from mutagen.id3 import APIC
+            from mutagen.mp3 import MP3
             a: Any = MP3(path)
             meta["title"] = str(a.tags.get("TIT2", "")) if a.tags else ""
             meta["artist"] = str(a.tags.get("TPE1", "")) if a.tags else ""
@@ -799,9 +801,9 @@ async def share_launch(request: Request):
     url = f"http://{ip}:{port}/{urllib.parse.quote(serve_file)}" if serve_file else f"http://{ip}:{port}/"
 
     # Tunggu server siap (max 5 detik)
-    import urllib.request as _ureq
-    import urllib.error as _uerr
     import time as _time
+    import urllib.error as _uerr
+    import urllib.request as _ureq
     deadline = _time.time() + 5
     ready = False
     while _time.time() < deadline:
@@ -831,8 +833,8 @@ def run_server(host: str, port: int, verbose: bool = False):
         Show uvicorn request logs (default: quiet).
     """
     import asyncio as _asyncio
-    import time as _time
     import threading as _threading
+    import time as _time
 
     from ..utils.console import console as _console
     from ..utils.formatters import color as _color

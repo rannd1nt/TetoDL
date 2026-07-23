@@ -6,10 +6,10 @@ from io import StringIO
 import pytest
 
 from tetodl.utils.hooks import (
-    get_progress_hook,
+    EncodingSpinnerHook,
     QuietLogger,
     get_postprocessor_hook,
-    EncodingSpinnerHook,
+    get_progress_hook,
 )
 
 

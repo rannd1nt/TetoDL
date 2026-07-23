@@ -1,15 +1,17 @@
 """
 File operation utilities
 """
-import os
-import glob
 import atexit
+import glob
+import os
 import shutil
+
+from tetodl.utils.tracer import trace, traced
+
 from ..constants import TEMP_DIR
 from ..utils.console import console
-
 from ..utils.i18n_keys import Keys
-from tetodl.utils.tracer import trace, traced
+
 
 class TempManager:
     """Singleton helper for managing temporary files."""
@@ -127,8 +129,7 @@ def create_m3u8_playlist(target_dir, playlist_name, file_list):
         with open(m3u_path, 'w', encoding='utf-8') as f:
             f.write("#EXTM3U\n")
             
-            for filename in file_list:
-                f.write(f"{os.path.basename(filename)}\n")
+            f.writelines(f"{os.path.basename(filename)}\n" for filename in file_list)
                 
         console.ok(Keys.files.playlist_generated(name=os.path.basename(m3u_path)))
         return m3u_path

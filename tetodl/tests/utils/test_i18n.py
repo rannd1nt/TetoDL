@@ -3,11 +3,11 @@
 
 
 from tetodl.utils.i18n import (
-    get_text,
-    set_language,
-    get_current_language,
     get_available_languages,
+    get_current_language,
+    get_text,
     load_language,
+    set_language,
 )
 
 
