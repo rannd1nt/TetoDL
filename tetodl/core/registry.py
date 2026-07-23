@@ -9,7 +9,7 @@ from ..constants import REGISTRY_PATH
 
 class RegistryManager:
     def __init__(self):
-        self.data = {"youtube": {}, "spotify": {}}
+        self.data: dict[str, dict] = {"youtube": {}, "spotify": {}}
         self.load()
 
     def load(self):
@@ -22,7 +22,7 @@ class RegistryManager:
                 else:
                     self.data = raw
             except Exception:
-        self.data: dict[str, dict] = {"youtube": {}, "spotify": {}}
+                self.data = {"youtube": {}, "spotify": {}}
 
     def save(self):
         try:
