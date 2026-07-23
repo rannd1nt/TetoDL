@@ -6,7 +6,7 @@ IS_BINARY = getattr(sys, 'frozen', False)
 if IS_BINARY:
     sys.path.insert(0, os.path.dirname(sys.executable))
 
-from tetodl.ui.entry.app import app
+from tetodl.ui.entry.app import app  # noqa: E402
 
 
 def main():
