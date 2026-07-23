@@ -1070,7 +1070,7 @@ def _playlist_sequential(
 
         if i < total:
             jitter = random.uniform(config.jitter_min, config.jitter_max)  # type: ignore[arg-type]
-            console.proc(Keys.download.youtube.wait_jitter(jitter_min=config.jitter_min, jitter_max=config.jitter_max))
+            console.proc(Keys.download.youtube.wait_jitter(jitter_min=int(config.jitter_min), jitter_max=int(config.jitter_max)))
             time.sleep(jitter)
 
     if config.create_m3u and ordered_files:

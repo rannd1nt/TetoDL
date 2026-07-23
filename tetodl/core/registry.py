@@ -22,7 +22,7 @@ class RegistryManager:
                 else:
                     self.data = raw
             except Exception:
-                self.data = {"youtube": {}, "spotify": {}}
+        self.data: dict[str, dict] = {"youtube": {}, "spotify": {}}
 
     def save(self):
         try:
