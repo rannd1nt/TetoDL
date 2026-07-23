@@ -234,19 +234,14 @@ class TestConfigToggles:
         assert result is True
         assert cfg.header_style == "classic"
 
-    def test_set_network_config(self, monkeypatch, tmp_path):
-        """set_network_config saves config and returns True.
-
-        Note: module-level download_delay/max_retries are NOT updated
-        directly — the function lacks ``global`` declarations for those
-        fields (existing source issue).
-        """
+    def test_set_jitter_config(self, monkeypatch, tmp_path):
+        """set_jitter_config saves config and returns True."""
         import tetodl.core.config as cfg
         config_file = tmp_path / "config.json"
         config_file.write_text("{}")
         monkeypatch.setattr(cfg, "CONFIG_PATH", str(config_file))
 
-        result = cfg.set_network_config(delay=5.0, retries=7)
+        result = cfg.set_jitter_config(min_=2.0, max_=6.0, retries=7)
         assert result is True
 
     def test_set_media_scanner(self, monkeypatch, tmp_path):
@@ -300,25 +295,24 @@ class TestFormatStrings:
 class TestConfigDeletion:
     """Tests for config/cache/registry deletion functions."""
 
-    def test_clear_cache_removes_file(self, monkeypatch, tmp_path):
-        """clear_cache deletes the cache file and returns True."""
+    def test_clear_cache_removes_file(self):
+        """clear_cache returns True and clears all cache namespaces."""
         import tetodl.core.config as cfg
-        cache_file = tmp_path / "cache.json"
-        cache_file.write_text("{}")
-        monkeypatch.setattr("tetodl.constants.CACHE_PATH", str(cache_file))
+        from tetodl.core.cache import get_cache
 
+        get_cache("yt_metadata").set("test", "value")
         result = cfg.clear_cache()
         assert result is True
-        assert not cache_file.exists()
+        assert get_cache("yt_metadata").get("test") is None
 
-    def test_clear_cache_no_file(self, monkeypatch, tmp_path):
-        """clear_cache returns False when there is no cache file."""
+    def test_clear_cache_no_file(self):
+        """clear_cache returns True even when cache is already empty."""
         import tetodl.core.config as cfg
-        cache_file = tmp_path / "cache.json"
-        monkeypatch.setattr("tetodl.constants.CACHE_PATH", str(cache_file))
+        from tetodl.core.cache import reset_cache
 
+        reset_cache()
         result = cfg.clear_cache()
-        assert result is False
+        assert result is True
 
     def test_reset_config_removes_file(self, monkeypatch, tmp_path):
         """reset_config deletes the config file and returns True."""
@@ -365,20 +359,16 @@ class TestConfigDeletion:
         import tetodl.core.config as cfg
         config_file = tmp_path / "config.json"
         config_file.write_text("{}")
-        cache_file = tmp_path / "cache.json"
-        cache_file.write_text("{}")
         reg_file = tmp_path / "registry.json"
         reg_file.write_text("{}")
 
         monkeypatch.setattr(cfg, "CONFIG_PATH", str(config_file))
-        monkeypatch.setattr("tetodl.constants.CACHE_PATH", str(cache_file))
         monkeypatch.setattr(cfg, "REGISTRY_PATH", str(reg_file))
         mocker.patch("tetodl.core.history.reset_history", return_value=True)
 
         result = cfg.perform_full_wipe()
         assert result is True
         assert not config_file.exists()
-        assert not cache_file.exists()
         assert not reg_file.exists()
 
 

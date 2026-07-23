@@ -27,6 +27,7 @@ class DownloadRequest(BaseModel):
 
     share: bool = False
     share_temp: bool = False
+    spotify: bool = False
 
     class Config:
         json_schema_extra = {

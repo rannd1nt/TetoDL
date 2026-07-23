@@ -1,4 +1,4 @@
-from ..constants import IS_TERMUX
+from ..constants import IS_TERMUX, YTDLP_CACHE_DIR
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
 from ..utils.formatters import (
@@ -27,6 +27,7 @@ def perform_youtube_search(query, limit=5):
             'quiet': True,
             'no_warnings': True,
             'extract_flat': 'in_playlist',
+            'cachedir': YTDLP_CACHE_DIR,
         }) as ydl:
             search_query = f"ytsearch{limit}:{query}"
             info = ydl.extract_info(search_query, download=False)

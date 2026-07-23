@@ -11,13 +11,14 @@ try:
 except ImportError:
     yt = None
 
-from ...constants import FFMPEG_CMD
+from ...constants import FFMPEG_CMD, YTDLP_CACHE_DIR
 from ...core.models import DownloadedFile, MediaInfo, PipelineContext
 from ...core.step import PipelineStep
 from ...utils.console import console
 from ...utils.hooks import QuietLogger, get_progress_hook, get_postprocessor_hook
 from tetodl.utils.tracer import trace
 from ...utils.i18n_keys import Keys
+from yt_dlp.utils import sanitize_filename
 from ...utils.processing import (
     get_audio_format_string,
     build_audio_postprocessors,
@@ -105,15 +106,17 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
         info = ctx.media_info
         target_dir = ctx.target_dir
 
+        output_title = ctx.spotify_title or (info.title if info else "")
+        safe = sanitize_filename(output_title) if ctx.spotify_title else output_title
         try:
             result = self._download(info, target_dir, ctx)
             ctx.downloaded_file = result
             return ctx
         except KeyboardInterrupt:
-            self._cleanup_partial(target_dir, info)
+            self._cleanup_partial(target_dir, safe)
             raise
         except Exception as exc:
-            self._cleanup_partial(target_dir, info)
+            self._cleanup_partial(target_dir, safe)
             ctx.error = str(exc)
             return ctx
 
@@ -147,7 +150,13 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
         DownloadedFile
             Descriptor of the successfully downloaded file.
         """
+        title = ctx.spotify_title or info.title
+        artist = ctx.spotify_artist or info.artist or info.uploader or ""
+        safe = sanitize_filename(title)
+
         opts = self._build_ydl_opts(ctx)
+        if ctx.spotify_title:
+            opts["outtmpl"] = os.path.join(target_dir, f"{safe}.%(ext)s")
 
         if ctx.cut_range:
             start, end = ctx.cut_range
@@ -155,21 +164,21 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
             opts["download_ranges"] = lambda info, ydl: [{"start_time": start, "end_time": end}]
             opts["force_keyframes_at_cuts"] = True
 
-        console.proc(Keys.download.youtube.downloading_item(title=info.title))
+        console.proc(Keys.download.youtube.downloading_item(title=title))
         with yt.YoutubeDL(opts) as ydl:
             ydl.download([info.url])
 
         container = ctx.config.audio_quality if ctx.media_type == "audio" else ctx.config.video_container
-        path = os.path.join(target_dir, f"{info.title}.{container}")
+        path = os.path.join(target_dir, f"{safe}.{container}")
         if not os.path.exists(path):
-            guessed = self._find_file(target_dir, info)
+            guessed = self._find_file(target_dir, safe)
             path = guessed or path
 
         return DownloadedFile(
             path=os.path.abspath(path),
             container=container,
-            title=info.title,
-            artist=info.artist or info.uploader,
+            title=title,
+            artist=artist,
             duration=info.duration,
             info=info,
         )
@@ -227,7 +236,10 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
             "retries": config.max_retries,
             "fragment_retries": config.max_retries,
             "file_access_retries": config.max_retries,
-            "extractor_retries": 3,
+            "extractor_retries": config.max_retries,
+            "sleep_interval": config.jitter_min,
+            "max_sleep_interval": config.jitter_max,
+            "cachedir": YTDLP_CACHE_DIR,
         }
 
     def _video_opts(self, ctx: PipelineContext) -> dict:
@@ -277,13 +289,16 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
             "retries": config.max_retries,
             "fragment_retries": config.max_retries,
             "file_access_retries": config.max_retries,
-            "extractor_retries": 3,
+            "extractor_retries": config.max_retries,
+            "sleep_interval": config.jitter_min,
+            "max_sleep_interval": config.jitter_max,
+            "cachedir": YTDLP_CACHE_DIR,
         }
 
     @staticmethod
-    def _cleanup_partial(target_dir: str, info: MediaInfo) -> None:
+    def _cleanup_partial(target_dir: str, title: str) -> None:
         """Remove partial (``.part``, ``.ytdl``) files left by a failed download."""
-        base = os.path.join(target_dir, info.title)
+        base = os.path.join(target_dir, title)
         for pattern in (f"{base}.*.part", f"{base}.part", f"{base}.ytdl"):
             for f in glob.glob(pattern):
                 try:
@@ -292,9 +307,9 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
                     pass
 
     @staticmethod
-    def _find_file(target_dir: str, info: MediaInfo) -> Optional[str]:
+    def _find_file(target_dir: str, title: str) -> Optional[str]:
         """Search for the downloaded file when the expected path doesn't exist."""
-        base = os.path.join(target_dir, info.title)
+        base = os.path.join(target_dir, title)
         for f in glob.glob(f"{base}.*"):
             if not f.endswith(".part") and not f.endswith(".ytdl"):
                 return f

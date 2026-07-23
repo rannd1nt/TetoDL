@@ -11,7 +11,6 @@ class TestRegistry:
         """Create a RegistryManager with isolated temp paths."""
         reg_path = tmp_path / "registry.json"
         reg_path.write_text("{}")
-        # Patch REGISTRY_PATH on the actual module (not the shadowing attribute)
         reg_module = sys.modules["tetodl.core.registry"]
         monkeypatch.setattr(reg_module, "REGISTRY_PATH", str(reg_path))
         from tetodl.core.registry import RegistryManager
@@ -37,9 +36,9 @@ class TestRegistry:
             metadata={"title": "My Song", "artist": "Artist", "album": "Album"},
         )
 
-        assert "vid123" in fresh_registry.data
-        assert "audio" in fresh_registry.data["vid123"]
-        entry = fresh_registry.data["vid123"]["audio"]
+        assert "vid123" in fresh_registry.data["youtube"]
+        assert "audio" in fresh_registry.data["youtube"]["vid123"]
+        entry = fresh_registry.data["youtube"]["vid123"]["audio"]
         assert path in entry["paths"]
         assert entry["t"] == "My Song"
         assert entry["a"] == "Artist"
@@ -48,15 +47,15 @@ class TestRegistry:
         """register_download increments the counter on each call."""
         fresh_registry.register_download("vid1", str(base / "s1.mp3"), "audio", {"title": "S1"})
         fresh_registry.register_download("vid1", str(base / "s2.mp3"), "audio", {"title": "S2"})
-        assert fresh_registry.data["vid1"]["audio"]["c"] == 2
+        assert fresh_registry.data["youtube"]["vid1"]["audio"]["c"] == 2
 
     def test_register_multiple_types(self, fresh_registry, base):
         """register_download separates audio and video entries."""
         fresh_registry.register_download("vid1", str(base / "a.mp3"), "audio", {"title": "A"})
         fresh_registry.register_download("vid1", str(base / "v.mp4"), "video", {"title": "V"})
 
-        assert "audio" in fresh_registry.data["vid1"]
-        assert "video" in fresh_registry.data["vid1"]
+        assert "audio" in fresh_registry.data["youtube"]["vid1"]
+        assert "video" in fresh_registry.data["youtube"]["vid1"]
 
     def test_update_path(self, fresh_registry, tmp_path):
         """update_path moves a path from old to new location."""
@@ -66,7 +65,7 @@ class TestRegistry:
         fresh_registry.register_download("vid1", old, "audio", {"title": "S1"})
         fresh_registry.update_path(old, new)
 
-        entry = fresh_registry.data["vid1"]["audio"]
+        entry = fresh_registry.data["youtube"]["vid1"]["audio"]
         assert old not in entry["paths"]
         assert new in entry["paths"]
 
@@ -75,23 +74,23 @@ class TestRegistry:
         fresh_registry.register_download("vid1", str(base / "s1.mp3"), "audio", {"title": "S1"})
         fresh_registry.update_path(str(base / "nonexistent" / "old.mp3"), str(base / "new.mp3"))
 
-        assert len(fresh_registry.data["vid1"]["audio"]["paths"]) == 1
+        assert len(fresh_registry.data["youtube"]["vid1"]["audio"]["paths"]) == 1
 
     def test_register_download_empty_id(self, fresh_registry, base):
         """register_download exits early when video_id is empty."""
         fresh_registry.register_download("", str(base / "s.mp3"), "audio", {"title": "T"})
-        assert fresh_registry.data == {}
+        assert fresh_registry.data == {"youtube": {}, "spotify": {}}
 
     def test_register_download_empty_content_type(self, fresh_registry, base):
         """register_download exits early when content_type is empty."""
         fresh_registry.register_download("vid1", str(base / "s.mp3"), "", {"title": "T"})
-        assert "vid1" not in fresh_registry.data
+        assert "vid1" not in fresh_registry.data["youtube"]
 
     def test_reset(self, fresh_registry, base):
         """reset clears all data and removes the file."""
         fresh_registry.register_download("vid1", str(base / "s.mp3"), "audio", {"title": "T"})
         fresh_registry.reset()
-        assert fresh_registry.data == {}
+        assert fresh_registry.data == {"youtube": {}, "spotify": {}}
 
     def test_check_existing_found(self, fresh_registry, tmp_path):
         """check_existing returns (True, metadata) when file exists in target folder."""
@@ -122,3 +121,92 @@ class TestRegistry:
         found, meta = fresh_registry.check_existing("vid1", "video", str(base))
         assert found is False
         assert meta is None
+
+    def test_register_with_spotify_id(self, fresh_registry, tmp_path):
+        """register_download stores spotify_id in youtube entry and spotify index."""
+        music_dir = tmp_path / "music"
+        music_dir.mkdir()
+        song = music_dir / "song.mp3"
+        song.write_text("content")
+
+        fresh_registry.register_download(
+            video_id="abc123",
+            file_path=str(song),
+            content_type="audio",
+            metadata={"title": "S1", "artist": "A1"},
+            spotify_id="spot123",
+        )
+
+        entry = fresh_registry.data["youtube"]["abc123"]["audio"]
+        assert entry["s"] == "spot123"
+        assert fresh_registry.data["spotify"]["spot123"] == "abc123"
+
+    def test_check_existing_by_spotify_id(self, fresh_registry, tmp_path):
+        """check_existing finds an entry by spotify_id."""
+        music_dir = tmp_path / "music"
+        music_dir.mkdir()
+        song = music_dir / "song.mp3"
+        song.write_text("content")
+
+        fresh_registry.register_download(
+            video_id="abc123",
+            file_path=str(song),
+            content_type="audio",
+            metadata={"title": "S1"},
+            spotify_id="spot123",
+        )
+
+        found, meta = fresh_registry.check_existing(
+            content_type="audio", target_folder=str(music_dir), spotify_id="spot123",
+        )
+        assert found is True
+        assert meta["title"] == "S1"
+
+    def test_check_existing_by_spotify_id_missing(self, fresh_registry, base):
+        """check_existing returns (False, None) when spotify_id not found."""
+        found, meta = fresh_registry.check_existing(
+            content_type="audio", target_folder=str(base), spotify_id="nonexistent",
+        )
+        assert found is False
+        assert meta is None
+
+    def test_migrate_old_format(self, monkeypatch, tmp_path):
+        """load migrates flat old-format registry to youtube/spotify structure."""
+        old_data = {
+            "vid1": {
+                "audio": {"paths": ["/tmp/s1.mp3"], "t": "S1", "a": "A1", "c": 1},
+            },
+        }
+        reg_path = tmp_path / "registry.json"
+        import json
+        reg_path.write_text(json.dumps(old_data))
+
+        reg_module = sys.modules["tetodl.core.registry"]
+        monkeypatch.setattr(reg_module, "REGISTRY_PATH", str(reg_path))
+
+        from tetodl.core.registry import RegistryManager
+        fresh = RegistryManager()
+
+        assert "vid1" in fresh.data["youtube"]
+        assert fresh.data["youtube"]["vid1"]["audio"]["t"] == "S1"
+        assert fresh.data["spotify"] == {}
+
+    def test_migrate_new_format_unchanged(self, monkeypatch, tmp_path):
+        """load leaves new-format data intact."""
+        new_data = {
+            "youtube": {
+                "vid1": {"audio": {"paths": ["/tmp/s1.mp3"], "t": "S1", "c": 1}},
+            },
+            "spotify": {"spot123": "vid1"},
+        }
+        reg_path = tmp_path / "registry.json"
+        import json
+        reg_path.write_text(json.dumps(new_data))
+
+        reg_module = sys.modules["tetodl.core.registry"]
+        monkeypatch.setattr(reg_module, "REGISTRY_PATH", str(reg_path))
+
+        from tetodl.core.registry import RegistryManager
+        fresh = RegistryManager()
+
+        assert fresh.data == new_data

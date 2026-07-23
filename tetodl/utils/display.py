@@ -108,7 +108,8 @@ def show_app_info() -> None:
     header_val = getattr(cfg, 'header_style', 'default')
     p_style = getattr(cfg, 'progress_style', 'minimal')
     lang = getattr(cfg, 'language', 'en')
-    delay = getattr(cfg, 'download_delay', 2)
+    jitter_min = getattr(cfg, 'jitter_min', 3.0)
+    jitter_max = getattr(cfg, 'jitter_max', 5.0)
     retries = getattr(cfg, 'max_retries', 3)
     scanner = getattr(cfg, 'media_scanner_enabled', False)
 
@@ -117,7 +118,7 @@ def show_app_info() -> None:
     table.add_row("Header Style", str(header_val))
     table.add_row("Progress Style", str(p_style))
     table.add_row("Language", str(lang).upper())
-    table.add_row("Network", f"Delay: {delay}s | Retries: {retries}")
+    table.add_row("Network", f"Jitter: {jitter_min}-{jitter_max}s | Retries: {retries}")
     table.add_row("Media Scanner", scanner_str)
 
     # Video Prefs

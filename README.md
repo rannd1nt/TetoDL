@@ -14,7 +14,7 @@
     <a href="https://github.com/rannd1nt/TetoDL/issues">
       <img src="https://img.shields.io/badge/Maintained%3F-Yes-238636?style=flat-square" alt="Maintenance">
     </a>
-    <img src="https://img.shields.io/badge/Version-1.3.0-orange?style=flat-square" alt="Version">
+    <img src="https://img.shields.io/badge/Version-2.2.0-orange?style=flat-square" alt="Version">
   </p>
 
 </div>

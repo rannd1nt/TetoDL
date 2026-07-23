@@ -275,7 +275,7 @@ jobs:
       - uses: actions/download-artifact@v4
       - name: Generate tag
         id: tag
-        run: echo "tag=v$(grep '^version' pyproject.toml | head -1 | sed 's/.*\"\(.*\)\"/\1/')" >> $GITHUB_OUTPUT
+        run: echo "tag=v$(grep '^APP_VERSION' tetodl/constants.py | sed 's/.*\"\(.*\)\"/\1/')" >> $GITHUB_OUTPUT
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}

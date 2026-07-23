@@ -28,7 +28,8 @@ if not IS_WINDOWS and not IS_TERMUX:
         pass
 
 APP_NAME = "TetoDL"
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.2.0"
+JITTER = (3.0, 5.0)
 
 # ==== BINARY ROOT (PyInstaller) ====
 _BINARY_DIR: Path | None
@@ -61,7 +62,7 @@ elif IS_WINDOWS:
         assert _BINARY_DIR is not None
         bundled_ffmpeg = _BINARY_DIR / "ffmpeg.exe"
         if not bundled_ffmpeg.exists() and hasattr(sys, '_MEIPASS'):
-            bundled_ffmpeg = Path(sys._MEIPASS) / "ffmpeg.exe"
+            bundled_ffmpeg = Path(sys._MEIPASS) / "ffmpeg.exe" # pyright: ignore[reportAttributeAccessIssue]
         FFMPEG_CMD = str(bundled_ffmpeg) if bundled_ffmpeg.exists() else "ffmpeg"
     else:
         FFMPEG_CMD = shutil.which("ffmpeg") or "ffmpeg"
@@ -137,6 +138,7 @@ YTDLP_OVERRIDE_DIR = DATA_DIR / "yt-dlp-override"
 # ==== CONFIG FILES ====
 CONFIG_PATH = str(CONFIG_DIR / "config.json")
 CACHE_PATH = str(CACHE_DIR / "cache.json")
+YTDLP_CACHE_DIR = str(CACHE_DIR / "ytdlp")
 HISTORY_PATH = str(DATA_DIR / "history.json")
 REGISTRY_PATH = str(DATA_DIR / "registry.json")
 

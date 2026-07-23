@@ -1,5 +1,5 @@
 """
-Core sub-package fixtures — config paths, sample JSON, dependency mocks.
+Core sub-package fixtures — config paths, sample JSON, dependency mocks, cache isolation.
 """
 
 from __future__ import annotations
@@ -9,6 +9,13 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
+
+@pytest.fixture(autouse=True)
+def _reset_cache_before_test():
+    """Clear all cache namespaces before each core test."""
+    from tetodl.core.cache import reset_cache
+    reset_cache()
 
 
 @pytest.fixture

@@ -172,7 +172,7 @@
       "downloading_url": "Downloading URL: {url} as {type}.",
       "success": "Success: {title}",
       "failed": "Failed: {title}",
-      "wait_delay": "Waiting {delay} seconds before next download...",
+      "wait_jitter": "Waiting {jitter_min}-{jitter_max}s before next download...",
       "summary": "Summary: {success} successful, {skipped} skipped, {failed} failed out of {total} {type}",
       "failed_items": "{count} {type} failed to download",
       "extract_failed": "Failed to extract content: {error}",
@@ -187,6 +187,7 @@
       "no_internet": "No internet connection or unstable connection.",
       "detected": "Spotify {type} detected",
       "classification_failed": "URL classification failed, unknown URL.",
+      "searching_ytmusic": "Searching for matching tracks...",
       "downloading": "Downloading...",
       "success": "Spotify download complete.",
       "failed": "Download failed.",
@@ -334,7 +335,7 @@
     "header_style": "Header style: {style}",
     "progress_style": "Progress style: {style}",
     "language_set": "Language: {name}",
-    "delay_set": "Delay: {delay}s",
+    "jitter_set": "Jitter: {jitter_min}-{jitter_max}s",
     "retries_set": "Retries: {retries}",
     "media_scanner_status": "Media Scanner {status}.",
     "media_scanner_note": "Note: Media Scanner only affects Android/Termux.",
@@ -490,9 +491,7 @@
     "removing_systemd": "Removing systemd service...",
     "daemon_not_installed": "TetoDL daemon is not installed.",
     "daemon_removed": "Daemon service successfully removed.",
-    "failed_remove_systemd": "Failed to remove systemd service: {error}",
-    "mdns_broadcast_active": "mDNS Broadcast active. You can access via: http://{hostname}:{port}",
-    "mdns_broadcast_failed": "mDNS Broadcast failed (Zeroconf might not be supported on this network): {error}"
+    "failed_remove_systemd": "Failed to remove systemd service: {error}"
   },
   "ui": {
     "dependency_update_available": "Dependency Update Available!",

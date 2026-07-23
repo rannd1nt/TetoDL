@@ -12,7 +12,7 @@ from tetodl.ui.entry.app import app  # noqa: E402
 def main():
     if IS_BINARY:
         os.environ["TETODL_BINARY"] = sys.executable
-    app.run()
+    app.launch()
 
 
 if __name__ == "__main__":

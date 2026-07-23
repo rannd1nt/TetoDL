@@ -34,9 +34,9 @@ class TestAppConfig:
         assert cfg.progress_style == "minimal"
         assert cfg.language == "en"
         assert cfg.media_scanner_enabled is False
-        assert cfg.download_delay == 2
+        assert cfg.jitter_min == 3.0
+        assert cfg.jitter_max == 5.0
         assert cfg.max_retries == 3
-        assert cfg.retry_delay == 2
         assert cfg.async_workers == 3
         assert cfg.daemon_default_temp is True
         assert cfg.daemon_cleanup_interval == 3600
@@ -104,11 +104,12 @@ class TestAppConfig:
     def test_sub_config_system(self):
         """AppConfig.system returns SystemConfig from flat fields."""
         from tetodl.core.models import AppConfig
-        cfg = AppConfig(max_retries=5, async_workers=8, download_delay=3)
+        cfg = AppConfig(max_retries=5, async_workers=8, jitter_min=2.0, jitter_max=6.0)
         sys_cfg = cfg.system
         assert sys_cfg.max_retries == 5
         assert sys_cfg.async_workers == 8
-        assert sys_cfg.download_delay == 3
+        assert sys_cfg.jitter_min == 2.0
+        assert sys_cfg.jitter_max == 6.0
 
     def test_sub_config_daemon(self):
         """AppConfig.daemon returns DaemonConfig from flat fields."""

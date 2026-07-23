@@ -55,7 +55,7 @@ def reset_history():
 @trace
 def add_to_history(
         id, file_path, success, title, content_type, platform,
-        download_type, duration, metadata=None
+        download_type, duration, metadata=None, spotify_id=None
     ):
     """Add entry to download history"""
     global _download_history
@@ -93,8 +93,9 @@ def add_to_history(
             metadata={
                 'artist': metadata.get('artist'),
                 'album': metadata.get('album'),
-                'title': title
-            }
+                'title': title,
+            },
+            spotify_id=spotify_id,
         )
         
 
@@ -111,7 +112,7 @@ def calculate_stats():
         'most_played_count': 0
     }
 
-    raw_data = registry.data
+    raw_data = registry.data.get("youtube", {})
 
     for video_id, content_types in raw_data.items():
         for c_type, data in content_types.items():

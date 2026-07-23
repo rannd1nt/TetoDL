@@ -10,18 +10,42 @@ from pathlib import Path
 import subprocess
 import webbrowser
 import requests
+from requests.adapters import HTTPAdapter
 from ..utils.i18n_keys import Keys
 from tetodl.utils.tracer import trace
 from .formatters import console as rich_console
 from ..utils.console import console
 from ..constants import IS_TERMUX, IS_WSL
 
+
+_DEFAULT_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+}
+_session: requests.Session | None = None
+
+
+def get_session() -> requests.Session:
+    """Lazily-initialized shared session with connection pooling."""
+    global _session
+    if _session is None:
+        _session = requests.Session()
+        _session.headers.update(_DEFAULT_HEADERS)
+        adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20)
+        _session.mount("https://", adapter)
+        _session.mount("http://", adapter)
+    return _session
+
+
 @trace
 def check_internet() -> bool:
     """Check if internet connection is available"""
     try:
         with console.spin(Keys.download.youtube.checking_internet):
-            r = requests.get("https://www.google.com", timeout=5)
+            r = get_session().get("https://www.google.com", timeout=5)
             result = r.status_code == 200
             return result
     except Exception:

@@ -1,4 +1,5 @@
 import argparse
+import re
 import sys
 import os
 from typing import Tuple, Optional, Literal, cast
@@ -77,6 +78,7 @@ class CLIHandler:
         dl_group.add_argument('--lyrics', action='store_true', help="Fetch & embed lyrics (Genius)")
         dl_group.add_argument('--romaji', action='store_true', help="Prioritize Romanized lyrics (Requires --lyrics)")
         dl_group.add_argument('--thumbnail-only', action='store_true', help="Download thumbnail only")
+        dl_group.add_argument('--spotify', action='store_true', help="Spotify URL mode (auto-detected from URL)")
 
         dl_group.add_argument('-o', '--output', metavar='PATH', help='Custom output directory')
 
@@ -100,7 +102,7 @@ class CLIHandler:
         cfg_group.add_argument('--header', metavar='NAME', help="Set header")
         cfg_group.add_argument('--progress-style', choices=['minimal', 'classic', 'modern'], help="Set progress style")
         cfg_group.add_argument('--lang', choices=['en', 'id'], help="Set language")
-        cfg_group.add_argument('--delay', type=float, metavar='SEC', help="Set delay")
+        cfg_group.add_argument('--jitter', metavar='MIN-MAX', help="Set jitter range in seconds (e.g. 3-5)")
         cfg_group.add_argument('--retries', type=int, metavar='NUM', help="Set retries")
 
     def _handle_daemon_subcommand(self):
@@ -117,6 +119,7 @@ class CLIHandler:
         
         daemon_parser.add_argument('--host', default="0.0.0.0", help="Bind IP Address (default: 0.0.0.0)")
         daemon_parser.add_argument('--port', type=int, default=7370, help="Bind Port (default: 7370)")
+        daemon_parser.add_argument('--verbose', action='store_true', help="Show request logs (default: quiet)")
 
         args = daemon_parser.parse_args(sys.argv[2:])
 
@@ -128,8 +131,7 @@ class CLIHandler:
             setup_systemd(args.host, args.port)
         elif args.run:
             from ..daemon.api import run_server
-            console.warn(Keys.cli.starting_api_server(host=args.host, port=args.port))
-            run_server(args.host, args.port)
+            run_server(args.host, args.port, verbose=args.verbose)
         elif args.remove:
             from ..daemon.service import remove_systemd
             remove_systemd()
@@ -206,7 +208,7 @@ class CLIHandler:
     def _handle_config_changes(self, args) -> bool:
         """Handle configuration flags."""
         if not (args.header or args.progress_style or args.lang or
-                args.delay or args.retries):
+                args.jitter or args.retries):
             return False
 
         config_mgr.load_config()
@@ -223,11 +225,22 @@ class CLIHandler:
         if args.lang and config_mgr.update_language(args.lang):
             console.ok(Keys.cli.language_set(name=config_mgr.get_language_name(args.lang)))
             changed = True
+
+        jitter_min = jitter_max = None
+        if args.jitter:
+            m = re.match(r'^(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)$', args.jitter)
+            if m:
+                jitter_min = float(m.group(1))
+                jitter_max = float(m.group(2))
+                changed = True
+            else:
+                console.err(f"Invalid jitter format: {args.jitter}. Use MIN-MAX (e.g. 3-5)")
+                return changed
             
-        if args.delay is not None or args.retries is not None:
-            config_mgr.set_network_config(delay=args.delay, retries=args.retries)
-            if args.delay:
-                console.ok(Keys.cli.delay_set(delay=args.delay))
+        if jitter_min is not None or jitter_max is not None or args.retries is not None:
+            config_mgr.set_jitter_config(min_=jitter_min, max_=jitter_max, retries=args.retries)
+            if jitter_min is not None:
+                console.ok(Keys.cli.jitter_set(jitter_min=jitter_min, jitter_max=jitter_max))
             if args.retries:
                 console.ok(Keys.cli.retries_set(retries=args.retries))
             changed = True
@@ -351,20 +364,26 @@ class CLIHandler:
         # RULE 1: Orphan Flags
         processing_flags = [
             args.audio, args.video, args.thumbnail_only,
+            args.spotify,
             args.format, args.resolution, args.codec,
-            args.cut, args.limit != 5, 
+            args.cut, args.limit != 5,
             args.smart_cover, args.no_cover, args.force_crop,
-            args.share_temp 
+            args.share_temp,
         ]
-        
+
         if any(processing_flags) and not has_target:
-            if not args.share: 
+            if not args.share:
                 self.parser.error("Processing flags require a URL or --search query.")
 
         # RULE 2: Mode Conflict
         modes = sum([bool(args.audio), bool(args.video), bool(args.thumbnail_only)])
         if modes > 1:
             self.parser.error("Conflicting modes: Choose ONLY ONE of --audio, --video, or --thumbnail-only.")
+
+        # RULE 2b: Spotify conflict
+        is_spotify_arg = args.spotify or (args.url and "spotify.com" in args.url.lower())
+        if is_spotify_arg and args.video:
+            self.parser.error("Spotify mode is audio-only. Remove the --video flag.")
 
         # RULE 3: Metadata Conflict & Constraints
         if args.smart_cover and args.no_cover:
@@ -380,10 +399,12 @@ class CLIHandler:
                 self.parser.error("Invalid flag: --cut cannot be used with --thumbnail-only.")
             if args.resolution or args.codec:
                 self.parser.error("Invalid flag: Video settings cannot be used with --thumbnail-only.")
-        
+
         if args.audio and (args.resolution or args.codec):
             console.warn(Keys.cli.audio_mode_note)
-        
+        if args.spotify and (args.resolution or args.codec):
+            console.warn(Keys.cli.audio_mode_note)
+
         # RULE 5: Search Constraints
         if args.limit != 5 and not args.search:
             self.parser.error("The --limit flag requires --search.")
@@ -392,7 +413,11 @@ class CLIHandler:
 
     def _prepare_context(self, args) -> CliResult:
         """Prepare the execution result from parsed args."""
+        is_spotify = bool(args.spotify or (args.url and "spotify.com" in args.url.lower()))
+
         detected_type, validated_format = self._detect_type_and_format(args)
+        if is_spotify and detected_type not in ("audio", "thumbnail"):
+            detected_type = "audio"
 
         # --- Path / share-temp ---
         is_share_temp = bool(args.share_temp)
@@ -431,7 +456,7 @@ class CLIHandler:
         resolution = None
         if args.resolution and detected_type == 'video':
             res_map = {
-                '144p': '144p', '240p': '240p', '360p': '360p',
+                '144p': '240p', '240p': '240p', '360p': '360p',
                 '480p': '480p', '720p': '720p', '1080p': '1080p',
                 '2k': '1440p', '4k': '2160p', '8k': '4320p',
             }
@@ -441,6 +466,7 @@ class CLIHandler:
         session = DownloadSession(
             url=args.url or '',
             media_type=detected_type,
+            is_spotify=is_spotify,
             output_path=output_path,
             format=validated_format,
             codec=args.codec if (args.codec and detected_type == 'video') else None,

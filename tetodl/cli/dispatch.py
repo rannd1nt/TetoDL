@@ -11,7 +11,7 @@ from tetodl.core.models import DownloadSession, DownloadResult
 from tetodl.core.config import load_app_config
 from tetodl.core.resolver import ConfigResolver
 
-from tetodl.pipeline.handlers import download_audio_youtube, download_video_youtube
+from tetodl.pipeline.handlers import download_audio_youtube, download_spotify, download_spotify_thumbnail, download_video_youtube
 from tetodl.utils.thumbnail import download_thumbnail_task
 
 @trace
@@ -33,11 +33,16 @@ def execute_download(session: DownloadSession):
             if session.media_type == 'thumbnail':
                 fmt = session.format or 'jpg'
                 with traced(f'thumbnail-only mode, format={fmt}'):
-                    result = download_thumbnail_task(url, target_format=fmt)
+                    if session.is_spotify:
+                        result = download_spotify_thumbnail(url, target_format=fmt)
+                    else:
+                        result = download_thumbnail_task(url, target_format=fmt)
                 return result
 
             with traced(f'dispatching to {"video" if session.media_type == "video" else "audio"} handler'):
-                if session.media_type == 'video':
+                if session.is_spotify:
+                    result = download_spotify(url, session=session, config=app_config)
+                elif session.media_type == 'video':
                     result = download_video_youtube(
                         url, session=session, config=app_config,
                     )
@@ -61,7 +66,7 @@ def execute_download(session: DownloadSession):
                                     print()
                                     pass
 
-                                if result.is_staging:
+                                if result.is_staging and not session.is_temp_session:
                                     with traced('moving files from staging'):
                                         console.warn(Keys.dispatch.moving_files_back)
                                         moved_files = move_contents_and_cleanup(path_to_share, result.parent_dir)

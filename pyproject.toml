@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tetodl"
-version = "2.1.0"
+dynamic = ["version"]
 description = "An User Friendly and Configurable TUI/CLI Media Downloader"
 authors = [{name = "rannd1nt"}]
 license = {text = "MIT"}
@@ -23,7 +23,6 @@ dependencies = [
     "qrcode>=7.4",
     "fastapi>=0.100",
     "uvicorn>=0.20",
-    "zeroconf>=0.100",
 ]
 
 [project.optional-dependencies]
@@ -42,6 +41,9 @@ Repository = "https://github.com/rannd1nt/tetodl"
 
 [tool.setuptools.packages.find]
 include = ["tetodl*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "tetodl.constants.APP_VERSION"}
 
 [tool.pytest.ini_options]
 testpaths = ["tetodl/tests"]
