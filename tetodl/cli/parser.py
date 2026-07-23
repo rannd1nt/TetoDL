@@ -250,7 +250,7 @@ class CLIHandler:
         if jitter_min is not None or jitter_max is not None or args.retries is not None:
             config_mgr.set_jitter_config(min_=jitter_min, max_=jitter_max, retries=args.retries)
             if jitter_min is not None:
-                console.ok(Keys.cli.jitter_set(jitter_min=int(jitter_min), jitter_max=int(jitter_max)))
+                console.ok(Keys.cli.jitter_set(jitter_min=str(jitter_min), jitter_max=str(jitter_max)))
             if args.retries:
                 console.ok(Keys.cli.retries_set(retries=args.retries))
             changed = True
