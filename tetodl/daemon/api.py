@@ -838,6 +838,7 @@ def run_server(host: str, port: int, verbose: bool = False):
 
     from ..utils.console import console as _console
     from ..utils.formatters import color as _color
+    from ..utils.network import get_best_ip
     from .display import _get_ip_from_ip_a
 
     os.environ["TETODL_PORT"] = str(port)
@@ -862,7 +863,9 @@ def run_server(host: str, port: int, verbose: bool = False):
             _time.sleep(0.05)
 
     ip = _get_ip_from_ip_a()
-    url = f"http://{ip}:{port}" if ip else f"http://{host}:{port}"
+    if not ip:
+        ip = get_best_ip()
+    url = f"http://{ip}:{port}"
 
     print()
     _console.ok(f"TetoDL Daemon URL: {_color(url, 'c')}")

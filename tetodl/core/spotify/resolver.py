@@ -8,7 +8,12 @@ from .client import SpotifyClient
 from .errors import SpotifyParseError
 from .models import SpotifyTrack
 
-_URL_PATTERN = re.compile(r"spotify\.com/(track|album|playlist)/([a-zA-Z0-9]+)")
+_URL_PATTERN = re.compile(
+    r"spotify\.com"
+    r"(?:/[a-z]+(?:-[a-z]{2})?)?"
+    r"/(track|album|playlist)/([a-zA-Z0-9]+)",
+    re.IGNORECASE
+)
 
 
 class SpotifyResolver:

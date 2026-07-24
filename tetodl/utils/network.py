@@ -152,6 +152,10 @@ def check_firewall_status(port):
 # --- MAIN SHARING FUNCTION (FastAPI) ---
 
 def start_share_server(file_path_str: str, start_port=8989):
+    import asyncio as _asyncio
+    import threading as _threading
+    import time as _time
+
     import qrcode
     import uvicorn
     from fastapi import FastAPI
@@ -159,7 +163,7 @@ def start_share_server(file_path_str: str, start_port=8989):
     from ..utils.share import create_share_router
 
     path = Path(file_path_str).resolve()
-    
+
     if not path.exists():
         console.err(Keys.net.file_dir_not_found(path=str(path)))
         return
@@ -191,32 +195,43 @@ def start_share_server(file_path_str: str, start_port=8989):
         serve_dir = path
         target_url = f"http://{ip_address}:{port}/"
 
-    # Build FastAPI app with share router
     app = FastAPI()
     router = create_share_router(str(serve_dir))
     app.include_router(router)
 
-    qr = qrcode.QRCode(version=1, box_size=1, border=1)
-    qr.add_data(target_url)
-    qr.make(fit=True)
+    config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="error")
+    server = uvicorn.Server(config)
+
+    def _run():
+        _asyncio.run(server.serve())
+
+    thread = _threading.Thread(target=_run, name="share-server", daemon=True)
+    thread.start()
+
+    while not server.started:
+        _time.sleep(0.05)
 
     console.ok(Keys.net.sharing_started)
     rich_console.print()
 
     rich_console.print(f"Hosting: [cyan]{path.name}[/cyan]")
     rich_console.print(f"Address: [yellow]{target_url}[/yellow]")
-    
+
     check_firewall_status(port)
-    
+
+    qr = qrcode.QRCode(version=1, box_size=1, border=1)
+    qr.add_data(target_url)
+    qr.make(fit=True)
+
     rich_console.print()
-    qr.print_ascii(invert=True) 
-    
+    qr.print_ascii(invert=True)
+
     rich_console.print()
     rich_console.print("[dim]Scan QR above with your phone camera.[/dim]")
     rich_console.print("[bold red]Press Ctrl+C to stop server.[/bold red]")
 
     try:
-        uvicorn.run(app, host="0.0.0.0", port=port, log_level="error")
+        thread.join()
     except KeyboardInterrupt:
         rich_console.print("\n[yellow]Sharing stopped.[/yellow]")
         raise KeyboardInterrupt
