@@ -28,7 +28,7 @@ if not IS_WINDOWS and not IS_TERMUX:
         pass
 
 APP_NAME = "TetoDL"
-APP_VERSION = "2.2.1"
+APP_VERSION = "2.2.2"
 JITTER = (3.0, 5.0)
 
 # ==== BINARY ROOT (PyInstaller) ====
