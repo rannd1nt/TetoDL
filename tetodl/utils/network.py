@@ -231,7 +231,8 @@ def start_share_server(file_path_str: str, start_port=8989):
     rich_console.print("[bold red]Press Ctrl+C to stop server.[/bold red]")
 
     try:
-        thread.join()
+        while thread.is_alive():
+            thread.join(0.5)
     except KeyboardInterrupt:
         rich_console.print("\n[yellow]Sharing stopped.[/yellow]")
         raise KeyboardInterrupt

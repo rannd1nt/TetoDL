@@ -401,7 +401,22 @@ def download_spotify(
 
     if not remaining_tracks:
         console.err("All tracks from this URL have already been downloaded")
-        return DownloadResult(success=False, reason="all_existing", file_path=None)
+        existing_path = None
+        for t in tracks:
+            if t.spotify_id:
+                for d in precheck_dirs:
+                    exists, meta = registry.check_existing(
+                        content_type="audio", target_folder=d, spotify_id=t.spotify_id,
+                    )
+                    if exists and meta:
+                        existing_path = meta.get("file_path")
+                        break
+            if existing_path:
+                break
+        return DownloadResult(
+            success=False, reason="all_existing",
+            file_path=existing_path, skipped=True,
+        )
 
     # --- Search YT Music for unresolved tracks (inside spinner) ---
     yt_match_cache = get_cache("yt_match")
