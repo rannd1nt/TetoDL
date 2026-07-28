@@ -95,7 +95,7 @@ class GeniusCoverProvider(CoverProvider):
                 source="Genius",
                 artist=clean_artist,
                 title=hit_title,
-                album=result.get("album", {}).get("name") if isinstance(result.get("album"), dict) else None,
+                album=str(result.get("album", {}).get("name", "") if isinstance(result.get("album"), dict) else ""),
             )
 
         return None

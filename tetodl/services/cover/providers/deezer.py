@@ -78,7 +78,7 @@ class DeezerProvider(CoverProvider):
         try:
             resp = get_session().get(
                 "https://api.deezer.com/search",
-                params={"q": search_term, "limit": 10, "output": "json"},
+                params={"q": search_term, "limit": "10", "output": "json"},
                 timeout=8,
             )
             data = resp.json()
