@@ -13,7 +13,7 @@ from tetodl.services.cover.providers import get_cover_providers
 from tetodl.utils.console import console
 from tetodl.utils.i18n_keys import Keys
 from tetodl.utils.network import check_internet
-from tetodl.utils.tracer import trace, traced
+from tetodl.utils.tracer import trace
 
 try:
     import yt_dlp as yt
