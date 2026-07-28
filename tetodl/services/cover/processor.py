@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import abc
+import importlib
 import os
 import subprocess
 
@@ -89,11 +90,8 @@ class PyAVThumbnailProcessor(ThumbnailProcessor):
 
 def get_thumbnail_processor() -> ThumbnailProcessor:
     if IS_WINDOWS and IS_BINARY:
-        try:
-            import av
+        if importlib.util.find_spec("av") is not None:
             return PyAVThumbnailProcessor()
-        except ImportError:
-            pass
     return FFmpegThumbnailProcessor()
 
 

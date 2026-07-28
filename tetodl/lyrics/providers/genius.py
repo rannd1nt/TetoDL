@@ -153,7 +153,7 @@ def _align_with_anchor(raw_lyrics: str, anchor: str) -> str:
     if not raw_lyrics or not anchor:
         return raw_lyrics or ""
 
-    anchor_lines = [l.strip() for l in anchor.strip().split("\n") if l.strip()]
+    anchor_lines = [line.strip() for line in anchor.strip().split("\n") if line.strip()]
     if not anchor_lines:
         return raw_lyrics
 

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from difflib import SequenceMatcher
-
 from tetodl.lyrics.matcher import is_valid_match
 from tetodl.services.cover.models import CoverData, CoverQuery
 from tetodl.services.cover.providers.base import CoverProvider
