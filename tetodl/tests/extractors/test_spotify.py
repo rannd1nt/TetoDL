@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
-from tetodl.core.step import PipelineError
-from tetodl.extractors.spotify import SpotifyExtractor
+from tetodl.core.domain.step import PipelineError
+from tetodl.core.sources.spotify import SpotifyExtractor
 
 
 class TestSpotifyExtractorHandles:
@@ -75,7 +75,7 @@ def _fake_track(
     artist: str = "Artist",
     album: str = "Album",
 ) -> object:
-    from tetodl.core.spotify import SpotifyTrack
+    from tetodl.core.clients.spotify.models import SpotifyTrack
 
     return SpotifyTrack(
         title=name,

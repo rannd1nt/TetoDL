@@ -19,7 +19,7 @@ from typing import Any
 
 import pytest
 
-from tetodl.core.models import (
+from tetodl.core.domain.models import (
     AppConfig,
     DownloadSession,
     PipelineContext,

@@ -1,22 +1,30 @@
 
 
-from tetodl.core.models import DownloadResult, DownloadSession
+from tetodl.core.domain.models import DownloadResult, DownloadSession
 
 
 class TestDispatch:
     """Tests for CLI dispatch module."""
 
+    def _import_modules(self):
+        """Ensure submodules are loaded so mocker.patch can resolve dotted paths."""
+        import tetodl.ui.cli.dispatch  # noqa: F401
+        import tetodl.core.domain.config  # noqa: F401
+        import tetodl.core.resolver  # noqa: F401
+        import tetodl.core.cover  # noqa: F401
+
     def test_execute_download_audio(self, mocker):
+        self._import_modules()
         """execute_download calls download_audio_youtube for audio media_type."""
         mock_dl = mocker.patch(
-            "tetodl.cli.dispatch.download_audio_youtube",
+            "tetodl.ui.cli.dispatch.download_audio_youtube",
             return_value=DownloadResult(success=True, file_path="/tmp/song.mp3"),
         )
-        mock_config = mocker.patch("tetodl.cli.dispatch.load_app_config")
-        mock_resolver = mocker.patch("tetodl.cli.dispatch.ConfigResolver")
+        mock_config = mocker.patch("tetodl.ui.cli.dispatch.load_app_config")
+        mock_resolver = mocker.patch("tetodl.ui.cli.dispatch.ConfigResolver")
         mock_resolver.return_value.resolve.return_value = mock_config.return_value
 
-        from tetodl.cli.dispatch import execute_download
+        from tetodl.ui.cli.dispatch import execute_download
 
         session = DownloadSession(
             url="https://music.youtube.com/watch?v=test",
@@ -28,16 +36,17 @@ class TestDispatch:
         assert result.success is True
 
     def test_execute_download_video(self, mocker):
+        self._import_modules()
         """execute_download calls download_video_youtube for video media_type."""
         mock_dl = mocker.patch(
-            "tetodl.cli.dispatch.download_video_youtube",
+            "tetodl.ui.cli.dispatch.download_video_youtube",
             return_value=DownloadResult(success=True, file_path="/tmp/video.mp4"),
         )
-        mock_config = mocker.patch("tetodl.cli.dispatch.load_app_config")
-        mock_resolver = mocker.patch("tetodl.cli.dispatch.ConfigResolver")
+        mock_config = mocker.patch("tetodl.ui.cli.dispatch.load_app_config")
+        mock_resolver = mocker.patch("tetodl.ui.cli.dispatch.ConfigResolver")
         mock_resolver.return_value.resolve.return_value = mock_config.return_value
 
-        from tetodl.cli.dispatch import execute_download
+        from tetodl.ui.cli.dispatch import execute_download
 
         session = DownloadSession(
             url="https://youtube.com/watch?v=test",
@@ -49,16 +58,17 @@ class TestDispatch:
         assert result.success is True
 
     def test_execute_download_thumbnail(self, mocker):
+        self._import_modules()
         """execute_download calls CoverService.download for thumbnail."""
         mock_thumb = mocker.patch(
-            "tetodl.services.cover.CoverService.download",
+            "tetodl.ui.cli.dispatch.CoverService.download",
             return_value=DownloadResult(success=True, file_path="/tmp/thumb.jpg"),
         )
-        mock_config = mocker.patch("tetodl.cli.dispatch.load_app_config")
-        mock_resolver = mocker.patch("tetodl.cli.dispatch.ConfigResolver")
+        mock_config = mocker.patch("tetodl.ui.cli.dispatch.load_app_config")
+        mock_resolver = mocker.patch("tetodl.ui.cli.dispatch.ConfigResolver")
         mock_resolver.return_value.resolve.return_value = mock_config.return_value
 
-        from tetodl.cli.dispatch import execute_download
+        from tetodl.ui.cli.dispatch import execute_download
 
         session = DownloadSession(
             url="https://youtube.com/watch?v=test",
@@ -73,12 +83,13 @@ class TestDispatch:
         assert result.success is True
 
     def test_execute_download_empty_url(self, mocker):
+        self._import_modules()
         """Returns failure result when URL is empty."""
-        mock_config = mocker.patch("tetodl.cli.dispatch.load_app_config")
-        mock_resolver = mocker.patch("tetodl.cli.dispatch.ConfigResolver")
+        mock_config = mocker.patch("tetodl.ui.cli.dispatch.load_app_config")
+        mock_resolver = mocker.patch("tetodl.ui.cli.dispatch.ConfigResolver")
         mock_resolver.return_value.resolve.return_value = mock_config.return_value
 
-        from tetodl.cli.dispatch import execute_download
+        from tetodl.ui.cli.dispatch import execute_download
 
         session = DownloadSession(url="", media_type="audio")
         result = execute_download(session)
@@ -86,16 +97,17 @@ class TestDispatch:
         assert result.success is False
 
     def test_execute_download_cancelled(self, mocker):
+        self._import_modules()
         """Handles KeyboardInterrupt gracefully."""
         mocker.patch(
-            "tetodl.cli.dispatch.download_audio_youtube",
+            "tetodl.ui.cli.dispatch.download_audio_youtube",
             side_effect=KeyboardInterrupt(),
         )
-        mock_config = mocker.patch("tetodl.cli.dispatch.load_app_config")
-        mock_resolver = mocker.patch("tetodl.cli.dispatch.ConfigResolver")
+        mock_config = mocker.patch("tetodl.ui.cli.dispatch.load_app_config")
+        mock_resolver = mocker.patch("tetodl.ui.cli.dispatch.ConfigResolver")
         mock_resolver.return_value.resolve.return_value = mock_config.return_value
 
-        from tetodl.cli.dispatch import execute_download
+        from tetodl.ui.cli.dispatch import execute_download
 
         session = DownloadSession(
             url="https://music.youtube.com/watch?v=test",
@@ -107,16 +119,17 @@ class TestDispatch:
         assert result.cancelled is True
 
     def test_execute_download_spotify(self, mocker):
+        self._import_modules()
         """execute_download calls download_spotify when is_spotify is True."""
         mock_spotify = mocker.patch(
-            "tetodl.cli.dispatch.download_spotify",
+            "tetodl.ui.cli.dispatch.download_spotify",
             return_value=DownloadResult(success=True, file_path="/music/song.mp3"),
         )
-        mock_config = mocker.patch("tetodl.cli.dispatch.load_app_config")
-        mock_resolver = mocker.patch("tetodl.cli.dispatch.ConfigResolver")
+        mock_config = mocker.patch("tetodl.ui.cli.dispatch.load_app_config")
+        mock_resolver = mocker.patch("tetodl.ui.cli.dispatch.ConfigResolver")
         mock_resolver.return_value.resolve.return_value = mock_config.return_value
 
-        from tetodl.cli.dispatch import execute_download
+        from tetodl.ui.cli.dispatch import execute_download
 
         session = DownloadSession(
             url="https://open.spotify.com/track/abc",

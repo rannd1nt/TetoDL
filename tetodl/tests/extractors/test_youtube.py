@@ -2,8 +2,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tetodl.core.models import MediaInfo
-from tetodl.extractors.youtube import YouTubeExtractor
+from tetodl.core.domain.models import MediaInfo
+from tetodl.core.sources.youtube import YouTubeExtractor
 
 
 class TestYouTubeExtractor:

@@ -7,7 +7,7 @@ class TestAppConfig:
 
     def test_defaults(self):
         """All AppConfig fields have expected default values."""
-        from tetodl.core.models import AppConfig
+        from tetodl.core.domain.models import AppConfig
         cfg = AppConfig()
         assert cfg.music_root == ""
         assert cfg.video_root == ""
@@ -44,20 +44,20 @@ class TestAppConfig:
 
     def test_forbids_extra(self):
         """AppConfig raises ValidationError for unknown fields."""
-        from tetodl.core.models import AppConfig
+        from tetodl.core.domain.models import AppConfig
         with pytest.raises(ValidationError):
             AppConfig(nonexistent_field=True)  # type: ignore[call-arg]
 
     def test_sub_config_audio(self):
         """AppConfig.audio returns AudioConfig with quality from audio_quality."""
-        from tetodl.core.models import AppConfig
+        from tetodl.core.domain.models import AppConfig
         cfg = AppConfig(audio_quality="mp3")
         audio = cfg.audio
         assert audio.quality == "mp3"
 
     def test_sub_config_video(self):
         """AppConfig.video returns VideoConfig populated from flat fields."""
-        from tetodl.core.models import AppConfig
+        from tetodl.core.domain.models import AppConfig
         cfg = AppConfig(video_container="mkv", video_codec="h265", max_video_resolution="1080p")
         video = cfg.video
         assert video.container == "mkv"
@@ -66,7 +66,7 @@ class TestAppConfig:
 
     def test_sub_config_cover(self):
         """AppConfig.cover returns CoverConfig populated from flat fields."""
-        from tetodl.core.models import AppConfig
+        from tetodl.core.domain.models import AppConfig
         cfg = AppConfig(smart_cover_mode=False, no_cover_mode=True, force_crop=True)
         cover = cfg.cover
         assert cover.smart_mode is False
@@ -75,7 +75,7 @@ class TestAppConfig:
 
     def test_sub_config_lyrics(self):
         """AppConfig.lyrics returns LyricsConfig from flat fields."""
-        from tetodl.core.models import AppConfig
+        from tetodl.core.domain.models import AppConfig
         cfg = AppConfig(lyrics_mode=True, romaji_mode=True)
         lyrics = cfg.lyrics
         assert lyrics.enabled is True
@@ -83,7 +83,7 @@ class TestAppConfig:
 
     def test_sub_config_download(self):
         """AppConfig.download returns DownloadConfig from flat fields."""
-        from tetodl.core.models import AppConfig
+        from tetodl.core.domain.models import AppConfig
         cfg = AppConfig(simple_mode=False, quiet=True, skip_existing_files=False, progress_style="detailed")
         dl = cfg.download
         assert dl.simple_mode is False
@@ -93,7 +93,7 @@ class TestAppConfig:
 
     def test_sub_config_library(self):
         """AppConfig.library returns LibraryConfig from flat fields."""
-        from tetodl.core.models import AppConfig
+        from tetodl.core.domain.models import AppConfig
         cfg = AppConfig(music_root="/music", group_mode=True, zip_mode=True, create_m3u=True)
         lib = cfg.library
         assert lib.music_root == "/music"
@@ -103,7 +103,7 @@ class TestAppConfig:
 
     def test_sub_config_system(self):
         """AppConfig.system returns SystemConfig from flat fields."""
-        from tetodl.core.models import AppConfig
+        from tetodl.core.domain.models import AppConfig
         cfg = AppConfig(max_retries=5, async_workers=8, jitter_min=2.0, jitter_max=6.0)
         sys_cfg = cfg.system
         assert sys_cfg.max_retries == 5
@@ -113,7 +113,7 @@ class TestAppConfig:
 
     def test_sub_config_daemon(self):
         """AppConfig.daemon returns DaemonConfig from flat fields."""
-        from tetodl.core.models import AppConfig
+        from tetodl.core.domain.models import AppConfig
         cfg = AppConfig(daemon_default_temp=False, daemon_cleanup_interval=7200)
         daemon = cfg.daemon
         assert daemon.default_temp is False
@@ -125,7 +125,7 @@ class TestSessionOverrides:
 
     def test_defaults(self):
         """SessionOverrides fields have expected defaults."""
-        from tetodl.core.models import SessionOverrides
+        from tetodl.core.domain.models import SessionOverrides
         o = SessionOverrides()
         assert o.output_path is None
         assert o.format is None
@@ -150,19 +150,19 @@ class TestDownloadSession:
 
     def test_url_not_empty_strips_whitespace(self):
         """url_not_empty validator strips leading/trailing whitespace."""
-        from tetodl.core.models import DownloadSession
+        from tetodl.core.domain.models import DownloadSession
         session = DownloadSession(url="  https://example.com  ")
         assert session.url == "https://example.com"
 
     def test_url_empty_preserved(self):
         """Empty URL is preserved as empty string."""
-        from tetodl.core.models import DownloadSession
+        from tetodl.core.domain.models import DownloadSession
         session = DownloadSession(url="")
         assert session.url == ""
 
     def test_merged_overrides_flat_takes_precedence(self):
         """Flat fields in DownloadSession override structured overrides."""
-        from tetodl.core.models import DownloadSession, SessionOverrides
+        from tetodl.core.domain.models import DownloadSession, SessionOverrides
         session = DownloadSession(
             url="https://example.com",
             format="mp3",
@@ -175,7 +175,7 @@ class TestDownloadSession:
 
     def test_merged_overrides_structured_used_when_flat_is_default(self):
         """Structured overrides apply when flat fields are at defaults."""
-        from tetodl.core.models import DownloadSession, SessionOverrides
+        from tetodl.core.domain.models import DownloadSession, SessionOverrides
         session = DownloadSession(
             url="https://example.com",
             overrides=SessionOverrides(quiet=True, async_mode=True),
@@ -186,7 +186,7 @@ class TestDownloadSession:
 
     def test_config_updates_output_path(self):
         """config_updates maps output_path to music/video/thumbnail_root."""
-        from tetodl.core.models import DownloadSession
+        from tetodl.core.domain.models import DownloadSession
         session = DownloadSession(url="https://example.com", output_path="/out")
         updates = session.config_updates()
         assert updates["music_root"] == "/out"
@@ -195,21 +195,21 @@ class TestDownloadSession:
 
     def test_config_updates_format_for_audio(self):
         """config_updates maps format to audio_quality for audio media_type."""
-        from tetodl.core.models import DownloadSession
+        from tetodl.core.domain.models import DownloadSession
         session = DownloadSession(url="https://example.com", format="mp3", media_type="audio")
         updates = session.config_updates()
         assert updates["audio_quality"] == "mp3"
 
     def test_config_updates_format_for_video(self):
         """config_updates maps format to video_container for video media_type."""
-        from tetodl.core.models import DownloadSession
+        from tetodl.core.domain.models import DownloadSession
         session = DownloadSession(url="https://example.com", format="mkv", media_type="video")
         updates = session.config_updates()
         assert updates["video_container"] == "mkv"
 
     def test_config_updates_toggles(self):
         """config_updates includes all toggle flags when set."""
-        from tetodl.core.models import DownloadSession
+        from tetodl.core.domain.models import DownloadSession
         session = DownloadSession(
             url="https://example.com",
             lyrics=True,
@@ -227,7 +227,7 @@ class TestDownloadSession:
 
     def test_merged_overrides_preserves_all_fields(self):
         """merged_overrides preserves all SessionOverrides fields."""
-        from tetodl.core.models import DownloadSession
+        from tetodl.core.domain.models import DownloadSession
         session = DownloadSession(
             url="https://example.com",
             output_path="/out",
@@ -271,7 +271,7 @@ class TestPipelineContext:
 
     def test_defaults_no_downloaded_file(self):
         """PipelineContext defaults have no downloaded_file set."""
-        from tetodl.core.models import AppConfig, PipelineContext
+        from tetodl.core.domain.models import AppConfig, PipelineContext
         ctx = PipelineContext(
             config=AppConfig(),
             url="https://example.com",
@@ -292,7 +292,7 @@ class TestDownloadResult:
 
     def test_getitem(self):
         """DownloadResult supports dict-style __getitem__ access."""
-        from tetodl.core.models import DownloadResult
+        from tetodl.core.domain.models import DownloadResult
         result = DownloadResult(success=True, file_path="/tmp/file.mp3", title="My Song")
         assert result["success"] is True
         assert result["file_path"] == "/tmp/file.mp3"
@@ -300,21 +300,21 @@ class TestDownloadResult:
 
     def test_get_method(self):
         """DownloadResult.get returns default for missing keys."""
-        from tetodl.core.models import DownloadResult
+        from tetodl.core.domain.models import DownloadResult
         result = DownloadResult(success=True)
         assert result.get("success") is True
         assert result.get("nonexistent", "fallback") == "fallback"
 
     def test_contains(self):
         """DownloadResult supports 'in' operator."""
-        from tetodl.core.models import DownloadResult
+        from tetodl.core.domain.models import DownloadResult
         result = DownloadResult(success=True)
         assert "success" in result
         assert "missing" not in result
 
     def test_defaults(self):
         """DownloadResult fields have expected defaults for optional fields."""
-        from tetodl.core.models import DownloadResult
+        from tetodl.core.domain.models import DownloadResult
         result = DownloadResult(success=True)
         assert result.file_path is None
         assert result.skipped is False
@@ -330,13 +330,13 @@ class TestSubModels:
 
     def test_audio_config_defaults(self):
         """AudioConfig defaults quality to m4a."""
-        from tetodl.core.models import AudioConfig
+        from tetodl.core.domain.models import AudioConfig
         cfg = AudioConfig()
         assert cfg.quality == "m4a"
 
     def test_video_config_defaults(self):
         """VideoConfig defaults match expected values."""
-        from tetodl.core.models import VideoConfig
+        from tetodl.core.domain.models import VideoConfig
         cfg = VideoConfig()
         assert cfg.container == "mp4"
         assert cfg.codec == "h264"
@@ -344,7 +344,7 @@ class TestSubModels:
 
     def test_cover_config_defaults(self):
         """CoverConfig defaults."""
-        from tetodl.core.models import CoverConfig
+        from tetodl.core.domain.models import CoverConfig
         cfg = CoverConfig()
         assert cfg.smart_mode is True
         assert cfg.disabled is False
@@ -352,14 +352,14 @@ class TestSubModels:
 
     def test_lyrics_config_defaults(self):
         """LyricsConfig defaults."""
-        from tetodl.core.models import LyricsConfig
+        from tetodl.core.domain.models import LyricsConfig
         cfg = LyricsConfig()
         assert cfg.enabled is False
         assert cfg.romaji is False
 
     def test_media_info_required_fields(self):
         """MediaInfo requires id, title, and url."""
-        from tetodl.core.models import MediaInfo
+        from tetodl.core.domain.models import MediaInfo
         info = MediaInfo(id="abc123", title="Test", url="https://example.com")
         assert info.id == "abc123"
         assert info.title == "Test"
@@ -367,7 +367,7 @@ class TestSubModels:
 
     def test_media_info_defaults_optional(self):
         """MediaInfo optional fields have proper defaults."""
-        from tetodl.core.models import MediaInfo
+        from tetodl.core.domain.models import MediaInfo
         info = MediaInfo(id="abc", title="T", url="https://e.com")
         assert info.duration == 0
         assert info.uploader == ""
@@ -378,7 +378,7 @@ class TestSubModels:
 
     def test_downloaded_file_minimal(self):
         """DownloadedFile requires path, container, and title."""
-        from tetodl.core.models import DownloadedFile
+        from tetodl.core.domain.models import DownloadedFile
         f = DownloadedFile(path="/tmp/f.mp3", container="mp3", title="Song")
         assert f.path == "/tmp/f.mp3"
         assert f.container == "mp3"
@@ -386,14 +386,14 @@ class TestSubModels:
 
     def test_classification_defaults(self):
         """Classification defaults."""
-        from tetodl.core.models import Classification
+        from tetodl.core.domain.models import Classification
         c = Classification()
         assert c.is_playlist is False
         assert c.existing_result is None
 
     def test_cover_result_required_fields(self):
         """CoverResult requires thumbnail_path."""
-        from tetodl.core.models import CoverResult
+        from tetodl.core.domain.models import CoverResult
         r = CoverResult(thumbnail_path="/tmp/cover.jpg")
         assert r.thumbnail_path == "/tmp/cover.jpg"
         assert r.source == "youtube"
@@ -401,7 +401,7 @@ class TestSubModels:
 
     def test_download_target_defaults(self):
         """DownloadTarget defaults."""
-        from tetodl.core.models import DownloadTarget
+        from tetodl.core.domain.models import DownloadTarget
         t = DownloadTarget(output_dir="/out", filename_template="%(title)s", format_string="bestaudio")
         assert t.postprocessors == []
         assert t.cut_range is None

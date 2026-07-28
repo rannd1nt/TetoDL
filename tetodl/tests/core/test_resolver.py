@@ -5,7 +5,7 @@ class TestConfigResolver:
 
     def test_merge_overrides_overrides_fields(self):
         """Session overrides take effect on the resolved config."""
-        from tetodl.core.models import AppConfig, DownloadSession
+        from tetodl.core.domain.models import AppConfig, DownloadSession
         from tetodl.core.resolver import ConfigResolver
 
         base = AppConfig(music_root="/base/music", video_root="/base/video")
@@ -24,7 +24,7 @@ class TestConfigResolver:
 
     def test_merge_overrides_preserves_defaults(self):
         """Non-overridden fields retain their base config values."""
-        from tetodl.core.models import AppConfig, DownloadSession
+        from tetodl.core.domain.models import AppConfig, DownloadSession
         from tetodl.core.resolver import ConfigResolver
 
         base = AppConfig(music_root="/base/music", max_video_resolution="1080p", audio_quality="m4a")
@@ -37,7 +37,7 @@ class TestConfigResolver:
 
     def test_resolve_no_base(self):
         """Resolver with no base uses default AppConfig."""
-        from tetodl.core.models import DownloadSession
+        from tetodl.core.domain.models import DownloadSession
         from tetodl.core.resolver import ConfigResolver
 
         resolver = ConfigResolver()
@@ -48,7 +48,7 @@ class TestConfigResolver:
 
     def test_resolve_covers_all_fields(self):
         """Resolver maps all SessionOverrides fields to AppConfig."""
-        from tetodl.core.models import AppConfig, DownloadSession, SessionOverrides
+        from tetodl.core.domain.models import AppConfig, DownloadSession, SessionOverrides
         from tetodl.core.resolver import ConfigResolver
 
         base = AppConfig()
@@ -92,7 +92,7 @@ class TestConfigResolver:
 
     def test_sets_simple_mode_true(self):
         """Resolver always sets simple_mode=True on the resolved config."""
-        from tetodl.core.models import AppConfig, DownloadSession
+        from tetodl.core.domain.models import AppConfig, DownloadSession
         from tetodl.core.resolver import ConfigResolver
 
         base = AppConfig(simple_mode=False)
@@ -103,7 +103,7 @@ class TestConfigResolver:
 
     def test_resolve_cover_smart_cover(self):
         """Setting smart_cover in overrides enables smart and disables no_cover."""
-        from tetodl.core.models import AppConfig, DownloadSession, SessionOverrides
+        from tetodl.core.domain.models import AppConfig, DownloadSession, SessionOverrides
         from tetodl.core.resolver import ConfigResolver
 
         base = AppConfig()
@@ -118,7 +118,7 @@ class TestConfigResolver:
 
     def test_resolve_cover_no_cover(self):
         """Setting no_cover disables smart cover."""
-        from tetodl.core.models import AppConfig, DownloadSession, SessionOverrides
+        from tetodl.core.domain.models import AppConfig, DownloadSession, SessionOverrides
         from tetodl.core.resolver import ConfigResolver
 
         base = AppConfig()
@@ -133,7 +133,7 @@ class TestConfigResolver:
 
     def test_m3u_enables_group_mode_if_no_group(self):
         """m3u override enables group_mode when base has no group."""
-        from tetodl.core.models import AppConfig, DownloadSession, SessionOverrides
+        from tetodl.core.domain.models import AppConfig, DownloadSession, SessionOverrides
         from tetodl.core.resolver import ConfigResolver
 
         base = AppConfig(group_mode=False)
@@ -148,7 +148,7 @@ class TestConfigResolver:
 
     def test_m3u_does_not_override_explicit_group(self):
         """m3u does not override an explicitly set group_folder."""
-        from tetodl.core.models import AppConfig, DownloadSession, SessionOverrides
+        from tetodl.core.domain.models import AppConfig, DownloadSession, SessionOverrides
         from tetodl.core.resolver import ConfigResolver
 
         base = AppConfig(group_mode=False)

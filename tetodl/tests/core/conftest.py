@@ -14,7 +14,7 @@ import pytest
 @pytest.fixture(autouse=True)
 def _reset_cache_before_test():
     """Clear all cache namespaces before each core test."""
-    from tetodl.core.cache import reset_cache
+    from tetodl.core.domain.cache import reset_cache
     reset_cache()
 
 

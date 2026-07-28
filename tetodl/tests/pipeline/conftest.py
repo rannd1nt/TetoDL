@@ -16,7 +16,7 @@ def mock_download_handler(mocker: Any) -> Any:
     Returns a coroutine-like mock so the pipeline can call it without
     actually invoking yt-dlp.
     """
-    return mocker.patch("tetodl.pipeline.handlers.download_audio_youtube")
+    return mocker.patch("tetodl.core.pipeline.handlers.download_audio_youtube")
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def step_ctx_factory() -> Any:
 
         ctx = step_ctx_factory(url="https://example.com", media_type="audio")
     """
-    from tetodl.core.models import AppConfig, PipelineContext
+    from tetodl.core.domain.models import AppConfig, PipelineContext
 
     def _build(
         url: str = "https://music.youtube.com/watch?v=dQw4w9WgXcQ",

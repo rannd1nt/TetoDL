@@ -1,9 +1,9 @@
 """
-Core application logic managing configuration, session history, dependency, registry, 
+Core application logic managing configuration, session history, dependency, registry,
 and global state.
 """
 
-from .cache import (
+from .domain.cache import (
     Cache,
     CacheStats,
     cache_metadata,
@@ -14,7 +14,7 @@ from .cache import (
     get_url_hash,
     reset_cache,
 )
-from .config import (
+from .domain.config import (
     cleanup_ghost_subfolders,
     get_fallback_format_string,
     get_video_format_string,
@@ -29,8 +29,8 @@ from .config import (
     update_language,
 )
 from .dependency import reset_verification, verify_core_dependencies
-from .history import add_to_history, get_history_stats, load_history, save_history
-from .registry import RegistryManager, registry
+from .domain.history import add_to_history, get_history_stats, load_history, save_history
+from .domain.registry import RegistryManager, registry
 
 __all__ = [
     'Cache',
@@ -58,7 +58,6 @@ __all__ = [
     'save_history',
     'set_progress_style',
     'set_video_resolution',
-    'toggle_media_scanner',
     'toggle_simple_mode',
     'toggle_skip_existing',
     'update_language',

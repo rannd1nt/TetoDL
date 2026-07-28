@@ -1,11 +1,11 @@
 
 
-from tetodl.core.models import (
+from tetodl.core.domain.models import (
     AppConfig,
     MediaInfo,
     PipelineContext,
 )
-from tetodl.pipeline.steps.classify import ClassifyStep
+from tetodl.core.pipeline.stages.classify import ClassifyStep
 
 
 class TestClassifyStep:
@@ -54,7 +54,7 @@ class TestClassifyStep:
         self, app_config: AppConfig, mocker,
     ):
         """Checks registry for audio and returns existing result when found."""
-        mock_registry = mocker.patch("tetodl.pipeline.steps.classify.registry")
+        mock_registry = mocker.patch("tetodl.core.pipeline.stages.classify.registry")
         mock_registry.check_existing.return_value = (
             True,
             {"title": "Existing Song", "file_path": "/tmp/existing.mp3"},
@@ -86,7 +86,7 @@ class TestClassifyStep:
     ):
         """Skips registry check for video when skip_existing_files is False."""
         config = app_config.model_copy(update={"skip_existing_files": False})
-        mock_registry = mocker.patch("tetodl.pipeline.steps.classify.registry")
+        mock_registry = mocker.patch("tetodl.core.pipeline.stages.classify.registry")
 
         info = MediaInfo(
             id="abc123",

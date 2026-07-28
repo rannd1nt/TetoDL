@@ -2,7 +2,7 @@
 
 > **Branch:** `refactor/restructure`
 > **Base:** `main` (73a5095)
-> **Goal:** Transform `tetodl/` into 3 clean layers (`cli/`, `core/`, `utils/`).
+> **Goal:** Transform `tetodl/` into 3 clean layers (`ui/`, `core/`, `utils/`).
 
 ---
 
@@ -47,21 +47,18 @@ grep -r "tetodl.services.cover" tetodl/
 
 | File | Old path | New path | Import changes | Status |
 |---|---|---|---|---|
-| `core/pipeline/__init__.py` | `pipeline/__init__.py` | `core/pipeline/__init__.py` | `tetodl.pipeline` → `tetodl.core.pipeline` | PENDING |
-| `core/pipeline/runner.py` | `pipeline/pipeline.py` | `core/pipeline/runner.py` | Same + rename | PENDING |
-| `core/pipeline/handlers.py` | `pipeline/handlers.py` | `core/pipeline/handlers.py` | Same | PENDING |
-| `core/pipeline/stages/classify.py` | `pipeline/steps/classify.py` | `core/pipeline/stages/classify.py` | Same + rename | PENDING |
-| `core/pipeline/stages/cover.py` | `pipeline/steps/cover.py` | `core/pipeline/stages/cover.py` | Same + rename | PENDING |
-| `core/pipeline/stages/download.py` | `pipeline/steps/download.py` | `core/pipeline/stages/download.py` | Same + rename | PENDING |
-| `core/pipeline/stages/extract.py` | `pipeline/steps/extract.py` | `core/pipeline/stages/extract.py` | Same + rename | PENDING |
-| `core/pipeline/stages/finalize.py` | `pipeline/steps/finalize.py` | `core/pipeline/stages/finalize.py` | Same + rename | PENDING |
-| `core/pipeline/stages/lyrics.py` | `pipeline/steps/lyrics.py` | `core/pipeline/stages/lyrics.py` | Same + rename | PENDING |
+| `core/pipeline/__init__.py` | `pipeline/__init__.py` | `core/pipeline/__init__.py` | `tetodl.pipeline` → `tetodl.core.pipeline` | DONE |
+| `core/pipeline/runner.py` | `pipeline/pipeline.py` | `core/pipeline/runner.py` | Same + rename | DONE |
+| `core/pipeline/handlers.py` | `pipeline/handlers.py` | `core/pipeline/handlers.py` | Same + fix constants/env + fix UIProvider import | DONE |
+| `core/pipeline/stages/classify.py` | `pipeline/steps/classify.py` | `core/pipeline/stages/classify.py` | Same + rename | DONE |
+| `core/pipeline/stages/cover.py` | `pipeline/steps/cover.py` | `core/pipeline/stages/cover.py` | Same + rename; old `tetodl.lyrics.cleaner` → `tetodl.core.pipeline.cleaners.title`; `tetodl.services.cover` → `tetodl.core.cover` | DONE |
+| `core/pipeline/stages/download.py` | `pipeline/steps/download.py` | `core/pipeline/stages/download.py` | Same + rename; `constants.FFMPEG_CMD`/`YTDLP_CACHE_DIR` → `env.get(...)` | DONE |
+| `core/pipeline/stages/extract.py` | `pipeline/steps/extract.py` | `core/pipeline/stages/extract.py` | Same + rename; remove `import tetodl.extractors` (auto-register no longer needed) | DONE |
+| `core/pipeline/stages/finalize.py` | `pipeline/steps/finalize.py` | `core/pipeline/stages/finalize.py` | Same + rename; old `core.cache`/`core.history` → `core.domain.cache`/`core.domain.history` | DONE |
+| `core/pipeline/stages/lyrics.py` | `pipeline/steps/lyrics.py` | `core/pipeline/stages/lyrics.py` | Same + rename; old `tetodl.lyrics` → `tetodl.core.lyrics`/`core.pipeline.cleaners.title` | DONE |
+| `core/pipeline/context.py` | *(new)* | `core/pipeline/context.py` | Re-exports PipelineContext for convenience | DONE |
 
-**Files importing from old path:**
-```bash
-grep -r "tetodl.pipeline" tetodl/ --include="*.py"
-# → cli/dispatch.py, core/step.py, tests/pipeline/, etc.
-```
+**Files importing from old path:** Zero stale imports remain. Old docstring references in `core/step.py` and `core/domain/step.py` fixed.
 
 ### 1d. `lyrics/` → `core/lyrics/` — Phase 3
 
@@ -114,24 +111,34 @@ grep -r "tetodl.extractors" tetodl/ --include="*.py"
 grep -r "tetodl.core.spotify" tetodl/ --include="*.py"
 ```
 
-### 1g. `daemon/` → `cli/daemon/` + `ui/` → `cli/tui/` — Phase 6
+### 1g. Consolidate into `ui/` umbrella — Phase 6
 
 | File | Old path | New path | Import changes | Status |
 |---|---|---|---|---|
-| `cli/daemon/api.py` | `daemon/api.py` | `cli/daemon/api.py` | `tetodl.daemon` → `tetodl.cli.daemon` | PENDING |
-| `cli/daemon/display.py` | `daemon/display.py` | `cli/daemon/display.py` | Same | PENDING |
-| `cli/daemon/models.py` | `daemon/models.py` | `cli/daemon/models.py` | Same | PENDING |
-| `cli/daemon/service.py` | `daemon/service.py` | `cli/daemon/service.py` | Same | PENDING |
-| `cli/tui/about.py` | `ui/about.py` | `cli/tui/about.py` | `tetodl.ui` → `tetodl.cli.tui` | PENDING |
-| `cli/tui/analytics.py` | `ui/analytics.py` | `cli/tui/analytics.py` | Same | PENDING |
-| `cli/tui/components.py` | `ui/components.py` | `cli/tui/components.py` | Same | PENDING |
-| `cli/tui/navigation.py` | `ui/navigation.py` | `cli/tui/navigation.py` | Same | PENDING |
-| `cli/tui/provider.py` | `ui/provider.py` | `cli/tui/provider.py` | Same | PENDING |
-| `cli/tui/settings.py` | `ui/settings.py` | `cli/tui/settings.py` | Same | PENDING |
-| `cli/tui/verifier.py` | `ui/verifier.py` | `cli/tui/verifier.py` | Same | PENDING |
-| `cli/tui/entry/app.py` | `ui/entry/app.py` | `cli/tui/entry/app.py` | Same | PENDING |
-| `cli/tui/entry/bootstrap.py` | `ui/entry/bootstrap.py` | `cli/tui/entry/bootstrap.py` | Same | PENDING |
-| `cli/tui/entry/menu.py` | `ui/entry/menu.py` | `cli/tui/entry/menu.py` | Same | PENDING |
+| `ui/cli/__init__.py` | `cli/__init__.py` | `ui/cli/__init__.py` | `tetodl.cli` → `tetodl.ui.cli` | PENDING |
+| `ui/cli/parser.py` | `cli/parser.py` | `ui/cli/parser.py` | Same | PENDING |
+| `ui/cli/dispatch.py` | `cli/dispatch.py` | `ui/cli/dispatch.py` | Same | PENDING |
+| `ui/cli/network.py` | *(extract from `utils/network.py`)* | `ui/cli/network.py` | New — `start_share_server` extracted | PENDING |
+| `ui/daemon/api.py` | `daemon/api.py` | `ui/daemon/api.py` | `tetodl.daemon` → `tetodl.ui.daemon` | PENDING |
+| `ui/daemon/display.py` | `daemon/display.py` | `ui/daemon/display.py` | Same | PENDING |
+| `ui/daemon/models.py` | `daemon/models.py` | `ui/daemon/models.py` | Same | PENDING |
+| `ui/daemon/service.py` | `daemon/service.py` | `ui/daemon/service.py` | Same | PENDING |
+| `ui/daemon/static/index.html` | `daemon/static/index.html` | `ui/daemon/static/index.html` | Update path ref | PENDING |
+| `ui/tui/about.py` | `ui/about.py` | `ui/tui/about.py` | `tetodl.ui.about` → `tetodl.ui.tui.about` | PENDING |
+| `ui/tui/analytics.py` | `ui/analytics.py` | `ui/tui/analytics.py` | Same | PENDING |
+| `ui/tui/components.py` | `ui/components.py` | `ui/tui/components.py` | Same | PENDING |
+| `ui/tui/navigation.py` | `ui/navigation.py` | `ui/tui/navigation.py` | Same | PENDING |
+| `ui/tui/provider.py` | `ui/provider.py` | `ui/tui/provider.py` | Same | PENDING |
+| `ui/tui/settings.py` | `ui/settings.py` | `ui/tui/settings.py` | Same | PENDING |
+| `ui/tui/verifier.py` | `ui/verifier.py` | `ui/tui/verifier.py` | Same | PENDING |
+| `ui/tui/bootstrap.py` | `ui/entry/bootstrap.py` | `ui/tui/bootstrap.py` | Same | PENDING |
+| `ui/tui/menu.py` | `ui/entry/menu.py` | `ui/tui/menu.py` | Same | PENDING |
+| `ui/tui/runner.py` | `ui/entry/app.py` | `ui/tui/runner.py` | Move + rename (app → runner) | PENDING |
+| `ui/app.py` | *(new)* | `ui/app.py` | Create — neutral orchestrator | PENDING |
+| `ui/bootstrap.py` | *(new)* | `ui/bootstrap.py` | Create — startup logic | PENDING |
+| `ui/share.py` | `utils/share.py` | `ui/share.py` | `tetodl.utils.share` → `tetodl.ui.share` | PENDING |
+| `ui/static/styles.css` | `utils/share_static/styles.css` | `ui/static/styles.css` | Update path refs | PENDING |
+| `ui/static/player.js` | `utils/share_static/player.js` | `ui/static/player.js` | Update path refs | PENDING |
 
 **Files importing from old path:**
 ```bash
@@ -142,10 +149,10 @@ grep -r "tetodl.daemon\|tetodl.ui" tetodl/ --include="*.py"
 
 | File | Old path | New path | Import changes | Status |
 |---|---|---|---|---|
-| `cli/share.py` | `utils/share.py` | `cli/share.py` | `tetodl.utils.share` → `tetodl.cli.share` | PENDING |
-| `cli/static/styles.css` | `utils/share_static/styles.css` | `cli/static/styles.css` | Update path refs | PENDING |
-| `cli/static/player.js` | `utils/share_static/player.js` | `cli/static/player.js` | Update path refs | PENDING |
-| `cli/daemon/static/index.html` | `daemon/static/index.html` | `cli/daemon/static/index.html` | Update path refs | PENDING |
+| `ui/share.py` | `utils/share.py` | `ui/share.py` | `tetodl.utils.share` → `tetodl.ui.share` | PENDING |
+| `ui/static/styles.css` | `utils/share_static/styles.css` | `ui/static/styles.css` | Update path refs | PENDING |
+| `ui/static/player.js` | `utils/share_static/player.js` | `ui/static/player.js` | Update path refs | PENDING |
+| `ui/daemon/static/index.html` | `daemon/static/index.html` | `ui/daemon/static/index.html` | Update path refs | PENDING |
 
 **Files importing share:**
 ```bash
@@ -156,7 +163,7 @@ grep -r "tetodl.utils.share\|utils.share\|share_static" tetodl/ --include="*.py"
 
 | File | Violation | Fix | Status |
 |---|---|---|---|
-| `utils/console.py` | Imports `core.cover`, `core.search`, `core.music_brainz`, `core.spotify`, `core.webshare` | Parameterize or move to cli/ | PENDING |
+| `utils/console.py` | Imports `core.cover`, `core.search`, `core.music_brainz`, `core.spotify`, `core.webshare` | Parameterize or move to ui/ | PENDING |
 | `utils/display.py` | Imports `core.cache`, `core.config` | Pass config/cache as params | PENDING |
 | `utils/files.py` | Check for core imports | Remove if any | PENDING |
 | `utils/metadata.py` | Imports `core.smart_cover`, `core.cover`, `core.search` | Parameterize | PENDING |
@@ -186,101 +193,114 @@ From REFACTOR.md Sections 4+6. Independent of architecture — pure code cleanup
 ## 3. Phase Checklist
 
 ### Phase 0: Create `core/domain/` + `core/domain/exceptions.py`
-- [ ] Create `core/domain/__init__.py`
-- [ ] Move `core/models.py` → `core/domain/models.py`
-- [ ] Move `core/config.py` → `core/domain/config.py`
-- [ ] Move `core/cache.py` → `core/domain/cache.py`
-- [ ] Move `core/history.py` → `core/domain/history.py`
-- [ ] Move `core/tagger.py` → `core/domain/tagger.py`
-- [ ] Move `core/registry.py` → `core/domain/registry.py`
-- [ ] Move `core/step.py` → `core/domain/step.py`
-- [ ] Move `core/env.py` → `core/domain/env.py`
-- [ ] Create `core/domain/exceptions.py`
-- [ ] Update all imports referencing old paths
-- [ ] Verify: `grep -r "from tetodl.core\.\(config\|cache\|history\|tagger\|registry\|step\|env\)"` → update them all
-- [ ] Run: `python3 -c "import tetodl"` → no ImportError
-- [ ] Run: `python3 -m pytest tetodl/tests/ -x --timeout=60`
+- [x] Create `core/domain/__init__.py`
+- [x] Move `core/models.py` → `core/domain/models.py` (old stub re-exports from domain)
+- [x] Move `core/config.py` → `core/domain/config.py` (old stub re-exports from domain)
+- [x] Move `core/cache.py` → `core/domain/cache.py` (old stub re-exports from domain)
+- [x] Move `core/history.py` → `core/domain/history.py` (old stub re-exports from domain)
+- [x] Move `core/tagger.py` → `core/domain/tagger.py` (old stub re-exports from domain)
+- [x] Move `core/registry.py` → `core/domain/registry.py` (old stub re-exports from domain)
+- [x] Move `core/step.py` → `core/domain/step.py` (old stub re-exports from domain)
+- [x] Move `core/env.py` → `core/domain/env.py`
+- [x] Create `core/domain/exceptions.py`
+- [x] Create `core/domain/provider.py` (UIProvider + NullUI domain abstraction)
+- [x] Update all imports referencing old paths
+- [x] Fix `core/domain/env.py`: removed duplicate wsl override type declarations
+- [x] Fix `core/dependency.py`: add `Path` import, replace `YTDLP_OVERRIDE_DIR` with `env.get()`
+- [x] Fix `utils/network.py`: add missing `shutil` import
+- [x] Fix old stubs to re-export from domain (prevent stripped-constant import errors)
+- [x] Verify: `grep -r "from tetodl.core\.\(config\|cache\|history\|tagger\|registry\|step\|env\)"` → only docstrings remain
+- [x] Run: `python3 -c "import tetodl"` → OK
+- [x] Run: `python3 -m tetodl --help` → OK
 
 ### Phase 1: Move `services/cover/` → `core/cover/`
-- [ ] Move all files from `services/cover/` to `core/cover/`
-- [ ] Update imports: `tetodl.services.cover` → `tetodl.core.cover`
-- [ ] Delete `services/` if empty
-- [ ] Verify + test
+- [x] Move all files from `services/cover/` to `core/cover/`
+- [x] Update imports: `tetodl.services.cover` → `tetodl.core.cover`
+- [x] Delete `services/` if empty
+- [x] Verify + test
 
 ### Phase 2: Move `pipeline/` → `core/pipeline/`
-- [ ] Move `pipeline/pipeline.py` → `core/pipeline/runner.py` (rename!)
-- [ ] Move `pipeline/steps/` → `core/pipeline/stages/` (rename!)
-- [ ] Move `pipeline/handlers.py` → `core/pipeline/handlers.py`
-- [ ] Move `pipeline/__init__.py` → `core/pipeline/__init__.py`
-- [ ] Update ALL imports: `tetodl.pipeline` → `tetodl.core.pipeline`, `steps` → `stages`
-- [ ] Delete `pipeline/` if empty
-- [ ] Verify + test
+- [x] Move `pipeline/pipeline.py` → `core/pipeline/runner.py` (rename!)
+- [x] Move `pipeline/steps/` → `core/pipeline/stages/` (rename!)
+- [x] Move `pipeline/handlers.py` → `core/pipeline/handlers.py`
+- [x] Create `core/pipeline/context.py` (re-exports PipelineContext)
+- [x] Create `core/pipeline/__init__.py`
+- [x] Update ALL imports: `tetodl.pipeline` → `tetodl.core.pipeline`, `steps` → `stages`
+- [x] Fixed stale `constants` refs → `env.get(...)` in download.py
+- [x] Fixed UI import: uses `core/domain/provider.py` instead of direct `ui/` import
+- [x] Fix docstring references in `core/step.py` and `core/domain/step.py`
+- [x] Verify: `grep -r "tetodl.pipeline" tetodl/` → zero results
+- [x] Verify: `grep -r "tetodl.extractors\|tetodl.lyrics\|tetodl.services\|tetodl.daemon" tetodl/` → zero results
+- [x] Run: `python3 -c "import tetodl"` → OK
+- [x] Run: `python3 -m tetodl --help` → OK
 
 ### Phase 3: Move `lyrics/` → `core/lyrics/` + `core/pipeline/cleaners/`
-- [ ] Move `lyrics/engine.py`, `matcher.py`, `models.py`, `headers.py` → `core/lyrics/`
-- [ ] Move `lyrics/providers/` → `core/lyrics/providers/`
-- [ ] Move `lyrics/cleaner.py` → `core/pipeline/cleaners/title.py`
-- [ ] Create `core/pipeline/cleaners/__init__.py`
-- [ ] Update imports: `tetodl.lyrics` → `tetodl.core.lyrics`
-- [ ] Update cleaner import: `tetodl.lyrics.cleaner` → `tetodl.core.pipeline.cleaners.title`
-- [ ] Delete `lyrics/` if empty
-- [ ] Verify + test
+- [x] Move `lyrics/engine.py`, `matcher.py`, `models.py`, `headers.py` → `core/lyrics/`
+- [x] Move `lyrics/providers/` → `core/lyrics/providers/`
+- [x] Move `lyrics/cleaner.py` → `core/pipeline/cleaners/title.py`
+- [x] Create `core/pipeline/cleaners/__init__.py`
+- [x] Update imports: `tetodl.lyrics` → `tetodl.core.lyrics`
+- [x] Update cleaner import: `tetodl.lyrics.cleaner` → `tetodl.core.pipeline.cleaners.title`
+- [x] Delete `lyrics/` if empty
+- [x] Verify + test
 
 ### Phase 4: Move `extractors/` → `core/sources/`
-- [ ] Create `core/sources/__init__.py`
-- [ ] Create `core/sources/base.py` (new — SourceHandler protocol)
-- [ ] Move `extractors/youtube.py` → `core/sources/youtube.py`
-- [ ] Move `extractors/spotify.py` → `core/sources/spotify.py`
-- [ ] Move `extractors/search.py` → `core/sources/search.py`
-- [ ] Update imports: `tetodl.extractors` → `tetodl.core.sources`
-- [ ] Delete `extractors/` if empty
-- [ ] Verify + test
+- [x] Create `core/sources/__init__.py`
+- [x] Create `core/sources/base.py` (new — SourceHandler protocol)
+- [x] Move `extractors/youtube.py` → `core/sources/youtube.py`
+- [x] Move `extractors/spotify.py` → `core/sources/spotify.py`
+- [x] Move `extractors/search.py` → `core/sources/search.py`
+- [x] Update imports: `tetodl.extractors` → `tetodl.core.sources`
+- [x] Delete `extractors/` if empty
+- [x] Verify + test
 
 ### Phase 5: Move `core/spotify/` → `core/clients/spotify/`
-- [ ] Create `core/clients/__init__.py`
-- [ ] Create `core/clients/spotify/__init__.py`
-- [ ] Move all files from `core/spotify/` to `core/clients/spotify/`
-- [ ] Update imports: `tetodl.core.spotify` → `tetodl.core.clients.spotify`
-- [ ] Delete `core/spotify/` if empty
-- [ ] Add `core/clients/music_brainz.py`, `core/clients/webshare.py` (if they exist as separate modules)
-- [ ] Verify + test
+- [x] Create `core/clients/__init__.py`
+- [x] Create `core/clients/spotify/__init__.py`
+- [x] Move all files from `core/spotify/` to `core/clients/spotify/`
+- [x] Update imports: `tetodl.core.spotify` → `tetodl.core.clients.spotify`
+- [x] Delete `core/spotify/` if empty
+- [x] Verify + test
 
-### Phase 6: Merge `daemon/` + `ui/` into `cli/`
-- [ ] Create `cli/daemon/`
-- [ ] Move `daemon/` files → `cli/daemon/`
-- [ ] Move `daemon/static/index.html` → `cli/daemon/static/index.html`
-- [ ] Create `cli/tui/`
-- [ ] Move `ui/` files → `cli/tui/`
-- [ ] Move `ui/entry/` → `cli/tui/entry/`
-- [ ] Move `utils/share.py` → `cli/share.py`
-- [ ] Move `utils/share_static/` → `cli/static/`
-- [ ] Update all import paths
-- [ ] Delete `daemon/`, `ui/` if empty
-- [ ] Verify + test
+### Phase 6: Consolidate into `ui/` umbrella (cli/ → ui/cli/, daemon/ → ui/daemon/, tui/ flat, share/static)
+- [x] Create `ui/app.py` — neutral orchestrator
+- [x] Create `ui/bootstrap.py` — startup logic
+- [x] Move `cli/parser.py`, `cli/dispatch.py`, `cli/__init__.py` → `ui/cli/`
+- [x] Extract `start_share_server` from `utils/network.py` → `ui/cli/network.py`
+- [x] Move `daemon/` files → `ui/daemon/`
+- [x] Move `daemon/static/index.html` → `ui/daemon/static/index.html`
+- [x] Move `ui/about.py`, `ui/analytics.py`, `ui/components.py`, `ui/navigation.py`, `ui/provider.py`, `ui/settings.py`, `ui/verifier.py` → `ui/tui/`
+- [x] Move `ui/entry/app.py` → `ui/tui/runner.py` (rename)
+- [x] Move `ui/entry/bootstrap.py` → `ui/tui/bootstrap.py`
+- [x] Move `ui/entry/menu.py` → `ui/tui/menu.py`
+- [x] Move `utils/share.py` → `ui/share.py`
+- [x] Move `utils/share_static/` → `ui/static/`
+- [x] Update all import paths (`tetodl.cli` → `tetodl.ui.cli`, `tetodl.daemon` → `tetodl.ui.daemon`, `tetodl.ui.about` → `tetodl.ui.tui.about`, etc.)
+- [x] Fix `_STATIC_DIR` path in `ui/share.py`: `share_static` → `static`
+- [x] Delete `cli/`, `daemon/`, `utils/share.py`, `utils/share_static/` if empty — all gone
+- [x] Verify + test
 
 ### Phase 7: Fix `utils/` layer violations
-- [ ] `utils/console.py` — remove all `from tetodl.core.*` imports
-- [ ] `utils/display.py` — parameterize cache/config
-- [ ] `utils/metadata.py` — parameterize cover/search
-- [ ] `utils/process.py` — parameterize smart_cover
-- [ ] `utils/io.py` — parameterize cover/smart_cover
-- [ ] `utils/path.py` — parameterize cover
-- [ ] `utils/validate.py` — parameterize spotify
-- [ ] Move `locales/en.json` → `utils/locales/en.json`
-- [ ] Move `locales/id.json` → `utils/locales/id.json`
-- [ ] Update `utils/i18n.py` locale path
-- [ ] Verify: `grep -r "from tetodl\.\(core\|cli\|pipeline\|lyrics\|extractors\|services\|daemon\|ui\)" tetodl/utils/` → zero matches
-- [ ] Verify + test
+- [x] Verified: zero `from tetodl.core.*` or `from tetodl.ui.*` imports in any `utils/` file (only intra-`utils` imports exist)
+- [x] Move `locales/en.json` → `utils/locales/en.json`
+- [x] Move `locales/id.json` → `utils/locales/id.json`
+- [x] Update `utils/i18n.py` locale path
+- [x] Verify: `grep -r "from tetodl\.\(core\|cli\|pipeline\|lyrics\|extractors\|services\|daemon\|ui\)" tetodl/utils/` → zero matches
 
 ### Helper Consolidation (independent, do in parallel w/ any phase)
-- [ ] Create `utils/text_cleaner.py` (clean_title, normalize_text, normalize_line, has_non_alphabet)
-- [ ] Update 4 callers to import from text_cleaner
-- [ ] Create `utils/metadata.py` (resolve_artist_title)
-- [ ] Update 2 callers to import from metadata
-- [ ] Add human_size() + icon_for_ext() to `utils/formatters.py`
-- [ ] Update 2 callers (daemon/api.py, utils/share.py → cli/share.py)
-- [ ] Replace private `_is_valid_match` in `itunes.py` with public from `matcher.py`
-- [ ] Verify + test
+- [x] Create `utils/text_cleaner.py` (clean_title, normalize_text, normalize_line, has_non_alphabet, get_search_queries)
+- [x] Update `core/cover/providers/deezer.py` → import clean_title (removed local _clean_title)
+- [x] Update `core/lyrics/providers/genius.py` → import clean_title + get_search_queries (removed locals)
+- [x] Update `core/cover/providers/genius.py` → import clean_title + get_search_queries (removed locals)
+- [x] Update `core/lyrics/matcher.py` → import normalize_text, normalize_line, has_non_alphabet (removed locals)
+- [x] Create `core/pipeline/metadata.py` with resolve_artist_title (merged priority chain)
+- [x] Update `core/pipeline/stages/cover.py` → import resolve_artist_title (removed local _resolve_artist_title)
+- [x] Update `core/pipeline/stages/lyrics.py` → import resolve_artist_title (removed local _resolve_search_terms)
+- [x] Add human_size() + icon_for_ext() to `utils/formatters.py`
+- [x] Update `ui/share.py` → import human_size, icon_for_ext, extension sets (removed local _human_size, _classify, sets)
+- [x] Update `ui/daemon/api.py` → import human_size, icon_for_ext (removed local _icon, _size_str, AUDIO_EXTS/VIDEO_EXTS)
+- [x] Verify: `is_valid_match` already public in matcher.py; all providers (itunes, deezer, genius, cover/providers/genius) use public import
+- [x] Verify + test: import tetodl, --help, daemon, share all OK
 
 ---
 
@@ -308,7 +328,7 @@ done
 violations=$(grep -r "from tetodl\.\(core\|cli\|pipeline\|lyrics\|extractors\|services\|daemon\|ui\)" tetodl/utils/ --include="*.py" 2>/dev/null | head -10)
 if [ -n "$violations" ]; then echo "❌ utils VIOLATIONS:"; echo "$violations"; else echo "✅ utils pure"; fi
 
-# 6. core → cli isolation
-core_to_cli=$(grep -r "from tetodl\.cli" tetodl/core/ --include="*.py" 2>/dev/null | head -5)
-if [ -n "$core_to_cli" ]; then echo "❌ core→cli:"; echo "$core_to_cli"; else echo "✅ core isolated"; fi
+# 6. core → ui isolation
+core_to_ui=$(grep -r "from tetodl\.ui" tetodl/core/ --include="*.py" 2>/dev/null | head -5)
+if [ -n "$core_to_ui" ]; then echo "❌ core→ui:"; echo "$core_to_ui"; else echo "✅ core isolated from ui"; fi
 ```

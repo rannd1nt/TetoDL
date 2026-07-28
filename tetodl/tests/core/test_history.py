@@ -8,16 +8,16 @@ class TestHistory:
     def _setup(self, monkeypatch, tmp_path, mocker):
         """Reset global state and patch paths for every test."""
         history_file = tmp_path / "history.json"
-        monkeypatch.setattr("tetodl.core.history.HISTORY_PATH", str(history_file))
-        mocker.patch("tetodl.core.history.console.err")
-        mocker.patch("tetodl.core.history.console.ok")
-        mocker.patch("tetodl.core.history.registry.register_download")
-        import tetodl.core.history as hist
+        monkeypatch.setattr("tetodl.core.domain.history.HISTORY_PATH", str(history_file))
+        mocker.patch("tetodl.core.domain.history.console.err")
+        mocker.patch("tetodl.core.domain.history.console.ok")
+        mocker.patch("tetodl.core.domain.history.registry.register_download")
+        import tetodl.core.domain.history as hist
         hist.reset_history()
 
     def test_add_to_history(self):
         """An entry added via add_to_history appears in history."""
-        import tetodl.core.history as hist
+        import tetodl.core.domain.history as hist
 
         hist.add_to_history(
             id="vid123",
@@ -38,7 +38,7 @@ class TestHistory:
 
     def test_add_to_history_dedup(self):
         """Adding the same ID twice replaces the old entry."""
-        import tetodl.core.history as hist
+        import tetodl.core.domain.history as hist
 
         hist.add_to_history(
             id="vid123", file_path="/tmp/v1.mp3", success=True,
@@ -57,7 +57,7 @@ class TestHistory:
 
     def test_get_history_stats_empty(self):
         """get_history_stats returns all zeros when history is empty."""
-        import tetodl.core.history as hist
+        import tetodl.core.domain.history as hist
 
         hist.reset_history()
         stats = hist.get_history_stats()
@@ -69,7 +69,7 @@ class TestHistory:
 
     def test_get_history_stats_with_entries(self):
         """get_history_stats returns correct counts for different platforms."""
-        import tetodl.core.history as hist
+        import tetodl.core.domain.history as hist
 
         hist.add_to_history(
             id="v1", file_path="/tmp/v1.mp4", success=True,
@@ -96,7 +96,7 @@ class TestHistory:
 
     def test_reset_history(self):
         """reset_history clears all entries and returns True."""
-        import tetodl.core.history as hist
+        import tetodl.core.domain.history as hist
 
         hist.add_to_history("v1", "/tmp/v1.mp3", True, "T1", "audio", "YT", "audio", 100)
         hist.add_to_history("v2", "/tmp/v2.mp3", True, "T2", "audio", "YT", "audio", 200)
@@ -108,7 +108,7 @@ class TestHistory:
 
     def test_add_to_history_skips_registry_when_no_id(self):
         """add_to_history does not call registry when id is empty."""
-        import tetodl.core.history as hist
+        import tetodl.core.domain.history as hist
 
         hist.add_to_history(
             id="", file_path="/tmp/s.mp3", success=True,
@@ -120,9 +120,9 @@ class TestHistory:
     def test_save_and_load_persistence(self, monkeypatch, tmp_path):
         """History entries persist across save/load cycles."""
         history_file = tmp_path / "history.json"
-        monkeypatch.setattr("tetodl.core.history.HISTORY_PATH", str(history_file))
+        monkeypatch.setattr("tetodl.core.domain.history.HISTORY_PATH", str(history_file))
 
-        import tetodl.core.history as hist
+        import tetodl.core.domain.history as hist
 
         hist.add_to_history("v1", "/tmp/v1.mp3", True, "T1", "audio", "YT", "audio", 100)
         assert history_file.exists()
@@ -135,7 +135,7 @@ class TestHistory:
 
     def test_get_history_stats_skips_failed(self):
         """get_history_stats only counts successful entries."""
-        import tetodl.core.history as hist
+        import tetodl.core.domain.history as hist
 
         hist.add_to_history("v1", "/tmp/v1.mp4", True, "V1", "video", "YouTube Video", "video", 120)
         hist.add_to_history("v2", "/tmp/v2.mp4", False, "V2", "video", "YouTube Video", "video", 60)

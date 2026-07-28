@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
-from tetodl.core.models import AppConfig, PipelineContext
-from tetodl.pipeline.pipeline import MediaPipeline
+from tetodl.core.domain.models import AppConfig, PipelineContext
+from tetodl.core.pipeline.runner import MediaPipeline
 from tetodl.utils.console import console
 
 
@@ -24,17 +24,17 @@ class TestMediaPipeline:
         pipeline = MediaPipeline(config=app_config)
 
         with patch(
-            "tetodl.pipeline.pipeline.ExtractStep"
+            "tetodl.core.pipeline.runner.ExtractStep"
         ) as mock_extract, patch(
-            "tetodl.pipeline.pipeline.ClassifyStep"
+            "tetodl.core.pipeline.runner.ClassifyStep"
         ) as mock_classify, patch(
-            "tetodl.pipeline.pipeline.DownloadStep"
+            "tetodl.core.pipeline.runner.DownloadStep"
         ) as mock_download, patch(
-            "tetodl.pipeline.pipeline.CoverStep"
+            "tetodl.core.pipeline.runner.CoverStep"
         ) as mock_cover, patch(
-            "tetodl.pipeline.pipeline.LyricsStep"
+            "tetodl.core.pipeline.runner.LyricsStep"
         ) as mock_lyrics, patch(
-            "tetodl.pipeline.pipeline.FinalizeStep"
+            "tetodl.core.pipeline.runner.FinalizeStep"
         ) as mock_finalize:
             def passthrough(ctx):
                 return ctx
@@ -71,7 +71,7 @@ class TestMediaPipeline:
         pipeline = MediaPipeline(config=app_config)
 
         with patch(
-            "tetodl.pipeline.pipeline.ExtractStep"
+            "tetodl.core.pipeline.runner.ExtractStep"
         ) as mock_extract:
             err_ctx = PipelineContext(
                 config=app_config,
@@ -93,14 +93,14 @@ class TestMediaPipeline:
     ):
         """Returns early when ClassifyStep finds an existing result."""
         console.debug("checking short-circuit on existing result")
-        from tetodl.core.models import Classification, DownloadResult
+        from tetodl.core.domain.models import Classification, DownloadResult
 
         pipeline = MediaPipeline(config=app_config)
 
         with patch(
-            "tetodl.pipeline.pipeline.ExtractStep"
+            "tetodl.core.pipeline.runner.ExtractStep"
         ) as mock_extract, patch(
-            "tetodl.pipeline.pipeline.ClassifyStep"
+            "tetodl.core.pipeline.runner.ClassifyStep"
         ) as mock_classify:
             extract_instance = mock_extract.return_value
             extract_instance.__call__ = MagicMock(

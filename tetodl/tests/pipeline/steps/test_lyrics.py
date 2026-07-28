@@ -1,6 +1,6 @@
 
 
-from tetodl.core.models import (
+from tetodl.core.domain.models import (
     AppConfig,
     CoverResult,
     DownloadedFile,
@@ -8,7 +8,8 @@ from tetodl.core.models import (
     MediaInfo,
     PipelineContext,
 )
-from tetodl.pipeline.steps.lyrics import LyricsStep
+from tetodl.core.pipeline.stages.lyrics import LyricsStep
+from tetodl.core.pipeline.metadata import resolve_artist_title
 
 
 class TestLyricsStep:
@@ -98,7 +99,7 @@ class TestLyricsStep:
             thumbnail_path="/tmp/thumb.jpg",
             metadata=cover_meta,
         )
-        artist, title = step._resolve_search_terms(info, cover)
+        artist, title = resolve_artist_title(info, None, cover)
         assert artist == "Cover Artist"
         assert title == "Cover Title"
 
@@ -107,17 +108,16 @@ class TestLyricsStep:
     ):
         """Parses artist - title pattern from media_info.title."""
         mocker.patch(
-            "tetodl.pipeline.steps.lyrics.clean_youtube_title",
+            "tetodl.core.pipeline.metadata.clean_youtube_title",
             return_value=("Artist Name", "Song Title"),
         )
-        step = LyricsStep()
         info = MediaInfo(
             id="abc123",
             title="Artist Name - Song Title (Official Video)",
             url="https://youtube.com/watch?v=abc123",
             uploader="Some Channel",
         )
-        artist, title = step._resolve_search_terms(info, None)
+        artist, title = resolve_artist_title(info, None, None)
         assert artist == "Artist Name"
         assert title == "Song Title"
 
@@ -125,7 +125,6 @@ class TestLyricsStep:
         self, app_config: AppConfig,
     ):
         """Falls back to info.artist/info.track when no cover metadata."""
-        step = LyricsStep()
         info = MediaInfo(
             id="abc123",
             title="Video Title",
@@ -134,7 +133,7 @@ class TestLyricsStep:
             artist="Artist Name",
             track="Track Name",
         )
-        artist, title = step._resolve_search_terms(info, None)
+        artist, title = resolve_artist_title(info, None, None)
         assert artist == "Artist Name"
         assert title == "Track Name"
 
@@ -143,16 +142,15 @@ class TestLyricsStep:
     ):
         """Falls back to uploader/title when artist/track are None and no dash pattern."""
         mocker.patch(
-            "tetodl.pipeline.steps.lyrics.clean_youtube_title",
+            "tetodl.core.pipeline.metadata.clean_youtube_title",
             return_value=(None, None),
         )
-        step = LyricsStep()
         info = MediaInfo(
             id="abc123",
             title="Video Title",
             url="https://youtube.com/watch?v=abc123",
             uploader="Artist Channel - Topic",
         )
-        artist, title = step._resolve_search_terms(info, None)
+        artist, title = resolve_artist_title(info, None, None)
         assert artist == "Artist Channel"
         assert title == "Video Title"

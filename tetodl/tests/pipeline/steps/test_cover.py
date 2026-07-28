@@ -1,12 +1,12 @@
 
 
-from tetodl.core.models import (
+from tetodl.core.domain.models import (
     AppConfig,
     DownloadedFile,
     MediaInfo,
     PipelineContext,
 )
-from tetodl.pipeline.steps.cover import CoverStep
+from tetodl.core.pipeline.stages.cover import CoverStep
 
 
 class TestCoverStep:
@@ -153,7 +153,7 @@ class TestCoverStep:
             side_effect=lambda path, crop=False, target_format="jpg": path,
         )
         mocker.patch(
-            "tetodl.pipeline.steps.cover.embed_metadata",
+            "tetodl.core.pipeline.stages.cover.embed_metadata",
             return_value=True,
         )
 

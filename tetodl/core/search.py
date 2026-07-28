@@ -1,4 +1,3 @@
-from ..constants import IS_TERMUX, YTDLP_CACHE_DIR
 from ..utils.console import console
 from ..utils.formatters import (
     color,
@@ -7,6 +6,7 @@ from ..utils.formatters import (
     truncate_title,
 )
 from ..utils.i18n_keys import Keys
+from .domain.env import env
 
 try:
     import yt_dlp as yt
@@ -23,11 +23,12 @@ def perform_youtube_search(query, limit=5):
         return None
 
     try:
+        _cachedir = env.get("ytdlp_cache_dir")
         with yt.YoutubeDL({
             'quiet': True,
             'no_warnings': True,
             'extract_flat': 'in_playlist',
-            'cachedir': YTDLP_CACHE_DIR,
+            'cachedir': _cachedir,
         }) as ydl:
             search_query = f"ytsearch{limit}:{query}"
             info = ydl.extract_info(search_query, download=False)
@@ -63,7 +64,7 @@ def perform_youtube_search(query, limit=5):
 
         choices.append(Choice(title="- Cancel", value="CANCEL"))
 
-        if not IS_TERMUX:
+        if not env.get("is_termux"):
             selection = questionary.select(
                 message="Select one to download:",
                 choices=choices,

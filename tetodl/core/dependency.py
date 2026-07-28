@@ -15,13 +15,14 @@ import os
 import shutil
 import sys
 import time
+from pathlib import Path
 
 import requests
 
-from ..constants import IS_BINARY, IS_WINDOWS, YTDLP_OVERRIDE_DIR
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
-from . import config as cfg
+from .domain import config as cfg
+from .domain.env import env
 
 
 def check_python_version():
@@ -119,7 +120,7 @@ def check_ffmpeg():
         except Exception:
             pass
 
-    if IS_WINDOWS and IS_BINARY:
+    if env.get("is_windows") and env.get("is_binary"):
         console.warn(Keys.dependency.ffmpeg_not_found)
         return True  # non-fatal on Windows binary — PyAV handles thumbnails
 
@@ -279,15 +280,16 @@ def _update_ytdlp_binary_mode(latest_version: str) -> bool:
             console.err("Failed to download yt-dlp wheel")
             return False
 
-        if YTDLP_OVERRIDE_DIR.exists():
-            shutil.rmtree(YTDLP_OVERRIDE_DIR)
-        YTDLP_OVERRIDE_DIR.mkdir(parents=True, exist_ok=True)
+        _override = Path(env.get("ytdlp_override_dir"))
+        if _override.exists():
+            shutil.rmtree(_override)
+        _override.mkdir(parents=True, exist_ok=True)
 
         with zipfile.ZipFile(io.BytesIO(wheel_resp.content)) as zf:
-            zf.extractall(path=str(YTDLP_OVERRIDE_DIR))
+            zf.extractall(path=str(_override))
 
-        if str(YTDLP_OVERRIDE_DIR) not in sys.path:
-            sys.path.insert(0, str(YTDLP_OVERRIDE_DIR))
+        if str(_override) not in sys.path:
+            sys.path.insert(0, str(_override))
 
         for key in list(sys.modules.keys()):
             if key.startswith('yt_dlp') or key.startswith('yt-dlp'):
@@ -305,9 +307,10 @@ def _update_ytdlp_binary_mode(latest_version: str) -> bool:
 
     except Exception as e:
         console.err(f"yt-dlp update failed: {e}")
-        if YTDLP_OVERRIDE_DIR.exists():
+        override_dir = Path(env.get("ytdlp_override_dir"))
+        if override_dir.exists():
             try:
-                shutil.rmtree(YTDLP_OVERRIDE_DIR)
+                shutil.rmtree(override_dir)
             except Exception:
                 pass
         return False

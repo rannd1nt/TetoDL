@@ -155,3 +155,40 @@ def color(text: str, ansi: CCode | str, bold: bool = False) -> str:
         return f"{Colors.BOLD}{code}{text}{Colors.RESET}"
 
     return f"{code}{text}{Colors.RESET}"
+
+
+def human_size(size: int) -> str:
+    if size < 1024:
+        return f"{size} B"
+    if size < 1024**2:
+        return f"{size/1024:.1f} KB"
+    return f"{size/(1024**2):.1f} MB"
+
+
+AUDIO_EXTS = {'.mp3', '.m4a', '.wav', '.flac', '.opus'}
+VIDEO_EXTS = {'.mp4', '.mkv', '.webm', '.avi', '.mov'}
+MEDIA_EXTS = AUDIO_EXTS | VIDEO_EXTS
+IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg'}
+ARCHIVE_EXTS = {'.zip', '.rar', '.7z', '.tar', '.gz'}
+CODE_EXTS = {'.py', '.js', '.html', '.css', '.json', '.c', '.rs'}
+DOC_EXTS = {'.pdf', '.txt', '.md', '.doc', '.docx'}
+APP_EXTS = {'.apk', '.exe', '.msi'}
+
+
+def icon_for_ext(ext: str) -> str:
+    ext = ext.lower()
+    if ext in AUDIO_EXTS:
+        return 'audio'
+    if ext in VIDEO_EXTS:
+        return 'video'
+    if ext in IMAGE_EXTS:
+        return 'image'
+    if ext in ARCHIVE_EXTS:
+        return 'archive'
+    if ext in CODE_EXTS:
+        return 'code'
+    if ext in DOC_EXTS:
+        return 'doc'
+    if ext in APP_EXTS:
+        return 'app'
+    return 'file'

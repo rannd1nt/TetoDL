@@ -1,8 +1,8 @@
 import os
 from unittest.mock import MagicMock, patch
 
-from tetodl.core.models import AppConfig, MediaInfo, PipelineContext
-from tetodl.pipeline.steps.download import DownloadStep
+from tetodl.core.domain.models import AppConfig, MediaInfo, PipelineContext
+from tetodl.core.pipeline.stages.download import DownloadStep
 
 
 class TestDownloadStep:
@@ -26,7 +26,7 @@ class TestDownloadStep:
             title="Test Song",
             url="https://youtube.com/watch?v=abc123",
         )
-        with patch("tetodl.pipeline.steps.download.yt", None):
+        with patch("tetodl.core.pipeline.stages.download.yt", None):
             result = step(ctx)
         assert result.error is not None
         assert "yt-dlp" in result.error
@@ -36,7 +36,7 @@ class TestDownloadStep:
         target = tmp_path / "downloads" / "subdir"
         assert not target.exists()
 
-        from tetodl.pipeline.steps.download import DownloadStep
+        from tetodl.core.pipeline.stages.download import DownloadStep
 
         step = DownloadStep()
         info = MediaInfo(
@@ -52,7 +52,7 @@ class TestDownloadStep:
             media_type="audio",
         )
 
-        with patch("tetodl.pipeline.steps.download.yt") as mock_yt:
+        with patch("tetodl.core.pipeline.stages.download.yt") as mock_yt:
             mock_ydl = MagicMock()
             mock_yt.YoutubeDL.return_value.__enter__.return_value = mock_ydl
             mock_ydl.download.return_value = None
@@ -91,7 +91,7 @@ class TestDownloadStep:
         part_file = target / "Test Song.mp4.part"
         part_file.write_text("partial data")
 
-        with patch("tetodl.pipeline.steps.download.yt") as mock_yt:
+        with patch("tetodl.core.pipeline.stages.download.yt") as mock_yt:
             mock_ydl = MagicMock()
             mock_yt.YoutubeDL.return_value.__enter__.return_value = mock_ydl
             mock_ydl.download.side_effect = Exception("download failed")

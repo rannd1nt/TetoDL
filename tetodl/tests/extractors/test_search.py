@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tetodl.core.step import PipelineError
-from tetodl.extractors.search import SearchExtractor
+from tetodl.core.domain.step import PipelineError
+from tetodl.core.sources.search import SearchExtractor
 
 
 def _mock_ytdlp(return_value: dict) -> MagicMock:

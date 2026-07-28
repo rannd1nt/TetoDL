@@ -11,9 +11,9 @@ class TestRegistry:
         """Create a RegistryManager with isolated temp paths."""
         reg_path = tmp_path / "registry.json"
         reg_path.write_text("{}")
-        reg_module = sys.modules["tetodl.core.registry"]
+        reg_module = sys.modules["tetodl.core.domain.registry"]
         monkeypatch.setattr(reg_module, "REGISTRY_PATH", str(reg_path))
-        from tetodl.core.registry import RegistryManager
+        from tetodl.core.domain.registry import RegistryManager
         return RegistryManager()
 
     @pytest.fixture
@@ -181,10 +181,10 @@ class TestRegistry:
         import json
         reg_path.write_text(json.dumps(old_data))
 
-        reg_module = sys.modules["tetodl.core.registry"]
+        reg_module = sys.modules["tetodl.core.domain.registry"]
         monkeypatch.setattr(reg_module, "REGISTRY_PATH", str(reg_path))
 
-        from tetodl.core.registry import RegistryManager
+        from tetodl.core.domain.registry import RegistryManager
         fresh = RegistryManager()
 
         assert "vid1" in fresh.data["youtube"]
@@ -203,10 +203,10 @@ class TestRegistry:
         import json
         reg_path.write_text(json.dumps(new_data))
 
-        reg_module = sys.modules["tetodl.core.registry"]
+        reg_module = sys.modules["tetodl.core.domain.registry"]
         monkeypatch.setattr(reg_module, "REGISTRY_PATH", str(reg_path))
 
-        from tetodl.core.registry import RegistryManager
+        from tetodl.core.domain.registry import RegistryManager
         fresh = RegistryManager()
 
         assert fresh.data == new_data

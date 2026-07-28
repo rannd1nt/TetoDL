@@ -8,7 +8,7 @@ from typing import Any
 
 _current_lang = 'id'
 _translations: dict[str, Any] = {}
-_locales_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "locales")
+_locales_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "locales")
 
 
 def load_language(lang_code: str = "id") -> bool:

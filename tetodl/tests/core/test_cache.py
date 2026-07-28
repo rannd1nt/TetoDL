@@ -6,7 +6,7 @@ class TestCache:
 
     def test_cache_metadata_read_write(self):
         """Writing and then reading metadata returns the same data."""
-        from tetodl.core.cache import cache_metadata, get_cached_metadata, reset_cache
+        from tetodl.core.domain.cache import cache_metadata, get_cached_metadata, reset_cache
         reset_cache()
 
         url = "https://example.com/video"
@@ -22,7 +22,7 @@ class TestCache:
 
     def test_get_cached_metadata_missing(self):
         """get_cached_metadata returns None for an unknown URL."""
-        from tetodl.core.cache import get_cached_metadata, reset_cache
+        from tetodl.core.domain.cache import get_cached_metadata, reset_cache
         reset_cache()
 
         result = get_cached_metadata("https://example.com/unknown")
@@ -30,7 +30,7 @@ class TestCache:
 
     def test_get_url_hash(self):
         """get_url_hash returns a consistent MD5 hash."""
-        from tetodl.core.cache import get_url_hash
+        from tetodl.core.domain.cache import get_url_hash
 
         url = "https://example.com/video"
         expected = hashlib.md5(url.encode()).hexdigest()
@@ -38,20 +38,20 @@ class TestCache:
 
     def test_get_url_hash_consistency(self):
         """get_url_hash returns the same hash for the same URL."""
-        from tetodl.core.cache import get_url_hash
+        from tetodl.core.domain.cache import get_url_hash
 
         url = "https://example.com/video"
         assert get_url_hash(url) == get_url_hash(url)
 
     def test_get_url_hash_different_urls(self):
         """get_url_hash returns different hashes for different URLs."""
-        from tetodl.core.cache import get_url_hash
+        from tetodl.core.domain.cache import get_url_hash
 
         assert get_url_hash("https://example.com/a") != get_url_hash("https://example.com/b")
 
     def test_cache_persists_across_get_set(self):
         """Cached data survives memory → disk flush cycle."""
-        from tetodl.core.cache import get_cache, reset_cache
+        from tetodl.core.domain.cache import get_cache, reset_cache
         reset_cache()
 
         cache = get_cache("yt_metadata")
@@ -66,7 +66,7 @@ class TestCache:
 
     def test_cache_disk_persistence(self):
         """Data written to disk is readable by a new Cache instance."""
-        from tetodl.core.cache import _DiskCache, reset_cache
+        from tetodl.core.domain.cache import _DiskCache, reset_cache
         reset_cache()
 
         dc = _DiskCache("test_ns", 86400)
@@ -82,7 +82,7 @@ class TestCache:
 
     def test_reset_cache_clears_namespaces(self):
         """reset_cache removes cache files and clears memory."""
-        from tetodl.core.cache import get_cache, reset_cache
+        from tetodl.core.domain.cache import get_cache, reset_cache
         reset_cache()
 
         cache = get_cache("yt_metadata")
@@ -96,7 +96,7 @@ class TestCache:
 
     def test_get_cache_size(self):
         """get_cache_size returns a human-readable string."""
-        from tetodl.core.cache import get_cache_size, reset_cache
+        from tetodl.core.domain.cache import get_cache_size, reset_cache
         reset_cache()
 
         size_str = get_cache_size()
@@ -104,7 +104,7 @@ class TestCache:
 
     def test_cache_ttl_expiry(self):
         """Cache entries expire after their TTL."""
-        from tetodl.core.cache import get_cache, reset_cache
+        from tetodl.core.domain.cache import get_cache, reset_cache
         reset_cache()
 
         cache = get_cache("yt_metadata")
@@ -120,7 +120,7 @@ class TestCache:
 
     def test_cache_lru_eviction(self):
         """Oldest entries are evicted when memory is full."""
-        from tetodl.core.cache import get_cache, reset_cache
+        from tetodl.core.domain.cache import get_cache, reset_cache
         reset_cache()
 
         cache = get_cache("yt_metadata")
@@ -138,7 +138,7 @@ class TestCache:
 
     def test_disk_cache_stale_entry(self):
         """Expired disk entries are not returned."""
-        from tetodl.core.cache import _DiskCache, reset_cache
+        from tetodl.core.domain.cache import _DiskCache, reset_cache
         reset_cache()
 
         dc = _DiskCache("test_stale", 86400)

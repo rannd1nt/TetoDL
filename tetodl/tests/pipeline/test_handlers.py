@@ -1,5 +1,5 @@
 
-from tetodl.core.models import AppConfig, DownloadResult, DownloadSession
+from tetodl.core.domain.models import AppConfig, DownloadResult, DownloadSession
 
 
 class TestDownloadAudioYoutube:
@@ -8,11 +8,11 @@ class TestDownloadAudioYoutube:
     def test_download_audio_youtube_calls_execute(self, mocker):
         """Verify download_audio_youtube calls _execute with correct args."""
         mock_execute = mocker.patch(
-            "tetodl.pipeline.handlers._execute",
+            "tetodl.core.pipeline.handlers._execute",
             return_value=DownloadResult(success=True, file_path="/tmp/song.mp3"),
         )
 
-        from tetodl.pipeline.handlers import download_audio_youtube
+        from tetodl.core.pipeline.handlers import download_audio_youtube
 
         config = AppConfig(music_root="/music")
         session = DownloadSession(url="https://music.youtube.com/watch?v=test")
@@ -43,11 +43,11 @@ class TestDownloadVideoYoutube:
     def test_download_video_youtube_calls_execute(self, mocker):
         """Verify download_video_youtube calls _execute with correct args."""
         mock_execute = mocker.patch(
-            "tetodl.pipeline.handlers._execute",
+            "tetodl.core.pipeline.handlers._execute",
             return_value=DownloadResult(success=True, file_path="/tmp/video.mp4"),
         )
 
-        from tetodl.pipeline.handlers import download_video_youtube
+        from tetodl.core.pipeline.handlers import download_video_youtube
 
         config = AppConfig(video_root="/video")
         session = DownloadSession(url="https://youtube.com/watch?v=test")
@@ -77,10 +77,10 @@ class TestDownloadSpotify:
 
     def test_download_spotify_empty_tracks(self, mocker):
         """Spotify resolver returning no tracks returns failed DownloadResult."""
-        mock_resolver = mocker.patch("tetodl.core.spotify.SpotifyResolver", autospec=True)
+        mock_resolver = mocker.patch("tetodl.core.clients.spotify.SpotifyResolver", autospec=True)
         mock_resolver.return_value.resolve_meta.return_value = (None, [])
 
-        from tetodl.pipeline.handlers import download_spotify
+        from tetodl.core.pipeline.handlers import download_spotify
 
         config = AppConfig(music_root="/music")
         session = DownloadSession(url="https://open.spotify.com/playlist/empty")
@@ -96,7 +96,7 @@ class TestDownloadSpotify:
 
     def test_download_spotify_single_track(self, mocker):
         """Single track resolves YT Music URL then calls _handle_single."""
-        from tetodl.core.spotify import SpotifyTrack
+        from tetodl.core.clients.spotify import SpotifyTrack
 
         fake_track = SpotifyTrack(
             title="Test Song",
@@ -108,20 +108,20 @@ class TestDownloadSpotify:
             cover_url="",
         )
 
-        mock_resolver = mocker.patch("tetodl.core.spotify.SpotifyResolver", autospec=True)
+        mock_resolver = mocker.patch("tetodl.core.clients.spotify.SpotifyResolver", autospec=True)
         mock_resolver.return_value.resolve_meta.return_value = (None, [fake_track])
 
         mock_search = mocker.patch(
-            "tetodl.pipeline.handlers._search_ytmusic",
+            "tetodl.core.pipeline.handlers._search_ytmusic",
             return_value="https://music.youtube.com/watch?v=abc123",
         )
 
         mock_single = mocker.patch(
-            "tetodl.pipeline.handlers._handle_single",
+            "tetodl.core.pipeline.handlers._handle_single",
             return_value=DownloadResult(success=True, file_path="/music/Test Song - Test Artist.mp3"),
         )
 
-        from tetodl.pipeline.handlers import download_spotify
+        from tetodl.core.pipeline.handlers import download_spotify
 
         config = AppConfig(music_root="/music")
         session = DownloadSession(url="https://open.spotify.com/track/id123")
@@ -142,18 +142,18 @@ class TestDownloadSpotify:
 
     def test_download_spotify_playlist_resolves_all_tracks(self, mocker):
         """Playlist with multiple tracks resolves each and passes to _handle_playlist."""
-        from tetodl.core.spotify import SpotifyTrack
+        from tetodl.core.clients.spotify import SpotifyTrack
 
         tracks = [
             SpotifyTrack(title="Song A", artist="Art"),
             SpotifyTrack(title="Song B", artist="Art"),
         ]
 
-        mock_resolver = mocker.patch("tetodl.core.spotify.SpotifyResolver", autospec=True)
+        mock_resolver = mocker.patch("tetodl.core.clients.spotify.SpotifyResolver", autospec=True)
         mock_resolver.return_value.resolve_meta.return_value = ("My Mix", tracks)
 
         mock_search = mocker.patch(
-            "tetodl.pipeline.handlers._search_ytmusic",
+            "tetodl.core.pipeline.handlers._search_ytmusic",
             side_effect=[
                 "https://music.youtube.com/watch?v=a1",
                 "https://music.youtube.com/watch?v=b2",
@@ -161,11 +161,11 @@ class TestDownloadSpotify:
         )
 
         mock_playlist = mocker.patch(
-            "tetodl.pipeline.handlers._handle_playlist",
+            "tetodl.core.pipeline.handlers._handle_playlist",
             return_value=DownloadResult(success=True),
         )
 
-        from tetodl.pipeline.handlers import download_spotify
+        from tetodl.core.pipeline.handlers import download_spotify
 
         config = AppConfig(music_root="/music")
         session = DownloadSession(url="https://open.spotify.com/album/al")
@@ -189,18 +189,18 @@ class TestDownloadSpotify:
 
     def test_download_spotify_no_results_returns_failure(self, mocker):
         """When search returns nothing, returns failed DownloadResult."""
-        from tetodl.core.spotify import SpotifyTrack
+        from tetodl.core.clients.spotify import SpotifyTrack
 
         fake_track = SpotifyTrack(title="Unknown", artist="Nobody")
-        mock_resolver = mocker.patch("tetodl.core.spotify.SpotifyResolver", autospec=True)
+        mock_resolver = mocker.patch("tetodl.core.clients.spotify.SpotifyResolver", autospec=True)
         mock_resolver.return_value.resolve_meta.return_value = (None, [fake_track])
 
         mocker.patch(
-            "tetodl.pipeline.handlers._search_ytmusic",
+            "tetodl.core.pipeline.handlers._search_ytmusic",
             return_value=None,
         )
 
-        from tetodl.pipeline.handlers import download_spotify
+        from tetodl.core.pipeline.handlers import download_spotify
 
         config = AppConfig(music_root="/music")
         session = DownloadSession(url="https://open.spotify.com/track/x")

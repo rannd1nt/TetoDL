@@ -1,8 +1,8 @@
 from unittest.mock import MagicMock, patch
 
-from tetodl.core.models import MediaInfo, PipelineContext
-from tetodl.core.step import PipelineError
-from tetodl.pipeline.steps.extract import ExtractStep
+from tetodl.core.domain.models import MediaInfo, PipelineContext
+from tetodl.core.domain.step import PipelineError
+from tetodl.core.pipeline.stages.extract import ExtractStep
 
 
 class TestExtractStep:
@@ -13,7 +13,7 @@ class TestExtractStep:
         step = ExtractStep()
 
         with patch(
-            "tetodl.pipeline.steps.extract.resolve_extractor",
+            "tetodl.core.pipeline.stages.extract.resolve_extractor",
             side_effect=PipelineError("no extractor", "extract"),
         ):
             result = step(pipeline_ctx)
@@ -35,7 +35,7 @@ class TestExtractStep:
         mock_extractor.extract.return_value = fake_media
 
         with patch(
-            "tetodl.pipeline.steps.extract.resolve_extractor",
+            "tetodl.core.pipeline.stages.extract.resolve_extractor",
             return_value=mock_extractor,
         ):
             result = step(pipeline_ctx)
@@ -55,7 +55,7 @@ class TestExtractStep:
         )
 
         with patch(
-            "tetodl.pipeline.steps.extract.resolve_extractor",
+            "tetodl.core.pipeline.stages.extract.resolve_extractor",
             return_value=mock_extractor,
         ):
             result = step(pipeline_ctx)

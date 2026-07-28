@@ -1,5 +1,5 @@
 
-from tetodl.daemon.models import DownloadRequest, PreviewRequest
+from tetodl.ui.daemon.models import DownloadRequest, PreviewRequest
 
 
 class TestDownloadRequest:

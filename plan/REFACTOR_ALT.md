@@ -1,6 +1,6 @@
 # TetoDL 3-Layer Refactor Plan (Alternative)
 
-> **Why this exists:** The original `plan/REFACTOR.md` proposed 4 layers (`core/`, `services/`, `utils/`, `ui/`). After deeper analysis, that split has fundamental problems. This document proposes a cleaner 3-layer architecture (`cli/`, `core/`, `utils/`) and maps every file to its new home.
+> **Why this exists:** The original `plan/REFACTOR.md` proposed 4 layers (`core/`, `services/`, `utils/`, `ui/`). After deeper analysis, that split has fundamental problems. This document proposes a cleaner 3-layer architecture (`ui/`, `core/`, `utils/`) — with the user's choice of `ui/` as the presentation umbrella instead of `cli/` — and maps every file to its new home.
 
 ---
 
@@ -28,7 +28,7 @@ The 4-layer plan (`utils/` → `core/` → `services/` → `ui/`) was the starti
 
 | Dimension | Current (monolith) | REFACTOR.md (4-layer) | REFACTOR_ALT.md (3-layer) |
 |---|---|---|---|
-| **Top-level dirs** | 11 (`core`, `utils`, `cli`, `daemon`, `ui`, `pipeline`, `lyrics`, `extractors`, `services`, `locales`, `tests`) | 4 (`core`, `services`, `utils`, `ui`) | **3** (`cli`, `core`, `utils`) |
+| **Top-level dirs** | 11 (`core`, `utils`, `cli`, `daemon`, `ui`, `pipeline`, `lyrics`, `extractors`, `services`, `locales`, `tests`) | 4 (`core`, `services`, `utils`, `ui`) | **3** (`ui`, `core`, `utils`) |
 | **Related code split across layers** | Mild (lyrics in `lyrics/`, cover in `services/cover/`) | **Severe** (pipeline steps in `core/pipeline/steps/`, cover providers in `services/cover/providers/`, lyrics providers in `services/lyrics/providers/`) | **None** — all pipeline logic in `core/pipeline/`, all clients in `core/clients/` |
 | **`core/` vs `services/` boundary** | N/A (not yet split) | **Arbitrary.** Why is `core/spotify/` in "core" but `services/extractors/` in "services"? Why is `core/pipeline/steps/download.py` in "core" but `services/lyrics/` in "services"? No clear rule. | **Absent.** One `core/` layer for all business logic. No false distinction. |
 | **Mental model match** | ✗ Scattered | ✗ Split by vague "importance" | ✓ **Maps to data flow:** sources (branch) → pipeline (merge) |
@@ -59,27 +59,39 @@ tetodl/
 ├── __main__.py
 ├── constants.py              ← semua layer boleh import (APP_VERSION, enums, dll)
 │
-├── cli/                      ← PRESENTATION — depends on core/ + utils/
-│   ├── commands/             ← Thin command handlers (download, search, config)
-│   │   ├── download.py
-│   │   ├── search.py
-│   │   └── config.py
+├── ui/                       ← PRESENTATION — depends on core/ + utils/
+│   ├── __init__.py
+│   ├── app.py                ← Neutral application orchestrator
+│   ├── bootstrap.py          ← Application startup (ffmpeg check, etc.)
+│   ├── cli/                  ← CLI sub-interface (headless mode)
+│   │   ├── __init__.py
+│   │   ├── dispatch.py       ← Command dispatcher
+│   │   ├── network.py        ← Share server startup
+│   │   └── parser.py         ← Cement CLI argument parser
 │   ├── daemon/               ← HTTP API server
+│   │   ├── __init__.py
 │   │   ├── api.py
 │   │   ├── display.py
 │   │   ├── models.py
 │   │   └── service.py
-│   ├── tui/                  ← Textual TUI components
-│   │   ├── about.py
-│   │   ├── analytics.py
-│   │   ├── components.py
-│   │   ├── navigation.py
-│   │   ├── provider.py
-│   │   ├── settings.py
-│   │   └── verifier.py
-│   ├── parser.py             ← Cement CLI argument parser
-│   ├── dispatch.py           ← Command dispatcher
-│   └── utils.py              ← CLI-specific helpers (formatting, rendering)
+│   │   └── static/
+│   │       └── index.html
+│   ├── share.py              ← Share feature (HTML generation)
+│   ├── static/               ← Share static assets
+│   │   ├── player.js
+│   │   └── styles.css
+│   └── tui/                  ← Textual TUI
+│       ├── __init__.py
+│       ├── about.py
+│       ├── analytics.py
+│       ├── bootstrap.py
+│       ├── components.py
+│       ├── menu.py
+│       ├── navigation.py
+│       ├── provider.py
+│       ├── runner.py
+│       ├── settings.py
+│       └── verifier.py
 │
 ├── core/                     ← BUSINESS LOGIC — depends on utils/ only
 │   ├── sources/              ← BRANCHING: input URL → list of VideoInfo
@@ -179,8 +191,8 @@ tetodl/
 | Rule | Detail |
 |---|---|
 | **`utils/` imports zero tetodl packages** | `from tetodl.*` is **forbidden**. Only stdlib + third-party. |
-| **`core/` imports from `utils/` and `constants` only** | No `core/` → `cli/` imports. No `core/` → `core/clients/` → `core/` circular. Wait — `clients/` can import from `core/domain/` (models, exceptions). |
-| **`cli/` imports from `core/` and `utils/`** | `cli/` is the composition root. It wires everything together. |
+| **`core/` imports from `utils/` and `constants` only** | No `core/` → `ui/` imports. No `core/` → `core/clients/` → `core/` circular. `clients/` can import from `core/domain/` (models, exceptions). |
+| **`ui/` imports from `core/` and `utils/`** | `ui/` is the composition root. It wires everything together. |
 | **No circular imports** | `core/domain/` → `core/clients/` is OK. `core/clients/` → `core/sources/` is NOT (would create cycle). |
 | **One file = one responsibility** | Max ~300 lines per file. Split when exceeded. |
 
@@ -272,38 +284,40 @@ Every `.py` file in the current codebase, and where it goes in the new structure
 | `services/cover/providers/itunes.py` | `core/cover/providers/itunes.py` | Move |
 | `services/__init__.py` | *(Delete)* | Removed — services layer dissolved |
 
-### 3g. `cli/` → `cli/` (stays, flattens)
+### 3g. `cli/` → `ui/cli/`
 
 | Current path | New path | Action |
 |---|---|---|
-| `cli/parser.py` | `cli/parser.py` | Keep |
-| `cli/dispatch.py` | `cli/dispatch.py` | Keep |
+| `cli/parser.py` | `ui/cli/parser.py` | Move under ui/ umbrella |
+| `cli/dispatch.py` | `ui/cli/dispatch.py` | Move under ui/ umbrella |
+| `cli/__init__.py` | `ui/cli/__init__.py` | Move under ui/ umbrella |
 
-### 3h. `daemon/` → `cli/daemon/`
-
-| Current path | New path | Action |
-|---|---|---|
-| `daemon/api.py` | `cli/daemon/api.py` | Move |
-| `daemon/display.py` | `cli/daemon/display.py` | Move |
-| `daemon/models.py` | `cli/daemon/models.py` | Move |
-| `daemon/service.py` | `cli/daemon/service.py` | Move |
-
-### 3i. `ui/` → `cli/tui/`
+### 3h. `daemon/` → `ui/daemon/`
 
 | Current path | New path | Action |
 |---|---|---|
-| `ui/__init__.py` | `cli/__init__.py` | Merge (cli/ already has __init__.py) |
-| `ui/about.py` | `cli/tui/about.py` | Move |
-| `ui/analytics.py` | `cli/tui/analytics.py` | Move |
-| `ui/components.py` | `cli/tui/components.py` | Move |
-| `ui/navigation.py` | `cli/tui/navigation.py` | Move |
-| `ui/provider.py` | `cli/tui/provider.py` | Move |
-| `ui/settings.py` | `cli/tui/settings.py` | Move |
-| `ui/verifier.py` | `cli/tui/verifier.py` | Move |
-| `ui/entry/__init__.py` | `cli/tui/entry/__init__.py` | Move |
-| `ui/entry/app.py` | `cli/tui/entry/app.py` | Move |
-| `ui/entry/bootstrap.py` | `cli/tui/entry/bootstrap.py` | Move |
-| `ui/entry/menu.py` | `cli/tui/entry/menu.py` | Move |
+| `daemon/api.py` | `ui/daemon/api.py` | Move under ui/ umbrella |
+| `daemon/display.py` | `ui/daemon/display.py` | Move under ui/ umbrella |
+| `daemon/models.py` | `ui/daemon/models.py` | Move under ui/ umbrella |
+| `daemon/service.py` | `ui/daemon/service.py` | Move under ui/ umbrella |
+| `daemon/static/index.html` | `ui/daemon/static/index.html` | Move under ui/ umbrella |
+
+### 3i. `ui/` + `ui/tui/` → `ui/tui/` (consolidate into ui/ umbrella)
+
+| Current path | New path | Action |
+|---|---|---|
+| `ui/about.py` | `ui/tui/about.py` | Move into tui/ sub-layer |
+| `ui/analytics.py` | `ui/tui/analytics.py` | Move into tui/ sub-layer |
+| `ui/components.py` | `ui/tui/components.py` | Move into tui/ sub-layer |
+| `ui/navigation.py` | `ui/tui/navigation.py` | Move into tui/ sub-layer |
+| `ui/provider.py` | `ui/tui/provider.py` | Move into tui/ sub-layer |
+| `ui/settings.py` | `ui/tui/settings.py` | Move into tui/ sub-layer |
+| `ui/verifier.py` | `ui/tui/verifier.py` | Move into tui/ sub-layer |
+| `ui/entry/app.py` | `ui/tui/runner.py` | Move + rename (app → runner) |
+| `ui/entry/bootstrap.py` | `ui/tui/bootstrap.py` | Move (into tui/) |
+| `ui/entry/menu.py` | `ui/tui/menu.py` | Move (into tui/) |
+| *(new)* | `ui/app.py` | Create — neutral orchestrator |
+| *(new)* | `ui/bootstrap.py` | Create — startup logic |
 
 ### 3j. `utils/` — mostly stays (some violations need fixing)
 
@@ -343,12 +357,12 @@ Every `.py` file in the current codebase, and where it goes in the new structure
 
 | Current path | New path | Action |
 |---|---|---|
-| `tests/cli/` | `tests/cli/` | Adjust imports |
+| `tests/cli/` | `tests/cli/` | Adjust imports (ui.cli.*) |
 | `tests/core/` | `tests/core/` | Adjust imports (path changes) |
-| `tests/daemon/` | `tests/cli/daemon/` | Move |
-| `tests/extractors/` | `tests/core/sources/` | Move |
-| `tests/pipeline/` | `tests/core/pipeline/` | Move |
-| `tests/ui/` | `tests/cli/tui/` | Move |
+| `tests/daemon/` | `tests/daemon/` | Keep (imports ui.daemon.*) |
+| `tests/extractors/` | `tests/extractors/` | Keep (imports core.sources.*) |
+| `tests/pipeline/` | `tests/pipeline/` | Keep (imports core.pipeline.*) |
+| `tests/ui/` | `tests/ui/` | Keep (imports ui.tui.*, ui.app) |
 | `tests/utils/` | `tests/utils/` | Adjust imports |
 | `tests/conftest.py` | `tests/conftest.py` | Update imports |
 | `tests/plugin.py` | `tests/plugin.py` | Update imports |
@@ -444,16 +458,18 @@ Contains the "boring" but essential domain infrastructure:
 - `env.py` — env detection
 - `exceptions.py` — base TetodlError + domain exceptions
 
-### 4g. `cli/` — Composition Root + Presentation
+### 4g. `ui/` — Composition Root + Presentation
 
-Everything under `cli/` is the UI layer:
-- `parser.py` — argument parsing
-- `dispatch.py` — command routing
-- `commands/` — thin handlers that call core logic
-- `daemon/` — HTTP server
-- `tui/` — Textual-based TUI
+Everything under `ui/` is the UI layer:
+- `app.py` — neutral orchestrator, routes CLI parse results to handlers
+- `bootstrap.py` — application startup (ffmpeg check, dependency verification)
+- `cli/` — CLI sub-interface (argument parsing + dispatch for headless mode)
+- `daemon/` — HTTP API server
+- `tui/` — Textual-based TUI (runner, components, providers)
+- `share.py` — share feature (HTML generation)
+- `static/` — share static assets (CSS, JS)
 
-The `cli/` layer is the only place where `console.err()` is allowed. All core code raises exceptions.
+The `ui/` layer is the only place where `console.err()` is allowed. All core code raises exceptions.
 
 ---
 
@@ -477,7 +493,7 @@ The `cli/` layer is the only place where `console.err()` is allowed. All core co
 ┌─────────────────────────────────────────────────────────────────┐
 │                            core/                                  │
 │  ✅ May import from utils/ and constants.py                       │
-│  ⛔ Must NOT import from cli/                                     │
+│  ⛔ Must NOT import from ui/                                      │
 │  📁 sources/, pipeline/, lyrics/, cover/, clients/, domain/,      │
 │     dependency.py, maintenance.py, search.py, resolver.py,         │
 │     extractor.py                                                   │
@@ -485,10 +501,10 @@ The `cli/` layer is the only place where `console.err()` is allowed. All core co
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                            cli/                                   │
+│                            ui/                                    │
 │  ✅ May import from core/ and utils/                              │
-│  ⛔ Must NOT import from cli/ → core/ (reverse)                   │
-│  📁 commands/, daemon/, tui/, parser.py, dispatch.py, utils.py    │
+│  ⛔ Must NOT import from ui/ → core/ (reverse)                    │
+│  📁 app.py, bootstrap.py, cli/, daemon/, tui/, share.py, static/  │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -627,16 +643,21 @@ Every file in the new structure is capped at **~300 lines maximum**. Files that 
 - Update ALL imports (`tetodl.core.spotify.*` → `tetodl.core.clients.spotify.*`)
 - Tests: run full suite
 
-### Phase 6: Merge `ui/` → `cli/tui/` + `daemon/` → `cli/daemon/` + share/static
+### Phase 6: Merge into `ui/` umbrella — `cli/` → `ui/cli/`, `daemon/` → `ui/daemon/`, `ui/tui/` consolidation, share/static
 
-- Move `ui/*` (except `ui/entry/`) → `cli/tui/`
-- Move `ui/entry/*` → `cli/tui/entry/`
-- Move `daemon/*` → `cli/daemon/` including `daemon/static/` → `cli/daemon/static/`
-- Move `utils/share.py` → `cli/share.py`
-- Move `utils/share_static/` → `cli/static/`
-- Extract `start_share_server` from `utils/network.py` → `cli/network.py`
-- Merge `cli/parser.py` and `cli/dispatch.py` → add `cli/commands/`
-- Update ALL imports (including `utils.share` → `cli.share`, `utils.network.start_share_server` → `cli.network`)
+- Create `ui/app.py` — neutral orchestrator
+- Create `ui/bootstrap.py` — startup logic
+- Move `cli/parser.py`, `cli/dispatch.py`, `cli/__init__.py` → `ui/cli/`
+- Move `cli/network.py` (extracted from `utils/network.py`) → `ui/cli/network.py`
+- Move `daemon/*` → `ui/daemon/` including `daemon/static/` → `ui/daemon/static/`
+- Move `ui/about.py`, `ui/analytics.py`, `ui/components.py`, `ui/navigation.py`, `ui/provider.py`, `ui/settings.py`, `ui/verifier.py` → `ui/tui/`
+- Move `ui/entry/app.py` → `ui/tui/runner.py` (rename)
+- Move `ui/entry/bootstrap.py` → `ui/tui/bootstrap.py`
+- Move `ui/entry/menu.py` → `ui/tui/menu.py`
+- Move `utils/share.py` → `ui/share.py`
+- Move `utils/share_static/` → `ui/static/`
+- Extract `start_share_server` from `utils/network.py` → `ui/cli/network.py`
+- Update ALL imports (including `utils.share` → `ui.share`, `utils.network.start_share_server` → `ui.cli.network`)
 - Tests: run full suite
 
 ### Phase 7: Fix `utils/` layer violations (ongoing)
@@ -669,7 +690,7 @@ Phases 0–6 are **pure directory moves + import rewrites** — no behavior chan
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | Missed import during move | Medium | High (runtime ImportError) | Run full test suite after each phase. `grep -r "old.path"` before/after. |
-| Broken `cli/parser.py` imports | Low | High (app won't start) | Test `python3 -m tetodl --help` after each phase. |
+| Broken `ui/cli/parser.py` imports | Low | High (app won't start) | Test `python3 -m tetodl --help` after each phase. |
 | Circular import in `core/` | Low | High (Python deadlock) | Adhere to dependency direction in Section 5. Run `python3 -c "import tetodl"` after each phase. |
 | `utils/` still has core imports | Medium | Low (violates rule but app works) | Phase 7 dedicated to fixing. CI check: `grep -r "from tetodl.core" tetodl/utils/` |
 | Large file (300+ lines) | Medium | Low (still works, but signals needed split) | Enforce in code review. Split proactively. |
@@ -735,15 +756,21 @@ utils/share.py               ← generates HTML, loads static files at import
 
 **Problem:** `utils/share.py` is presentation logic (HTML generation), not a pure utility. `utils/network.py` also has a presentation dependency through its lazy import. Both violate the `utils/` purity rule.
 
+**Solution:** All presentation assets move under `ui/` umbrella:
+- `utils/share.py` → `ui/share.py`
+- `utils/share_static/` → `ui/static/`
+- `start_share_server()` extracted from `utils/network.py` → `ui/cli/network.py`
+- `daemon/` moved as-is under `ui/daemon/`
+
 ### 11c. Target placement
 
 | Current | New home | Rationale |
 |---|---|---|
-| `utils/share.py` | `cli/share.py` | HTML generation = presentation layer |
-| `utils/share_static/styles.css` | `cli/static/styles.css` | Static asset, belongs with UI |
-| `utils/share_static/player.js` | `cli/static/player.js` | Static asset, belongs with UI |
-| `daemon/static/index.html` | `cli/daemon/static/index.html` | Moves with daemon to `cli/` |
-| `start_share_server` (in `utils/network.py`) | `cli/network.py` | Server start = CLI operation |
+| `utils/share.py` | `ui/share.py` | HTML generation = presentation layer |
+| `utils/share_static/styles.css` | `ui/static/styles.css` | Static asset, belongs with UI |
+| `utils/share_static/player.js` | `ui/static/player.js` | Static asset, belongs with UI |
+| `daemon/static/index.html` | `ui/daemon/static/index.html` | Moves with daemon to `ui/` |
+| `start_share_server` (in `utils/network.py`) | `ui/cli/network.py` | Server start = CLI operation |
 
 ### 11d. SVG icons handling
 
@@ -754,22 +781,22 @@ from ..utils.share import SVG as _SHARE_SVG
 ```
 
 After the move:
-- `SVG` stays in `cli/share.py` (it's presentation-specific)
-- `daemon/api.py` (→ `cli/daemon/api.py`) imports from `cli.share` — both in `cli/`, no violation
+- `SVG` stays in `ui/share.py` (it's presentation-specific)
+- `daemon/api.py` (→ `ui/daemon/api.py`) imports from `ui.share` — both in `ui/`, no violation
 
 The `icon_for_ext()` function (planned in `utils/formatters.py`) is a different concern — it maps file extensions to icon names, not HTML SVGs.
 
 ### 11e. Implementation steps (part of Phase 6)
 
-1. Create `cli/static/` directory
-2. Move `utils/share_static/*` → `cli/static/`
-3. Move `utils/share.py` → `cli/share.py`; update `_STATIC_DIR` path
-4. Extract `start_share_server` from `utils/network.py` → `cli/network.py`
-5. Create `cli/daemon/static/`; move `daemon/static/index.html`
+1. Create `ui/static/` directory
+2. Move `utils/share_static/*` → `ui/static/`
+3. Move `utils/share.py` → `ui/share.py`; update `_STATIC_DIR` path
+4. Extract `start_share_server` from `utils/network.py` → `ui/cli/network.py`
+5. Create `ui/daemon/static/`; move `daemon/static/index.html`
 6. Update imports in:
-   - `cli/parser.py` → import from `cli.network` instead of `utils.network`
-   - `cli/dispatch.py` → same
-   - `cli/daemon/api.py` → import from `cli.share` instead of `utils.share`; fix static path
+   - `ui/cli/parser.py` → import from `ui.cli.network` instead of `utils.network`
+   - `ui/cli/dispatch.py` → same
+   - `ui/daemon/api.py` → import from `ui.share` instead of `utils.share`; fix static path
 7. Verify `utils/` has zero imports of share/static modules
 
 ---
@@ -871,8 +898,8 @@ def icon_for_ext(ext: str) -> str:
 
 | File | Change |
 |---|---|
-| `cli/daemon/api.py` | Remove `_icon`, `_size_str`; import `icon_for_ext`, `human_size` from `utils.formatters` |
-| `cli/share.py` | Remove `_classify`, `_human_size`; import `icon_for_ext`, `human_size` from `utils.formatters` |
+| `ui/daemon/api.py` | Remove `_icon`, `_size_str`; import `icon_for_ext`, `human_size` from `utils.formatters` |
+| `ui/share.py` | Remove `_classify`, `_human_size`; import `icon_for_ext`, `human_size` from `utils.formatters` |
 
 ### 12d. Remove Private `_is_valid_match`
 
@@ -938,7 +965,7 @@ Following the existing pattern (`type(scope): description`):
 | 3 | `refactor(lyrics): move lyrics/ to core/lyrics/, cleaner to pipeline/cleaners/` |
 | 4 | `refactor(sources): move extractors/ to core/sources/ as SourceHandler` |
 | 5 | `refactor(spotify): move core/spotify/ to core/clients/spotify/` |
-| 6 | `refactor(ui): merge daemon/ + ui/ + share into cli/` |
+| 6 | `refactor(ui): merge cli/ + daemon/ + tui/ + share under ui/ umbrella` |
 | 7 | `refactor(utils): fix all layer violations, move locales, enforce purity` |
 | Helpers | `refactor(helpers): consolidate duplicate title/metadata/formatter utilities` |
 

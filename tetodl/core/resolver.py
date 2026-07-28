@@ -13,7 +13,7 @@ See Also
 
 from typing import Any
 
-from .models import AppConfig, DownloadSession
+from .domain.models import AppConfig, DownloadSession
 
 
 class ConfigResolver:
@@ -28,7 +28,7 @@ class ConfigResolver:
 
     Examples
     --------
-    >>> from tetodl.core.models import AppConfig
+    >>> from tetodl.core.domain.models import AppConfig
     >>> from tetodl.core.resolver import ConfigResolver
     >>> base = AppConfig()
     >>> resolver = ConfigResolver(base)
@@ -66,7 +66,7 @@ class ConfigResolver:
 
         Examples
         --------
-        >>> from tetodl.core.models import AppConfig, DownloadSession
+        >>> from tetodl.core.domain.models import AppConfig, DownloadSession
         >>> from tetodl.core.resolver import ConfigResolver
         >>> base = AppConfig()
         >>> resolver = ConfigResolver(base)

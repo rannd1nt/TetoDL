@@ -1,12 +1,12 @@
 
 
-from tetodl.core.models import (
+from tetodl.core.domain.models import (
     AppConfig,
     DownloadedFile,
     MediaInfo,
     PipelineContext,
 )
-from tetodl.pipeline.steps.finalize import FinalizeStep
+from tetodl.core.pipeline.stages.finalize import FinalizeStep
 
 
 class TestFinalizeStep:
@@ -25,8 +25,8 @@ class TestFinalizeStep:
 
     def test_cache_called(self, mocker):
         """Verifies cache_metadata is called with correct data."""
-        mock_cache = mocker.patch("tetodl.pipeline.steps.finalize.cache_metadata")
-        mock_history = mocker.patch("tetodl.pipeline.steps.finalize.add_to_history")
+        mock_cache = mocker.patch("tetodl.core.pipeline.stages.finalize.cache_metadata")
+        mock_history = mocker.patch("tetodl.core.pipeline.stages.finalize.add_to_history")
         mock_scanner = mocker.patch("tetodl.utils.media_scanner.scan_media_files")
 
         config = AppConfig(media_scanner_enabled=True)
@@ -79,8 +79,8 @@ class TestFinalizeStep:
 
     def test_history_args_video(self, mocker):
         """Verifies add_to_history receives correct args for video."""
-        mocker.patch("tetodl.pipeline.steps.finalize.cache_metadata")
-        mock_history = mocker.patch("tetodl.pipeline.steps.finalize.add_to_history")
+        mocker.patch("tetodl.core.pipeline.stages.finalize.cache_metadata")
+        mock_history = mocker.patch("tetodl.core.pipeline.stages.finalize.add_to_history")
         mocker.patch("tetodl.utils.media_scanner.scan_media_files")
 
         config = AppConfig(media_scanner_enabled=False)

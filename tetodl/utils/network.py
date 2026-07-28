@@ -7,18 +7,14 @@ import shutil
 import socket
 import subprocess
 import webbrowser
-from pathlib import Path
-from urllib.parse import quote
 
 import requests
 from requests.adapters import HTTPAdapter
 
 from tetodl.utils.tracer import trace
 
-from ..constants import IS_TERMUX, IS_WSL
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
-from .formatters import console as rich_console
 
 _DEFAULT_HEADERS = {
     "User-Agent": (
@@ -53,6 +49,14 @@ def check_internet() -> bool:
     except Exception:
         return False
 
+def _detect_termux() -> bool:
+    return bool(os.environ.get("TERMUX_VERSION")) or shutil.which("termux-open") is not None
+
+
+def _detect_wsl() -> bool:
+    return bool(os.environ.get("WSL_DISTRO_NAME")) or os.path.exists("/proc/sys/fs/binfmt_misc/WSLInterop")
+
+
 def open_url(url: str) -> bool:
     """
     Membuka URL di browser default.
@@ -60,7 +64,7 @@ def open_url(url: str) -> bool:
     Returns: True jika berhasil dieksekusi, False jika gagal.
     """
     try:
-        if IS_TERMUX:
+        if _detect_termux():
             subprocess.run(
                 ["am", "start", "-a", "android.intent.action.VIEW", "-d", url],
                 stdout=subprocess.DEVNULL,
@@ -69,7 +73,7 @@ def open_url(url: str) -> bool:
             )
             return True
 
-        elif IS_WSL:
+        elif _detect_wsl():
             subprocess.run(
                 ["explorer.exe", url], 
                 stdout=subprocess.DEVNULL, 
@@ -132,110 +136,6 @@ def find_free_port(start_port=8989, max_tries=10):
             if s.connect_ex(('localhost', port)) != 0:
                 return port
     return None
-
-def check_firewall_status(port):
-    """
-    Memberikan HINTS kepada user jika terdeteksi di Distro yang ketat.
-    """
-    if IS_WSL:
-        return
-
-    if shutil.which("ufw"):
-        rich_console.print("\n[dim][Tip] If connection fails, allow port in UFW:[/dim]")
-        rich_console.print(f"[dim cyan]  sudo ufw allow {port}/tcp[/dim cyan]")
-    
-    elif shutil.which("firewall-cmd"):
-        rich_console.print("\n[dim][Tip] If connection fails, allow port in FirewallD:[/dim]")
-        rich_console.print(f"[dim cyan]  sudo firewall-cmd --add-port={port}/tcp --temporary[/dim cyan]")
-
-
-# --- MAIN SHARING FUNCTION (FastAPI) ---
-
-def start_share_server(file_path_str: str, start_port=8989):
-    import asyncio as _asyncio
-    import threading as _threading
-    import time as _time
-
-    import qrcode
-    import uvicorn
-    from fastapi import FastAPI
-
-    from ..utils.share import create_share_router
-
-    path = Path(file_path_str).resolve()
-
-    if not path.exists():
-        console.err(Keys.net.file_dir_not_found(path=str(path)))
-        return
-
-    port = find_free_port(start_port)
-    if port is None:
-        console.err(Keys.net.ports_busy(start=start_port, end=start_port+10))
-        return
-
-    if IS_WSL:
-        ip_address = '127.0.0.1'
-    else:
-        ip_address = get_best_ip()
-
-    if IS_WSL:
-        rich_console.print("\n[bold yellow][!] WSL Environment Detected[/bold yellow]")
-        console.warn(Keys.net.wsl_nat_warning)
-        console.warn(Keys.net.wsl_share_tip)
-
-    if ip_address.startswith("127.") and not IS_WSL:
-        console.err(Keys.net.no_lan_ip)
-        console.warn(Keys.net.localhost_only)
-
-    if path.is_file():
-        serve_dir = path.parent
-        filename_url = quote(path.name)
-        target_url = f"http://{ip_address}:{port}/{filename_url}"
-    else:
-        serve_dir = path
-        target_url = f"http://{ip_address}:{port}/"
-
-    app = FastAPI()
-    router = create_share_router(str(serve_dir))
-    app.include_router(router)
-
-    config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="error")
-    server = uvicorn.Server(config)
-
-    def _run():
-        _asyncio.run(server.serve())
-
-    thread = _threading.Thread(target=_run, name="share-server", daemon=True)
-    thread.start()
-
-    while not server.started:
-        _time.sleep(0.05)
-
-    console.ok(Keys.net.sharing_started)
-    rich_console.print()
-
-    rich_console.print(f"Hosting: [cyan]{path.name}[/cyan]")
-    rich_console.print(f"Address: [yellow]{target_url}[/yellow]")
-
-    check_firewall_status(port)
-
-    qr = qrcode.QRCode(version=1, box_size=1, border=1)
-    qr.add_data(target_url)
-    qr.make(fit=True)
-
-    rich_console.print()
-    qr.print_ascii(invert=True)
-
-    rich_console.print()
-    rich_console.print("[dim]Scan QR above with your phone camera.[/dim]")
-    rich_console.print("[bold red]Press Ctrl+C to stop server.[/bold red]")
-
-    try:
-        while thread.is_alive():
-            thread.join(0.5)
-    except KeyboardInterrupt:
-        rich_console.print("\n[yellow]Sharing stopped.[/yellow]")
-        raise KeyboardInterrupt
 
 def perform_update():
     if not os.path.isdir(".git"):
