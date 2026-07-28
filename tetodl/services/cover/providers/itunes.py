@@ -34,9 +34,9 @@ class ITunesProvider(CoverProvider):
             source="iTunes",
             artist=result.get("artist", ""),
             title=result.get("title", ""),
-            album=result.get("album"),
-            album_artist=result.get("album_artist"),
-            genre=result.get("genre"),
+            album=result.get("album") or "",
+            album_artist=result.get("album_artist") or "",
+            genre=result.get("genre") or "",
             year=year,
             composer=result.get("composer", ""),
         )

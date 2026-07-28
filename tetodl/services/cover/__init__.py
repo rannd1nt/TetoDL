@@ -92,13 +92,13 @@ class CoverService:
                         metadata = cover_data
 
         if thumb_path is None:
-            candidate_urls = []
-            if info.get('thumbnail'):
-                candidate_urls.append(info.get('thumbnail'))
+            candidate_urls: list[str] = []
+            if isinstance(thumb := info.get('thumbnail'), str):
+                candidate_urls.append(thumb)
             if info.get('thumbnails'):
                 for t in reversed(info['thumbnails']):
-                    if t.get('url') and t.get('url') not in candidate_urls:
-                        candidate_urls.append(t['url'])
+                    if isinstance(url := t.get('url'), str) and url not in candidate_urls:
+                        candidate_urls.append(url)
 
             for url in candidate_urls:
                 img_data = self.fetch(url)

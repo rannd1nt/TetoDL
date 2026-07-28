@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import abc
-import importlib
+import importlib.util
 import os
 import subprocess
 
