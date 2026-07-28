@@ -1,13 +1,11 @@
-"""Binary image cache with pooled HTTP — raw bytes on disk, TTL via mtime."""
-
 from __future__ import annotations
 
 import hashlib
 import os
 import time
 
-from ..constants import CACHE_DIR
-from ..utils.network import get_session
+from tetodl.constants import CACHE_DIR
+from tetodl.utils.network import get_session
 
 IMG_TTL = 604800
 _IMG_DIR = CACHE_DIR / "cache" / "images"
@@ -29,10 +27,6 @@ def _fresh(path: str, ttl: float) -> bool:
 
 
 def fetch_image(url: str, ttl: float = IMG_TTL) -> bytes | None:
-    """Download *url* via pooled session, cache raw bytes on disk.
-
-    Returns ``None`` on any error (network, 4xx, 5xx, timeout, …).
-    """
     _IMG_DIR.mkdir(parents=True, exist_ok=True)
     key = _url_key(url)
     path = _data_path(key)
@@ -62,7 +56,6 @@ def fetch_image(url: str, ttl: float = IMG_TTL) -> bytes | None:
 
 
 def clear_img_cache() -> int:
-    """Delete all cached image files. Returns number of files removed."""
     n = 0
     for f in _IMG_DIR.glob("*"):
         try:
@@ -74,7 +67,6 @@ def clear_img_cache() -> int:
 
 
 def evict_img_cache(max_age: float | None = None) -> int:
-    """Remove image files older than *max_age* (default: IMG_TTL s)."""
     cutoff = time.time() - (max_age if max_age is not None else IMG_TTL)
     n = 0
     for f in _IMG_DIR.glob("*.img"):
@@ -88,7 +80,6 @@ def evict_img_cache(max_age: float | None = None) -> int:
 
 
 def img_cache_size() -> str:
-    """Human-readable total size of cached images."""
     total = 0
     for f in _IMG_DIR.glob("*.img"):
         try:

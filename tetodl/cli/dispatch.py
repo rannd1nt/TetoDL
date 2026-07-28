@@ -16,7 +16,7 @@ from tetodl.utils.console import console
 from tetodl.utils.files import TempManager, move_contents_and_cleanup
 from tetodl.utils.i18n_keys import Keys
 from tetodl.utils.network import start_share_server
-from tetodl.utils.thumbnail import download_thumbnail_task
+from tetodl.services.cover import CoverService
 from tetodl.utils.tracer import trace, traced
 
 
@@ -42,7 +42,12 @@ def execute_download(session: DownloadSession):
                     if session.is_spotify:
                         result = download_spotify_thumbnail(url, target_format=fmt)
                     else:
-                        result = download_thumbnail_task(url, target_format=fmt)
+                        result = CoverService().download(
+                            url,
+                            target_dir=app_config.thumbnail_root,
+                            target_format=fmt,
+                            smart_cover_mode=app_config.smart_cover_mode,
+                        )
                 return result
 
             with traced(f'dispatching to {"video" if session.media_type == "video" else "audio"} handler'):

@@ -14,7 +14,7 @@ if sys.platform == "win32":
     sys.stderr.reconfigure(encoding='utf-8')
 
 if hasattr(sys, '_MEIPASS'):
-    _mei = sys._MEIPASS
+    _mei = sys._MEIPASS # pyright: ignore[reportAttributeAccessIssue]
     if _mei not in os.environ.get('PATH', ''):
         os.environ['PATH'] = _mei + os.pathsep + os.environ.get('PATH', '')
 

@@ -328,7 +328,7 @@ def evict_cache(max_age: float | None = None) -> int:
         if ns not in _caches:
             c = _DiskCache(ns, _CACHE_CFG[ns].get("default_ttl", 86400))
             total += c.evict(max_age)
-    from .image_cache import evict_img_cache
+    from tetodl.services.cover.image import evict_img_cache
     total += evict_img_cache(max_age)
     return total
 

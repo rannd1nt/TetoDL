@@ -103,9 +103,13 @@ class TestLyricsStep:
         assert title == "Cover Title"
 
     def test_resolve_search_terms_parses_title_pattern(
-        self, app_config: AppConfig,
+        self, app_config: AppConfig, mocker,
     ):
         """Parses artist - title pattern from media_info.title."""
+        mocker.patch(
+            "tetodl.pipeline.steps.lyrics.clean_youtube_title",
+            return_value=("Artist Name", "Song Title"),
+        )
         step = LyricsStep()
         info = MediaInfo(
             id="abc123",
@@ -135,9 +139,13 @@ class TestLyricsStep:
         assert title == "Track Name"
 
     def test_resolve_search_terms_falls_back_to_uploader_and_title(
-        self, app_config: AppConfig,
+        self, app_config: AppConfig, mocker,
     ):
         """Falls back to uploader/title when artist/track are None and no dash pattern."""
+        mocker.patch(
+            "tetodl.pipeline.steps.lyrics.clean_youtube_title",
+            return_value=(None, None),
+        )
         step = LyricsStep()
         info = MediaInfo(
             id="abc123",

@@ -142,20 +142,19 @@ class TestCoverStep:
         thumb_path = tmp_path / "abc123.jpg"
         thumb_path.write_text("fake image")
 
-        mocker.patch(
-            "tetodl.pipeline.steps.cover.fetch_image",
-            return_value=b"fake image",
+        mocker.patch.object(
+            step._cover_service, "search", return_value=None,
         )
-        mocker.patch(
-            "tetodl.pipeline.steps.cover.crop_thumbnail_to_square",
+        mocker.patch.object(
+            step._cover_service, "fetch", return_value=b"fake image",
+        )
+        mocker.patch.object(
+            step._cover_service, "process",
+            side_effect=lambda path, crop=False, target_format="jpg": path,
         )
         mocker.patch(
             "tetodl.pipeline.steps.cover.embed_metadata",
             return_value=True,
-        )
-        mocker.patch(
-            "tetodl.pipeline.steps.cover.fetcher.fetch_metadata",
-            return_value=None,
         )
 
         result = step(ctx)

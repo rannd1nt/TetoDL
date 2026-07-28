@@ -1,13 +1,13 @@
 """
-LyricsStep — fetch and embed lyrics into an audio file via Genius.
+LyricsStep — fetch and embed lyrics into an audio file.
 """
 
 import os
-import re
 
+from tetodl.lyrics.cleaner import clean_youtube_title
+from tetodl.lyrics.engine import search_lyrics
 from tetodl.utils.tracer import trace, traced
 
-from ...core.metadata_fetcher import fetcher
 from ...core.models import CoverResult, MediaInfo, PipelineContext
 from ...core.step import PipelineStep
 from ...core.tagger import embed_lyrics
@@ -16,7 +16,7 @@ from ...utils.i18n_keys import Keys
 
 
 class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
-    """Fetch lyrics from Genius and embed them into a downloaded audio file.
+    """Fetch lyrics and embed them into a downloaded audio file.
 
     Reads ``ctx.media_info``, ``ctx.downloaded_file``, ``ctx.cover_result``,
     and ``ctx.config``.  Writes ``ctx.lyrics_embedded``.
@@ -28,7 +28,7 @@ class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
     --------
     :class:`CoverResult` : Provides alternative artist/title for search.
     :func:`embed_lyrics` : Lyrics embedding into the audio file.
-    :func:`fetcher.fetch_lyrics_genius` : Genius API lyrics fetch.
+    :func:`search_lyrics` : Lyrics engine (LRCLIB + Genius fallback).
 
     Example
     -------
@@ -42,13 +42,13 @@ class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
 
     @trace
     def __call__(self, ctx: PipelineContext) -> PipelineContext:
-        """Fetch and embed lyrics via the Genius API.
+        """Fetch and embed lyrics.
 
         Skips if ``lyrics_mode`` is disabled or the media type is not
         audio.  Uses :meth:`_resolve_search_terms` to determine the
         artist and title (preferring smart-cover metadata when
         available), then fetches lyrics via
-        :func:`fetcher.fetch_lyrics_genius`.  On success embeds the
+        :func:`search_lyrics`.  On success embeds the
         lyrics into the audio file via :func:`embed_lyrics`.
 
         Parameters
@@ -72,7 +72,7 @@ class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
         --------
         :meth:`_resolve_search_terms` : Artist/title resolution.
         :func:`embed_lyrics` : Embedding lyrics into the file.
-        :func:`fetcher.fetch_lyrics_genius` : Genius API lookup.
+        :func:`search_lyrics` : Lyrics engine lookup.
 
         Example
         -------
@@ -101,15 +101,12 @@ class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
         artist, title = self._resolve_search_terms(info, ctx.cover_result, ctx)
 
         console.proc(Keys.media.searching_lyrics_for(artist=artist, title=title))
-        with traced(f'fetching from Genius (romaji={ctx.config.romaji_mode})'):
-            lyrics = fetcher.fetch_lyrics_genius(
-                artist,
-                title,
-                romaji=ctx.config.romaji_mode,
-            )
+        duration = info.duration if info.duration else 0.0
+        with traced('fetching lyrics via engine'):
+            lyrics = search_lyrics(artist, title, duration=duration)
 
         if not lyrics:
-            with traced('no lyrics returned from Genius'):
+            with traced('no lyrics returned'):
                 console.warn(Keys.media.lyrics_not_found_genius)
                 return ctx
 
@@ -133,13 +130,14 @@ class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
         cover_result: CoverResult | None,
         ctx: PipelineContext | None = None,
     ) -> tuple[str, str]:
-        """Extract artist and title for the Genius lyrics search.
+        """Extract artist and title for the lyrics search.
 
         Priority:
         1. :class:`LyricsMetadata` from the cover step (iTunes/Genius).
         2. ``ctx.spotify_title`` / ``ctx.spotify_artist`` (Spotify origin).
-        3. Parse ``info.title`` for a ``"Artist - Title"`` pattern.
-        4. ``info.artist`` / ``info.track``.
+        3. ``info.artist`` / ``info.track`` (structured metadata from yt-dlp).
+        4. :func:`clean_youtube_title` — iTunes API lookup, then regex fallback.
+        5. ``info.uploader`` / ``info.title`` (last resort).
 
         Parameters
         ----------
@@ -161,12 +159,18 @@ class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
         if ctx and ctx.spotify_title:
             return (ctx.spotify_artist or ""), ctx.spotify_title
 
+        if info.artist and info.track:
+            return info.artist, info.track
+
         raw = info.title or ""
-        match = re.match(r"^(.*?)\s+-\s+(.*)$", raw)
-        if match:
-            artist = match.group(1).strip()
-            raw_title = match.group(2).strip()
-            title = re.sub(r"\s*[\(\[].*?[\)\]]", "", raw_title).strip()
+        artist, title = clean_youtube_title(raw)
+        if artist and title:
+            # YouTube titles often use "Title - Artist" (common for JP videos)
+            # rather than "Artist - Title".  Detect via uploader match.
+            if info.uploader:
+                uploader_clean = info.uploader.replace(" - Topic", "").strip().lower()
+                if title.lower() == uploader_clean and artist.lower() != uploader_clean:
+                    artist, title = title, artist
             return artist, title
 
         artist = info.artist or info.uploader.replace(" - Topic", "")

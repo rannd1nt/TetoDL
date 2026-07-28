@@ -47,7 +47,7 @@ __all__ = [
     'detect_system_language',
     'extract_all_urls_from_content',
     'extract_video_id',
-    'fetch_cover',
+
     'get_available_languages',
     'get_current_language',
     'get_language_display_name',

@@ -49,9 +49,9 @@ class TestDispatch:
         assert result.success is True
 
     def test_execute_download_thumbnail(self, mocker):
-        """execute_download calls download_thumbnail_task for thumbnail."""
+        """execute_download calls CoverService.download for thumbnail."""
         mock_thumb = mocker.patch(
-            "tetodl.cli.dispatch.download_thumbnail_task",
+            "tetodl.services.cover.CoverService.download",
             return_value=DownloadResult(success=True, file_path="/tmp/thumb.jpg"),
         )
         mock_config = mocker.patch("tetodl.cli.dispatch.load_app_config")
@@ -66,10 +66,10 @@ class TestDispatch:
         )
         result = execute_download(session)
 
-        mock_thumb.assert_called_once_with(
-            "https://youtube.com/watch?v=test",
-            target_format="jpg",
-        )
+        mock_thumb.assert_called_once()
+        args, kwargs = mock_thumb.call_args
+        assert args[0] == "https://youtube.com/watch?v=test"
+        assert kwargs.get("target_format") == "jpg"
         assert result.success is True
 
     def test_execute_download_empty_url(self, mocker):

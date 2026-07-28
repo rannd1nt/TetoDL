@@ -182,6 +182,7 @@ def _search_ytmusic(
     spotify_title = query.split(" - ", 1)[0] if " - " in query else ""
 
     _BLOCKED = ("live", "lyrics", "acoustic", "cover", "karaoke", "instrumental", "lirik", "terjemahan", "subtitle")
+    _LYRICS_KW = ("lyrics", "lirik", "terjemahan", "subtitle")
 
     def _is_topic(entry: dict) -> bool:
         uploader = entry.get("uploader") or entry.get("channel") or ""
@@ -190,6 +191,13 @@ def _search_ytmusic(
     def _has_blocked_kw(title: str) -> bool:
         lower = title.lower()
         for kw in _BLOCKED:
+            if kw in lower:
+                return True
+        return False
+
+    def _has_lyrics_kw(title: str) -> bool:
+        lower = title.lower()
+        for kw in _LYRICS_KW:
             if kw in lower:
                 return True
         return False
@@ -204,14 +212,25 @@ def _search_ytmusic(
             return False
         return True
 
-    def _duration_ok(entry: dict) -> bool:
+    def _duration_ok(entry: dict, tolerance_ms: int = 15000) -> bool:
         if not target_duration_ms or target_duration_ms <= 0:
             return True
         duration = entry.get("duration")
         if duration is None:
             return False
         diff = abs(duration * 1000 - target_duration_ms)
-        return diff <= 2000
+        return diff <= tolerance_ms
+
+    def _artist_in_uploader(entry: dict) -> bool:
+        if not artist_from_query:
+            return False
+        uploader = (entry.get("uploader") or entry.get("channel") or "").lower()
+        return artist_from_query in uploader
+
+    def _artist_in_title(yt_title: str) -> bool:
+        if not artist_from_query:
+            return False
+        return artist_from_query in yt_title.lower()
 
     def _title_word_overlap(yt_title: str) -> float:
         if not spotify_title:
@@ -282,12 +301,28 @@ def _search_ytmusic(
                 return _match(2, "topic+dur+overlap", entry)
 
         for entry in candidates1:
+            if _is_topic(entry) and _duration_ok(entry) and _artist_in_uploader(entry):
+                return _match(3, "topic+dur+artist_uploader", entry)
+
+        for entry in candidates1:
+            if _duration_ok(entry) and _artist_in_uploader(entry) and _artist_in_title(entry.get("title", "")):
+                return _match(4, "dur+artist_uploader+artist_title", entry)
+
+        for entry in candidates1:
             if _duration_ok(entry) and _title_word_overlap(entry.get("title", "")) >= 0.5:
-                return _match(3, "dur+overlap>=0.5", entry)
+                return _match(5, "dur+overlap>=0.5", entry)
 
         for entry in candidates1:
             if _duration_ok(entry) and _title_word_overlap(entry.get("title", "")) >= 0.3:
-                return _match(4, "dur+overlap>=0.3", entry)
+                return _match(6, "dur+overlap>=0.3", entry)
+
+        for entry in candidates1:
+            if _duration_ok(entry, 45000) and _title_word_overlap(entry.get("title", "")) >= 0.5:
+                return _match(7, "dur_wide+overlap>=0.5", entry)
+
+        for entry in candidates1:
+            if _duration_ok(entry, 45000) and _artist_in_uploader(entry) and _artist_in_title(entry.get("title", "")):
+                return _match(8, "dur_wide+artist_uploader+artist_title", entry)
 
     # ===== Phase 2: General search =====
     query_general = f"ytsearch10:{query}"
@@ -298,19 +333,35 @@ def _search_ytmusic(
     if candidates2:
         for entry in candidates2:
             if _is_topic(entry) and _duration_ok(entry) and _title_word_overlap(entry.get("title", "")) >= 0.5 and _title_clean(entry.get("title", "")):
-                return _match(5, "topic+dur+overlap+clean", entry)
+                return _match(9, "topic+dur+overlap+clean", entry)
 
         for entry in candidates2:
             if _is_topic(entry) and _duration_ok(entry) and _title_word_overlap(entry.get("title", "")) >= 0.3:
-                return _match(6, "topic+dur+overlap", entry)
+                return _match(10, "topic+dur+overlap", entry)
+
+        for entry in candidates2:
+            if _is_topic(entry) and _duration_ok(entry) and _artist_in_uploader(entry):
+                return _match(11, "topic+dur+artist_uploader", entry)
+
+        for entry in candidates2:
+            if _duration_ok(entry) and _artist_in_uploader(entry) and _artist_in_title(entry.get("title", "")):
+                return _match(12, "dur+artist_uploader+artist_title", entry)
 
         for entry in candidates2:
             if _duration_ok(entry) and _title_word_overlap(entry.get("title", "")) >= 0.5:
-                return _match(7, "dur+overlap>=0.5", entry)
+                return _match(13, "dur+overlap>=0.5", entry)
 
         for entry in candidates2:
             if _duration_ok(entry) and _title_word_overlap(entry.get("title", "")) >= 0.3:
-                return _match(8, "dur+overlap>=0.3", entry)
+                return _match(14, "dur+overlap>=0.3", entry)
+
+        for entry in candidates2:
+            if _duration_ok(entry, 45000) and _title_word_overlap(entry.get("title", "")) >= 0.5:
+                return _match(15, "dur_wide+overlap>=0.5", entry)
+
+        for entry in candidates2:
+            if _duration_ok(entry, 45000) and _artist_in_uploader(entry) and _artist_in_title(entry.get("title", "")):
+                return _match(16, "dur_wide+artist_uploader+artist_title", entry)
 
     # ===== Phase 3: Nekat =====
     all_candidates = candidates1 + candidates2
@@ -319,18 +370,34 @@ def _search_ytmusic(
 
     if all_candidates:
         for entry in all_candidates:
+            if _duration_ok(entry) and _artist_in_uploader(entry) and _artist_in_title(entry.get("title", "")):
+                return _match(17, "dur+artist_uploader+artist_title", entry)
+
+        for entry in all_candidates:
+            if _duration_ok(entry, 45000) and _has_lyrics_kw(entry.get("title", "")):
+                return _match(18, "dur_wide+lyrics_kw", entry)
+
+        for entry in all_candidates:
+            if _duration_ok(entry) and _artist_in_uploader(entry):
+                return _match(19, "dur+artist_uploader", entry)
+
+        for entry in all_candidates:
+            if _duration_ok(entry) and _artist_in_title(entry.get("title", "")):
+                return _match(20, "dur+artist_title", entry)
+
+        for entry in all_candidates:
             if _title_clean(entry.get("title", "")) and _title_word_overlap(entry.get("title", "")) >= 0.5:
-                return _match(9, "clean+overlap>=0.5", entry)
+                return _match(21, "clean+overlap>=0.5", entry)
 
         for entry in all_candidates:
             if _title_word_overlap(entry.get("title", "")) >= 0.5:
-                return _match(10, "overlap>=0.5", entry)
+                return _match(22, "overlap>=0.5", entry)
 
         for entry in all_candidates:
             if _title_word_overlap(entry.get("title", "")) >= 0.3:
-                return _match(11, "overlap>=0.3", entry)
+                return _match(23, "overlap>=0.3", entry)
 
-        return _match(12, "last resort", all_candidates[0])
+        return _match(24, "last resort", all_candidates[0])
 
     console.debug("No candidates found, returning None")
     return None
@@ -519,8 +586,8 @@ def download_spotify_thumbnail(
     from yt_dlp.utils import sanitize_filename
 
     from ..core import config as cfg
-    from ..core.image_cache import fetch_image
     from ..core.spotify import SpotifyResolver
+    from ..services.cover import CoverService
 
     target_dir = cfg.thumbnail_root
     if not os.path.exists(target_dir):
@@ -548,7 +615,7 @@ def download_spotify_thumbnail(
     filename = f"{sanitize_filename(f'{track.artist} - {track.title}')}.{target_format}"
     filepath = os.path.join(target_dir, filename)
 
-    data = fetch_image(track.cover_url)
+    data = CoverService().fetch(track.cover_url)
     if data is None:
         return DownloadResult(success=False, reason="download_failed")
     with open(filepath, "wb") as f:
