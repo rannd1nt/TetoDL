@@ -4,9 +4,17 @@ Color codes and colored print functions
 import os
 from typing import Literal
 
-from rich.console import Console
+from .console import console as _tetodl_console
 
-console = Console()
+console = _tetodl_console.rich
+"""
+Alias for ``console.rich`` -- the underlying ``rich.console.Console`` instance.
+
+Kept here for backward compatibility so existing importers
+(``from tetodl.utils.formatters import console``) continue to work.
+New code should use ``from tetodl.utils.console import console`` and access
+``console.rich`` directly.
+"""
 
 def search_style():
     from questionary import Style

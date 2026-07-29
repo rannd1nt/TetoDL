@@ -7,14 +7,14 @@ from collections import Counter
 from datetime import datetime
 from typing import Any
 
+from tetodl.utils.console import console
+from tetodl.utils.i18n_keys import Keys
 from tetodl.utils.tracer import trace
 
 from ...core.domain.env import env
 from .registry import registry
 
 HISTORY_PATH = env.get('history_path')
-from ...utils.console import console
-from ...utils.i18n_keys import Keys
 
 # Module-level history list
 _download_history: list = []

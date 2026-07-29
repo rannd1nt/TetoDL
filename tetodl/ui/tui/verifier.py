@@ -134,7 +134,7 @@ def verify_dependencies(header_title=None):
         detected_code = detect_system_language()
         display_name = get_language_display_name(detected_code)
 
-        console.warn(f"Detected System Language: {color(display_name, 'g')} | ({detected_code})")
+        console.warn(Keys.ui.detected_system_language(language=color(display_name, 'g'), code=detected_code))
         
         confirm_lang = False
 
@@ -190,7 +190,7 @@ def verify_dependencies(header_title=None):
         elif env.get('is_windows'):
             env_display = "Windows"
         
-        console.warn(f"Environment Detected: {color(env_display, 'c')}")
+        console.warn(Keys.ui.environment_detected(env=color(env_display, 'c')))
         print()
 
         proposed_music = env.get('default_music_root')
@@ -198,7 +198,7 @@ def verify_dependencies(header_title=None):
         
         # Pesan khusus untuk WSL
         if env.get('is_wsl'):
-            console.warn(f"{color('WSL Detected:', 'y')} We recommend saving files to Windows folders")
+            console.warn(Keys.ui.wsl_detected(wsl_warning=color('WSL Detected:', 'y')))
             console.warn(Keys.ui.wsl_file_explorer_access)
             print()
 

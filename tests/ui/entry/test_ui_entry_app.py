@@ -46,11 +46,11 @@ class TestApp:
     def test_app_launch_menu(self, mock_cli, mocker):
         """App.launch enters menu loop when CLI returns CliMenu."""
         mock_cli.parse.return_value = (False, CliMenu())
+        mock_tui = mocker.patch("tetodl.ui.tui.runner.run_tui_loop")
         mock_bootstrap = mocker.patch("tetodl.ui.app.bootstrap")
-        mock_loop = mocker.patch.object(App, "_loop_menu")
 
         app = App()
         app.launch()
 
-        mock_loop.assert_called_once()
+        mock_tui.assert_called_once()
         mock_bootstrap.setup_application.assert_called_once()

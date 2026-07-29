@@ -11,7 +11,7 @@ from .domain.env import env
 try:
     import yt_dlp as yt
 except ImportError:
-    yt = None
+    yt = None  # type: ignore[assignment]
 
 
 def perform_youtube_search(query, limit=5):
@@ -38,7 +38,7 @@ def perform_youtube_search(query, limit=5):
             return None
 
         videos = []
-        for entry in info['entries']:
+        for entry in info['entries']:  # type: ignore[union-attr]
             if entry:
                 videos.append({
                     'title': entry.get('title', 'Unknown Title'),
@@ -53,7 +53,7 @@ def perform_youtube_search(query, limit=5):
             return None
 
         formatted_query = color(query, 'c')
-        console.ok(f"Search Results for '{formatted_query}':")
+        console.ok(Keys.search.search_results(query=formatted_query))
 
         choices = []
         for vid in videos:

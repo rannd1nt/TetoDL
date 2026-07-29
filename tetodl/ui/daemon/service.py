@@ -104,11 +104,11 @@ class NullServiceManager(ServiceManager):
     """Stub service manager — Windows (not yet implemented)."""
 
     def setup(self, host: str, port: int):
-        console.warn("Daemon service registration is not yet supported on Windows.")
-        console.warn(f"You can still run the daemon manually: tetodl daemon --run --host {host} --port {port}")
+        console.warn(Keys.daemon.no_windows_service_setup)
+        console.warn(Keys.daemon.run_daemon_manually(host=host, port=port))
 
     def remove(self):
-        console.warn("Daemon service removal is not yet supported on Windows.")
+        console.warn(Keys.daemon.no_windows_service_remove)
 
 
 _service_manager: ServiceManager | None = None

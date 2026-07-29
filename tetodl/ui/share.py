@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 
-from tetodl.utils.formatters import AUDIO_EXTS, IMAGE_EXTS, MEDIA_EXTS, VIDEO_EXTS, human_size, icon_for_ext
+from tetodl.utils.formatters import AUDIO_EXTS, MEDIA_EXTS, human_size, icon_for_ext
 
 _STATIC_DIR = Path(__file__).parent / "static"
 

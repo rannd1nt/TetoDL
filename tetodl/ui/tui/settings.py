@@ -29,7 +29,6 @@ from ...utils.console import console
 from ...utils.display import formatted_video_codec
 from ...utils.files import get_free_space
 from ...utils.formatters import clear, color, colored_switch, menu_style
-from ...utils.formatters import console as rich_console
 from ...utils.i18n import get_available_languages, get_language_display_name
 from ...utils.i18n import get_text as _
 from ...utils.i18n_keys import Keys
@@ -42,37 +41,37 @@ def menu_audio_quality():
         current_quality = cfg.audio_quality
         quality_info = AUDIO_QUALITY_OPTIONS[current_quality]
 
-        print(color(f"\n======== {_('menu.audio_quality.title')} ========\n", "c"))
-        print(_('menu.audio_quality.current',
+        print(color(f"\n======== {_(Keys.menu.audio_quality.title)} ========\n", "c"))
+        print(_(Keys.menu.audio_quality.current(
                 format=color(quality_info['ext'].upper(), 'lgrn'),
-                bitrate=color(quality_info['bitrate'], 'g')))
+                bitrate=color(quality_info['bitrate'], 'g'))))
         print()
-        print(_('menu.audio_quality.select'))
+        print(_(Keys.menu.audio_quality.select))
         print()
 
         # MP3 Option
         selected_mp3 = f" {color(' [✓]', 'lgrn')}" if current_quality == "mp3" else ""
-        print(color(f"1) {_('menu.audio_quality.mp3_title')}{selected_mp3}", "c"))
-        print(f"   {_('menu.audio_quality.mp3_desc_1')}")
-        print(f"   {_('menu.audio_quality.mp3_desc_2')}")
-        print(f"   {_('menu.audio_quality.mp3_desc_3')}\n")
+        print(color(f"1) {_(Keys.menu.audio_quality.mp3_title)}{selected_mp3}", "c"))
+        print(f"   {_(Keys.menu.audio_quality.mp3_desc_1)}")
+        print(f"   {_(Keys.menu.audio_quality.mp3_desc_2)}")
+        print(f"   {_(Keys.menu.audio_quality.mp3_desc_3)}\n")
 
         # M4A Option
         selected_m4a = f" {color(' [✓]', 'lgrn')}" if current_quality == "m4a" else ""
-        print(color(f"2) {_('menu.audio_quality.m4a_title')}{selected_m4a}", "c"))
-        print(f"   {_('menu.audio_quality.m4a_desc_1')}")
-        print(f"   {_('menu.audio_quality.m4a_desc_2')}")
-        print(f"   {_('menu.audio_quality.m4a_desc_3')}\n")
+        print(color(f"2) {_(Keys.menu.audio_quality.m4a_title)}{selected_m4a}", "c"))
+        print(f"   {_(Keys.menu.audio_quality.m4a_desc_1)}")
+        print(f"   {_(Keys.menu.audio_quality.m4a_desc_2)}")
+        print(f"   {_(Keys.menu.audio_quality.m4a_desc_3)}\n")
 
         # OPUS Option
         selected_opus = f" {color(' [✓]', 'lgrn')}" if current_quality == "opus" else ""
-        print(color(f"3) {_('menu.audio_quality.opus_title')}{selected_opus}", "c"))
-        print(f"   {_('menu.audio_quality.opus_desc_1')}")
-        print(f"   {_('menu.audio_quality.opus_desc_2')}")
-        print(f"   {_('menu.audio_quality.opus_desc_3')}\n")
+        print(color(f"3) {_(Keys.menu.audio_quality.opus_title)}{selected_opus}", "c"))
+        print(f"   {_(Keys.menu.audio_quality.opus_desc_1)}")
+        print(f"   {_(Keys.menu.audio_quality.opus_desc_2)}")
+        print(f"   {_(Keys.menu.audio_quality.opus_desc_3)}\n")
 
         try:
-            choice = input(_('common.choose_info', info=_('common.zero_enter'))).strip()
+            choice = input(_(Keys.common.choose_info(info=_(Keys.common.zero_enter)))).strip()
         except KeyboardInterrupt:
             return
 
@@ -99,10 +98,9 @@ def menu_video_resolution():
     while True:
         clear()
         current_res = cfg.max_video_resolution
-        print(current_res)
 
-        print(color(f"\n======== {_('menu.video_resolution.title')} ========\n", "c"))
-        print(_('menu.video_resolution.select') + "\n")
+        print(color(f"\n======== {_(Keys.menu.video_resolution.title)} ========\n", "c"))
+        print(_(Keys.menu.video_resolution.select) + "\n")
 
         res_info = {
             "4320p": {"title": "8K Ultra HD", "desc": "menu.video_resolution.4320p_desc"},
@@ -128,7 +126,7 @@ def menu_video_resolution():
         back_idx = 0
 
         try:
-            choice = input(_('common.choose_info', info=_('common.zero_enter'))).strip()
+            choice = input(_(Keys.common.choose_info(info=_(Keys.common.zero_enter)))).strip()
         except KeyboardInterrupt:
             return
 
@@ -158,21 +156,21 @@ def menu_video_codec():
         clear()
         current_codec = cfg.video_codec
         
-        print(color(f"\n======== {_('menu.video_codec.title')} ========\n", "c"))
-        print(_('menu.video_codec.select') + "\n")
+        print(color(f"\n======== {_(Keys.menu.video_codec.title)} ========\n", "c"))
+        print(_(Keys.menu.video_codec.select) + "\n")
 
         # Dictionary info codec
         codec_info = {
             "default": {
-                "title": _("menu.video_codec.default_title"), 
+                "title": _(Keys.menu.video_codec.default_title), 
                 "desc": "menu.video_codec.default_desc"
             },
             "h264": {
-                "title": _("menu.video_codec.h264_title"), 
+                "title": _(Keys.menu.video_codec.h264_title), 
                 "desc": "menu.video_codec.h264_desc"
             },
             "h265": {
-                "title": _("menu.video_codec.h265_title"), 
+                "title": _(Keys.menu.video_codec.h265_title), 
                 "desc": "menu.video_codec.h265_desc"
             }
         }
@@ -191,7 +189,7 @@ def menu_video_codec():
         back_idx = 0
 
         try:
-            choice = input(_('common.choose_info', info=_('common.zero_enter'))).strip()
+            choice = input(_(Keys.common.choose_info(info=_(Keys.common.zero_enter)))).strip()
         except KeyboardInterrupt:
             return
 
@@ -232,10 +230,10 @@ def prompt_language_selection(force_selection=False):
     choices.append(Separator())
     
     if not force_selection:
-        choices.append(Choice(title=f"- {_('common.back')}", value="back")) 
+        choices.append(Choice(title=f"- {_(Keys.common.back)}", value="back")) 
 
     return questionary.select(
-        message=_('menu.language.choose'),
+        message=_(Keys.menu.language.choose),
         qmark="",
         choices=choices,
         style=menu_style(),
@@ -251,8 +249,8 @@ def language_setting():
         current_code = cfg.language
         current_display = get_language_display_name(current_code)
         
-        print(color(f"\n ======== {_('menu.language.title')} ========\n", "c"))
-        print(" " + _('menu.language.current', lang=color(current_display, 'lgrn')) + "\n")
+        print(color(f"\n ======== {_(Keys.menu.language.title)} ========\n", "c"))
+        print(" " + _(Keys.menu.language.current(lang=color(current_display, 'lgrn'))) + "\n")
         
         answer = prompt_language_selection(force_selection=False)
 
@@ -268,7 +266,7 @@ def menu_folder():
         clear()
         
         def path_info():
-            print(color(f"\n   {_('menu.root_folder.title')}\n", "c"))
+            print(color(f"\n   {_(Keys.menu.root_folder.title)}\n", "c"))
 
             table = Table(box=box.SIMPLE, show_header=False, padding=(0, 2))
             
@@ -294,17 +292,17 @@ def menu_folder():
             )
 
             # Render table ke layar
-            rich_console.print(table)
+            console.rich.print(table)
 
         path_info()
 
         # 3. Questionary Menu
         choices = [
-            Choice(title=f"- {_('menu.root_folder.change_music', default='Change music root')}", value="1"),
-            Choice(title=f"- {_('menu.root_folder.change_video', default='Change video root')}", value="2"),
+            Choice(title=f"- {_(Keys.menu.root_folder.change_music)}", value="1"),
+            Choice(title=f"- {_(Keys.menu.root_folder.change_video)}", value="2"),
             Separator(line="-"*30),
-            Choice(title=f"- {_('menu.root_folder.reset')}", value="3"),
-            Choice(title=f"- {_('common.back')}", value="4"),
+            Choice(title=f"- {_(Keys.menu.root_folder.reset)}", value="3"),
+            Choice(title=f"- {_(Keys.common.back)}", value="4"),
         ]
 
         selection = questionary.select(
@@ -322,7 +320,7 @@ def menu_folder():
         choice = selection
 
         if choice == "1":
-            new_dir = navigate_folders(cfg.music_root, _('download.navigation.title'), restrict_to_start=False)
+            new_dir = navigate_folders(cfg.music_root, _(Keys.download.navigation.title), restrict_to_start=False)
             if new_dir:
                 cfg.music_root = new_dir
                 os.makedirs(cfg.music_root, exist_ok=True)
@@ -330,7 +328,7 @@ def menu_folder():
                 save_config()
 
         elif choice == "2":
-            new_dir = navigate_folders(cfg.video_root, _('download.navigation.title'), restrict_to_start=False)
+            new_dir = navigate_folders(cfg.video_root, _(Keys.download.navigation.title), restrict_to_start=False)
             if new_dir:
                 cfg.video_root = new_dir
                 os.makedirs(cfg.video_root, exist_ok=True)
@@ -356,70 +354,70 @@ def menu_settings():
         current_container = getattr(cfg, 'video_container', 'mp4')
         current_codec = getattr(cfg, 'video_codec', 'default')
 
-        rich_console.print("="*15, f"{_('menu.settings.title')}", "="*15, justify='center', end='\n\n')
+        console.rich.print("="*15, f"{_(Keys.menu.settings.title)}", "="*15, justify='center', end='\n\n')
 
         # Simple Mode
-        simple_status = colored_switch(cfg.simple_mode, _('common.active'), _('common.inactive'))
-        print(color(f"1) {_('menu.settings.simple_mode', status=simple_status)}", "c"))
-        print(f"{_('menu.settings.simple_mode_desc')}\n")
+        simple_status = colored_switch(cfg.simple_mode, _(Keys.common.active), _(Keys.common.inactive))
+        print(color(f"1) {_(Keys.menu.settings.simple_mode(status=simple_status))}", "c"))
+        print(f"{_(Keys.menu.settings.simple_mode_desc)}\n")
 
         # Smart Cover Mode
-        s_cover_status = colored_switch(cfg.smart_cover_mode, _('common.active'), _('common.inactive'))
-        print(color(f"2) {_('menu.settings.smart_cover', status=s_cover_status)}", "c"))
-        print(f"{_('menu.settings.smart_cover_desc_1')}")
-        print(f"{_('menu.settings.smart_cover_desc_2')}")
-        print(f"{_('menu.settings.smart_cover_desc_3')}\n")
+        s_cover_status = colored_switch(cfg.smart_cover_mode, _(Keys.common.active), _(Keys.common.inactive))
+        print(color(f"2) {_(Keys.menu.settings.smart_cover(status=s_cover_status))}", "c"))
+        print(f"{_(Keys.menu.settings.smart_cover_desc_1)}")
+        print(f"{_(Keys.menu.settings.smart_cover_desc_2)}")
+        print(f"{_(Keys.menu.settings.smart_cover_desc_3)}\n")
         
         # Skip Existing
-        skip_status = colored_switch(cfg.skip_existing_files, _('common.active'), _('common.inactive'))
-        print(color(f"3) {_('menu.settings.skip_existing', status=skip_status)}", "c"))
-        print(f"{_('menu.settings.skip_existing_desc')}\n")
+        skip_status = colored_switch(cfg.skip_existing_files, _(Keys.common.active), _(Keys.common.inactive))
+        print(color(f"3) {_(Keys.menu.settings.skip_existing(status=skip_status))}", "c"))
+        print(f"{_(Keys.menu.settings.skip_existing_desc)}\n")
 
         # Max Resolution
-        print(color(f"4) {_('menu.settings.max_resolution', resolution=color(cfg.max_video_resolution, 'g'))}", "c"))
-        print(f"{_('menu.settings.max_resolution_desc_2')}\n")
+        print(color(f"4) {_(Keys.menu.settings.max_resolution(resolution=color(cfg.max_video_resolution, 'g')))}", "c"))
+        print(f"{_(Keys.menu.settings.max_resolution_desc_2)}\n")
 
         # Video Container
-        print(color(f"5) {_('menu.settings.video_container', container=color(current_container.upper(), 'g'))}", "c"))
-        print(f"{_('menu.settings.video_container_desc')}\n")
+        print(color(f"5) {_(Keys.menu.settings.video_container(container=color(current_container.upper(), 'g')))}", "c"))
+        print(f"{_(Keys.menu.settings.video_container_desc)}\n")
 
         # Video Codec
-        print(color(f"6) {_('menu.settings.video_codec', codec=color(formatted_video_codec(current_codec) or '', 'g'))}", "c"))
-        print(f"{_('menu.settings.video_codec_desc')}\n")
+        print(color(f"6) {_(Keys.menu.settings.video_codec(codec=color(formatted_video_codec(current_codec) or '', 'g')))}", "c"))
+        print(f"{_(Keys.menu.settings.video_codec_desc)}\n")
 
         # Audio Quality
-        print(color(f"7) {_('menu.settings.audio_quality', format=color(audio_quality_info['ext'].upper(), 'g'))}", 'c'))
-        print(f"{_('menu.settings.audio_quality_desc')}\n")
+        print(color(f"7) {_(Keys.menu.settings.audio_quality(format=color(audio_quality_info['ext'].upper(), 'g')))}", 'c'))
+        print(f"{_(Keys.menu.settings.audio_quality_desc)}\n")
         
         # Language
-        print(color(f"8) {_('menu.settings.language', lang=color(lang_name, 'g'))}", "c"))
-        print(f"{_('menu.settings.language_desc')}\n")
+        print(color(f"8) {_(Keys.menu.settings.language(lang=color(lang_name, 'g')))}", "c"))
+        print(f"{_(Keys.menu.settings.language_desc)}\n")
 
         # Clear Cache
-        print(color(f"9) {_('menu.settings.clear_cache')} {color(f'(Total Cache: {get_cache_size()})', 'g')}", "c"))
-        print(f"{_('menu.settings.clear_cache_desc')}\n")
+        print(color(f"9) {_(Keys.menu.settings.clear_cache)} {color(f'(Total Cache: {get_cache_size()})', 'g')}", "c"))
+        print(f"{_(Keys.menu.settings.clear_cache_desc)}\n")
 
 
         try:
-            choice = input(_('common.choose_info', info=_('common.zero_enter'))).strip()
+            choice = input(_(Keys.common.choose_info(info=_(Keys.common.zero_enter)))).strip()
         except KeyboardInterrupt:
             return
 
         if choice == "1":
             toggle_simple_mode(not cfg.simple_mode)
-            status = _('config.simple_mode_enabled') if cfg.simple_mode else _('config.simple_mode_disabled')
+            status = _(Keys.config.simple_mode_enabled) if cfg.simple_mode else _(Keys.config.simple_mode_disabled)
             console.ok(status)
             time.sleep(1)
 
         elif choice == "2":
             toggle_smart_cover(not cfg.smart_cover_mode)
-            status = _('config.smart_cover_enabled') if cfg.smart_cover_mode else _('config.smart_cover_disabled')
+            status = _(Keys.config.smart_cover_enabled) if cfg.smart_cover_mode else _(Keys.config.smart_cover_disabled)
             console.ok(status)
             time.sleep(1)
 
         elif choice == "3":
             toggle_skip_existing(not cfg.skip_existing_files)
-            status = _('config.skip_existing_enabled') if cfg.skip_existing_files else _('config.skip_existing_disabled')
+            status = _(Keys.config.skip_existing_enabled) if cfg.skip_existing_files else _(Keys.config.skip_existing_disabled)
             console.ok(status)
             time.sleep(1)
 
@@ -444,8 +442,8 @@ def menu_settings():
             language_setting()
 
         elif choice == "9":
-            confirm = input(_('config.confirm_clear_cache')).strip().lower()
-            if confirm == _('common.yes'):
+            confirm = input(_(Keys.config.confirm_clear_cache)).strip().lower()
+            if confirm == _(Keys.common.yes):
                 if clear_cache():
                     console.ok(Keys.config.cache_deleted)
                 else:

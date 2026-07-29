@@ -29,7 +29,7 @@ class TestYouTubeExtractor:
 
     def test_youtube_extractor_raises_when_no_ytdlp(self):
         """Raises PipelineError when yt-dlp is unavailable."""
-        with patch("tetodl.extractors.youtube.yt", None):
+        with patch("tetodl.core.sources.youtube.yt", None):
             extractor = YouTubeExtractor()
             with pytest.raises(Exception) as excinfo:
                 extractor.extract("https://youtube.com/watch?v=test")
@@ -55,7 +55,7 @@ class TestYouTubeExtractor:
         mock_ydl.__enter__.return_value = mock_ydl
         mock_ydl_cls = MagicMock(return_value=mock_ydl)
 
-        with patch("tetodl.extractors.youtube.yt") as mock_yt:
+        with patch("tetodl.core.sources.youtube.yt") as mock_yt:
             mock_yt.YoutubeDL = mock_ydl_cls
             extractor = YouTubeExtractor()
             result = extractor.extract("https://youtube.com/watch?v=abc123")

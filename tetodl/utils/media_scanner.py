@@ -54,7 +54,7 @@ def scan_media_files(target_path):
             return
 
     try:
-        with traced('starting media scan'), console.spin("Scanning media..."):
+        with traced('starting media scan'), console.spin(Keys.media.scanning):
             if shutil.which("termux-media-scan"):
                 cmd = ["termux-media-scan"]
                 if os.path.isdir(target_path):

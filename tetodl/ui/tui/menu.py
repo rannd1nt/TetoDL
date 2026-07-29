@@ -22,13 +22,13 @@ def get_menu_labels():
     """Generate dynamic menu labels."""
     audio_info = get_audio_quality_info()
     return {
-        "yt_audio": f"- {_('menu.main.youtube_audio', format=audio_info['ext'].upper(), bitrate=audio_info['bitrate'])}",
-        "yt_video": f"- {_('menu.main.youtube_video', container=cfg.video_container.upper(), resolution=cfg.max_video_resolution)}",
-        "folder": f"- {_('menu.main.root_folder')}",
-        "settings": f"- {_('menu.main.settings')}",
-        "history": f"- {_('menu.settings.history')}",
-        "about": f"- {_('menu.main.about')}",
-        "exit": f"- {_('menu.main.exit')}"
+        "yt_audio": f"- {_(Keys.menu.main.youtube_audio(format=audio_info['ext'].upper(), bitrate=audio_info['bitrate']))}",
+        "yt_video": f"- {_(Keys.menu.main.youtube_video(container=cfg.video_container.upper(), resolution=cfg.max_video_resolution))}",
+        "folder": f"- {_(Keys.menu.main.root_folder)}",
+        "settings": f"- {_(Keys.menu.main.settings)}",
+        "history": f"- {_(Keys.menu.settings.history)}",
+        "about": f"- {_(Keys.menu.main.about)}",
+        "exit": f"- {_(Keys.menu.main.exit)}"
     }
 
 def show_main_menu():
@@ -51,7 +51,7 @@ def show_main_menu():
         ]
         
         selection = questionary.select(
-            _('menu.main.choose'), choices=choices, style=menu_style(),
+            _(Keys.menu.main.choose), choices=choices, style=menu_style(),
             qmark='', pointer=">", use_indicator=False, 
             show_description=False, instruction=' '
         ).ask()
@@ -60,7 +60,7 @@ def show_main_menu():
 
     # --- TERMUX (Simple Input) ---
     else:
-        print(color(f"{_('menu.main.choose')}", "c"))
+        print(color(f"{_(Keys.menu.main.choose)}", "c"))
         for key in ["yt_audio", "yt_video", "folder", "settings", "history", "about", "exit"]:
             print(lbl[key])
         print()

@@ -19,7 +19,7 @@ try:
     import yt_dlp as yt
     from yt_dlp.utils import sanitize_filename
 except Exception:
-    yt = None
+    yt = None  # type: ignore[assignment]
 
 
 class CoverService:
@@ -168,7 +168,7 @@ class CoverService:
             return DownloadResult(success=False)
 
         try:
-            with console.spin("Extracting information..."):
+            with console.spin(Keys.media.extracting_information):
                 with yt.YoutubeDL({
                     'quiet': True, 'no_warnings': True,
                 }) as ydl:
@@ -179,15 +179,15 @@ class CoverService:
 
         if 'entries' in info:
             playlist_title = info.get('title')
-            console.warn(Keys.media.playlist_detected(title=playlist_title))
-            entries = list(info['entries'])
+            console.warn(Keys.media.playlist_detected(title=playlist_title or ""))
+            entries = list(info['entries'])  # type: ignore[union-attr, arg-type]
             total = len(entries)
             console.proc(Keys.media.found_items_processing(count=total))
             success_count = 0
             first_path = None
             for i, entry in enumerate(entries, 1):
                 console.proc(Keys.media.processing_entry(
-                    current=i, total=total, title=entry.get('title')))
+                    current=i, total=total, title=entry.get('title') or ""))
                 fpath = self._process_entry(
                     entry, target_dir,
                     target_format=target_format,

@@ -20,9 +20,9 @@ from ...core.domain.history import (
     reset_history,
 )
 from ...core.domain.registry import registry
+from ...utils.console import console
 from ...utils.formatters import (
     clear,
-    console,
     format_duration,
     format_duration_digital,
     menu_style,
@@ -34,15 +34,15 @@ def render_analytics_view():
     """Hanya menampilkan output Visual Analytics (Tanpa Loop/Clear)"""
     
     if not registry.data.get("youtube"):
-        console.print(Panel("[red]Registry database is empty. Download something first![/red]", title="No Data", border_style="red"))
+        console.rich.print(Panel("[red]Registry database is empty. Download something first![/red]", title="No Data", border_style="red"))
         return False
 
     data = calculate_stats()
 
     # --- HEADER SECTION ---
-    console.print()
-    console.rule("[bold cyan]TETODL WRAP & DOWNLOAD ANALYTICS[/bold cyan]", style="dim cyan")
-    console.print()
+    console.rich.print()
+    console.rich.rule("[bold cyan]TETODL WRAP & DOWNLOAD ANALYTICS[/bold cyan]", style="dim cyan")
+    console.rich.print()
 
     # --- SUMMARY GRID ---
     grid = Table.grid(expand=True)
@@ -59,8 +59,8 @@ def render_analytics_view():
         big_stat(data['total_video'], "Video Files")
     )
     
-    console.print(Panel(grid, box=box.MINIMAL, border_style="dim"))
-    console.print()
+    console.rich.print(Panel(grid, box=box.MINIMAL, border_style="dim"))
+    console.rich.print()
 
     # --- TOP ARTISTS TABLE ---
     t_artist = Table(title="TOP ARTISTS", box=box.SQUARE, expand=True, title_style="bold cyan", header_style="bold cyan", border_style="dim white", show_edge=True, pad_edge=True)
@@ -93,13 +93,13 @@ def render_analytics_view():
             bar_len = int((count / max_count_alb) * 20)
             t_album.add_row(str(idx), album, str(count), "━" * bar_len)
 
-    console.print(t_artist)
-    console.print() 
-    console.print(t_album)
-    console.print()
+    console.rich.print(t_artist)
+    console.rich.print() 
+    console.rich.print(t_album)
+    console.rich.print()
 
     if data['most_played_path']:
-        console.print(Align.center(f"[dim]Most Redownloaded:[/dim] [white]{data['most_played_path']}[/white] [cyan]({data['most_played_count']}x)[/cyan]"))
+        console.rich.print(Align.center(f"[dim]Most Redownloaded:[/dim] [white]{data['most_played_path']}[/white] [cyan]({data['most_played_count']}x)[/cyan]"))
     
     return True
 
@@ -114,7 +114,7 @@ def render_history_view(limit=20, reverse_order=False, search_query=None):
         search_query (str): Kata kunci untuk filter judul (case-insensitive).
     """
     
-    from ...core.history import _download_history
+    from ...core.domain.history import _download_history
     raw_history = _download_history
     valid_history = [x for x in raw_history if x.get('success', True)]
 
@@ -128,7 +128,7 @@ def render_history_view(limit=20, reverse_order=False, search_query=None):
         ]
         
         if not filtered_data:
-            console.print(f"\n[yellow]No history found matching query: [bold]'{search_query}'[/bold][/yellow]\n")
+            console.rich.print(f"\n[yellow]No history found matching query: [bold]'{search_query}'[/bold][/yellow]\n")
             return
 
         valid_history = filtered_data
@@ -137,14 +137,14 @@ def render_history_view(limit=20, reverse_order=False, search_query=None):
         filter_status = ""
         
         if not valid_history:
-            console.print("\n[yellow]No download history found.[/yellow]\n")
+            console.rich.print("\n[yellow]No download history found.[/yellow]\n")
             return
 
     # === HEADER STATS ===
     stats = get_history_stats()
-    console.print()
-    console.print(f"[bold white]=== TetoDL Download History{filter_status} ===[/bold white]", justify="center")
-    console.print(
+    console.rich.print()
+    console.rich.print(f"[bold white]=== TetoDL Download History{filter_status} ===[/bold white]", justify="center")
+    console.rich.print(
         f"[dim]Video: {stats['yt_video']} | Audio: {stats['yt_audio']} | Music: {stats['yt_music']} | Spotify: {stats['spotify']} | "
         f"Total Duration: {format_duration(stats['total_duration'])}[/dim]\n",
         justify="center"
@@ -172,7 +172,7 @@ def render_history_view(limit=20, reverse_order=False, search_query=None):
     table.add_column("Title", style="white", ratio=1, justify="left")
     table.add_column("Duration", justify="center", width=9)
 
-    console.print(f"[dim]Showing {order_desc} {len(target_data)} items[/dim]", justify="center")
+    console.rich.print(f"[dim]Showing {order_desc} {len(target_data)} items[/dim]", justify="center")
 
     # === RENDER ROWS ===
     for idx, entry in enumerate(target_data, 1):
@@ -184,7 +184,7 @@ def render_history_view(limit=20, reverse_order=False, search_query=None):
 
         title_display = title_raw.strip()
         if search_query:
-            title_display = query_pattern.sub(
+            title_display = query_pattern.sub( # pyright: ignore[reportPossiblyUnboundVariable]
                 lambda m: f"[u yellow]{m.group(0)}[/]", 
                 title_display
             )
@@ -197,8 +197,8 @@ def render_history_view(limit=20, reverse_order=False, search_query=None):
             format_duration_digital(duration_sec)
         )
 
-    console.print(table)
-    console.print()
+    console.rich.print(table)
+    console.rich.print()
 
 
 # ==========================================
@@ -261,5 +261,5 @@ def display_history():
         elif choice == "clear":
             if questionary.confirm("Clear history logs?", style=menu_style(), qmark=' ').ask():
                 reset_history()
-                console.print("[green]History cleared.[/green]")
+                console.rich.print("[green]History cleared.[/green]")
                 time.sleep(1)

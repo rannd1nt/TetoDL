@@ -23,7 +23,6 @@
     "unknown": "Unknown",
     "total": "Total"
   },
-
   "menu": {
     "main": {
       "title": "TetoDL by rannd1nt",
@@ -38,7 +37,6 @@
       "about": "Tentang",
       "exit": "Keluar"
     },
-
     "settings": {
       "title": "TetoDL Settings",
       "simple_mode": "Simple Mode: {status}",
@@ -71,7 +69,6 @@
       "language": "Bahasa saat ini: {lang}",
       "language_desc": "→ Ganti bahasa aplikasi"
     },
-
     "audio_quality": {
       "title": "Audio Quality Settings",
       "current": "Saat ini: {format} {bitrate}",
@@ -90,8 +87,7 @@
       "opus_desc_3": "→ Ukuran file lebih besar, fidelitas terbaik",
       "changed": "Kualitas audio diubah ke: {format}"
     },
-
-    "video_resolution":{
+    "video_resolution": {
       "title": "Video Resolution Limit Settings",
       "current": "Resolusi Saat ini: {resolution}",
       "select": "Pilih resolusi video:",
@@ -101,14 +97,12 @@
       "1080p_desc": "   → Standar kualitas High Definition (HD)\n   → Rasio kualitas dan ukuran paling optimal\n   → Direkomendasikan untuk kebanyakan user",
       "720p_desc": "   → Hemat ruang penyimpanan dan kuota\n   → Cukup bagus untuk layar HP\n   → Proses download lebih cepat",
       "480p_desc": "   → Kualitas dasar, hemat penggunaan data\n   → Ukuran file paling kecil\n   → Cocok untuk koneksi internet lambat",
-      "extreme_quality": "Kualitas Ekstrem",
       "very_high_storage": "Ukuran Besar",
       "high_quality": "Kualitas Tinggi",
       "standard": "Standar",
       "save_storage": "Hemat Ruang",
       "slow_connection": "Koneksi Lambat"
     },
-
     "video_codec": {
       "title": "Pengaturan Codec Video",
       "select": "Pilih codec/format video:",
@@ -119,13 +113,11 @@
       "h265_title": "H.265 (HEVC)",
       "h265_desc": "→ Ukuran file lebih kecil dengan kualitas setara\n→ Butuh device modern untuk memutar\n→ Proses download lama (Re-encoding)"
     },
-
     "language": {
       "title": "Pengaturan Bahasa",
       "current": "Bahasa saat ini: {lang}",
       "choose": "Pilih bahasa:"
     },
-
     "root_folder": {
       "title": "Download Destination Path Settings",
       "change_music": "Change music download path",
@@ -133,7 +125,6 @@
       "reset": "Reset ke default",
       "nav_folder_title": "Pilih folder tujuan download"
     },
-
     "about": {
       "title": "TetoDL v{version}, by rannd1nt",
       "subtitle": "The author kins Kasane Teto",
@@ -143,7 +134,6 @@
       "instagram": "Kunjungi instagram author >"
     }
   },
-
   "download": {
     "youtube": {
       "url_input_ytm": "Link Youtube/Youtube Music: ",
@@ -186,12 +176,20 @@
       "summary": "Ringkasan: {success} berhasil, {skipped} skipped, {failed} gagal dari total {total} {type}",
       "failed_items": "{count} {type} gagal didownload",
       "extract_failed": "Gagal extract konten: {error}",
+      "no_tracks_match_range": "Tidak ada track yang cocok dengan range --items yang ditentukan",
+      "skipping_existing_track": "Melewati track yang sudah ada: {title}",
+      "skipped_existing_tracks": "Melewati {count} track yang sudah didownload",
+      "all_tracks_already_downloaded": "Semua track dari URL ini sudah pernah didownload",
+      "no_tracks_resolved": "Tidak ada track yang bisa diresolve dari URL Spotify ini",
+      "failed_create_thumb_dir": "Gagal membuat direktori thumbnail: {error}",
+      "failed_resolve_spotify_url": "Gagal me-resolve URL Spotify: {error}",
+      "no_cover_url_found": "Tidak ada URL cover art yang ditemukan untuk track ini",
+      "could_not_find_youtube_result": "Tidak dapat menemukan hasil YouTube untuk: {query}",
       "error_downloading": "Error downloading {type}: {error}",
       "complete": "Download berhasil: {title}",
       "complete_metadata": "Download berhasil dengan metadata: {title}",
       "cancelled": "Dibatalkan."
     },
-
     "spotify": {
       "url_input": "Link Spotify: ",
       "invalid_url": "URL Spotify tidak valid.",
@@ -207,7 +205,6 @@
       "install_instruction": "Install dengan: pip install spotdl",
       "reset_verification_hint": "Atau reset verification di menu Pengaturan"
     },
-
     "folder": {
       "select_location": "Pilih Lokasi Penyimpanan ({type})",
       "root": "Target: {path}",
@@ -221,7 +218,6 @@
       "not_found": "Subfolder '{name}' tidak ditemukan, menghapus dari config...",
       "choose_again": "Silakan pilih lagi."
     },
-
     "navigation": {
       "title": "Pilih Root Folder",
       "current_location": "Lokasi sekarang:",
@@ -234,14 +230,13 @@
       "setted_video": "Video root diatur ke: {video_root}"
     }
   },
-
   "history": {
     "title": "Download History",
     "empty": "Belum ada riwayat download.",
     "total_duration": "Total Durasi: {duration}",
-    "entries": "entries"
+    "entries": "entries",
+    "no_results_for_query": "Tidak ada history yang cocok dengan pencarian: \"{query}\""
   },
-
   "dependency": {
     "title": "TetoDL - First Run Setup",
     "verifying": "Verifying dependencies for the first time...",
@@ -272,7 +267,6 @@
     "verification_reset": "Verification status direset",
     "verify_next_run": "Program akan verify ulang saat dijalankan berikutnya"
   },
-
   "config": {
     "simple_mode_enabled": "Simple Mode diaktifkan.",
     "simple_mode_disabled": "Simple Mode dinonaktifkan.",
@@ -298,23 +292,268 @@
     "save_failed": "Gagal menyimpan config.",
     "language_changed": "Bahasa diubah ke: {lang}."
   },
-
   "media": {
     "scanning": "Memulai memindai file...",
     "scan_complete": "File selesai dipindai...",
-    "convert_error": "Gagal mengconvert format thumbnail",
+    "extracting_information": "Mengekstrak informasi...",
     "scan_failed": "Gagal memindai media: {error}",
+    "convert_error": "Gagal mengconvert format thumbnail",
     "crop_failed": "FFmpeg crop failed: {error}",
     "crop_error": "Error cropping thumbnail: {error}",
     "thumbnail_error": "Error processing thumbnail: {error}",
     "embed_error": "Error embedding thumbnail: {error}",
     "temp_clean_error": "Error cleaning temp files: {error}",
-    "encoding": "Sedang encode video ke {codec} (mohon tunggu)..."
+    "encoding": "Sedang encode video ke {codec} (mohon tunggu)...",
+    "download_cancelled": "Download dibatalkan oleh user.",
+    "cleaning_partial_files": "Membersihkan file partial...",
+    "lyrics_embedded_success": "Lirik berhasil diembed (Genius)",
+    "failed_to_embed_lyrics": "Gagal mengembed lirik",
+    "lyrics_not_found_genius": "Lirik tidak ditemukan di Genius.",
+    "trimming_audio": "Memotong audio: {start}s hingga {end}s",
+    "trimming_video": "Memotong video: {start}s hingga {end}s (Ini mungkin butuh waktu lebih lama)",
+    "searching_lyrics_for": "Mencari lirik untuk: {artist} - {title}",
+    "cover_art_found_via": "Cover art ditemukan via {source}!",
+    "found_romanized_lyrics": "Lirik Romanized ditemukan: {title}",
+    "fetching_lyrics_from": "Mengambil lirik dari: {title}",
+    "stopping_threads": "Menghentikan threads... (Mohon tunggu)",
+    "high_concurrency_warning": "Peringatan: Konkurensi tinggi {n} meningkatkan resiko IP Ban.",
+    "async_mode": "Async Mode: {count} threads aktif. Tekan Ctrl+C untuk berhenti.",
+    "all_items_exist": "Semua item sudah ada di library. Folder staging kosong. Tidak ada yang bisa dishare.",
+    "scan_skipped": "Scan Dilewati",
+    "termux_tools_missing": "Termux tools tidak ditemukan. Install 'termux-tools' untuk scan folder.",
+    "scan_error": "Scan error: {error}",
+    "cannot_create_thumb_dir": "Tidak bisa membuat direktori thumbnail: {error}",
+    "extraction_failed": "Ekstraksi gagal: {error}",
+    "playlist_detected": "Playlist terdeteksi: {title}",
+    "found_items_processing": "Ditemukan {count} item. Memproses thumbnail...",
+    "processing_entry": "[{current}/{total}] Memproses: {title}",
+    "processed_thumbnails": "Memproses {success}/{total} thumbnail.",
+    "processing_cover_for": "Memproses cover untuk: {title}",
+    "thumbnail_saved": "Tersimpan: {name}",
+    "thumbnail_saved_as": "Tersimpan sebagai: {name}",
+    "failed_to_download_thumbnail": "Gagal mendownload thumbnail.",
+    "skipping_item": "Melewati item {index} (Tidak dipilih)",
+    "cut_flag_ignored_playlist": "Peringatan: Flag '--cut' diabaikan untuk playlist."
   },
-
   "error": {
     "invalid_input": "Input tidak valid!",
     "file_check_failed": "Error checking existing files: {error}",
     "documentation_unavailable": "Dokumentasi belum tersedia."
+  },
+  "cli": {
+    "starting_api_server": "Memulai TetoDL API Server di {host}:{port}...",
+    "checking_for_updates": "Memeriksa pembaruan...",
+    "header_style": "Header style: {style}",
+    "progress_style": "Progress style: {style}",
+    "language_set": "Bahasa: {name}",
+    "jitter_set": "Jitter: {jitter_min}-{jitter_max}s",
+    "retries_set": "Retries: {retries}",
+    "media_scanner_status": "Media Scanner {status}.",
+    "media_scanner_note": "Catatan: Media Scanner hanya berlaku di Android/Termux.",
+    "share_specify_mode": "Untuk share folder grup, tentukan mode: -a (Audio) atau -v (Video).",
+    "share_example": "Contoh: tetodl --share -a --group \"Folder Saya\"",
+    "group_folder_not_found": "Folder grup tidak ditemukan: '{name}'",
+    "searched_in": "Dicari di: {path}",
+    "specify_folder_name": "Silakan tentukan nama folder yang ingin dishare.",
+    "no_download_history": "Tidak ada histori download.",
+    "last_download_missing": "File terakhir yang didownload tidak ditemukan.",
+    "archiving_folder": "Mengarsipkan folder untuk share sementara: {name}...",
+    "serving_temp_archive": "Menyajikan Arsip Sementara: {name}",
+    "cleaning_temp_archive": "Membersihkan arsip sementara...",
+    "cleanup_complete": "Pembersihan selesai.",
+    "failed_remove_temp_zip": "Gagal menghapus zip sementara: {error}",
+    "failed_to_create_zip": "Gagal membuat arsip zip.",
+    "skipping_zip_creation": "Target adalah file, melewati pembuatan zip.",
+    "sharing_group": "Membagikan Grup: {name}",
+    "cannot_share_path_not_found": "Tidak bisa share: Path tidak ditemukan.",
+    "share_path": "Path: {path}",
+    "share_usage": "Penggunaan: tetodl --share [PATH] atau --share -a/-v [--group NAME]",
+    "audio_mode_note": "Catatan: --resolution dan --codec diabaikan di Audio mode.",
+    "share_group_folder_error": "Untuk share folder grup, tentukan mode: -a (Audio) atau -v (Video).",
+    "invalid_jitter_format": "Format jitter tidak valid: {value}. Gunakan MIN-MAX (misal 3-5)"
+  },
+  "maint": {
+    "updating_dependencies": "Mengupdate dependencies...",
+    "no_binary_found": "Binary tidak ditemukan untuk {asset_name}",
+    "downloading_binary": "Mendownload {tag} ...",
+    "not_git_repo": "Bukan repositori Git.",
+    "manual_update_required": "Update manual diperlukan (silakan download ulang source code).",
+    "already_up_to_date": "TetoDL sudah versi terbaru.",
+    "found_new_commits": "Ditemukan {count} commit baru! Mengupdate...",
+    "update_successful": "Update berhasil! Silakan restart TetoDL.",
+    "update_failed": "Update gagal: {error}",
+    "repo_broken": "Repositori kamu mungkin rusak atau tidak kompatibel.",
+    "try_reinstall": "Coba instal ulang TetoDL menggunakan installer.",
+    "git_not_found": "Perintah 'git' tidak ditemukan. Silakan install git.",
+    "uninstaller_script_not_found": "Script uninstaller tidak ditemukan di: {path}",
+    "uninstall_warning": "PERINGATAN: Kamu akan menghapus TetoDL.",
+    "uninstall_details": "Ini akan menghapus shortcut global, launcher, dan virtual environment.",
+    "invalid_choice_aborting": "Pilihan tidak valid. Membatalkan uninstall.",
+    "alert_permanent_delete": "PERHATIAN: Ini akan menghapus SEMUANYA secara permanen. Termasuk statistik download (Registry)!!",
+    "uninstall_cancelled": "Uninstall dibatalkan.",
+    "cleaning_user_data": "Membersihkan data user...",
+    "cache_dir_removed": "Direktori cache dihapus",
+    "config_dir_removed": "Direktori config dihapus",
+    "data_dir_removed": "Direktori data (History & Registry) dihapus",
+    "history_file_removed": "File history dihapus",
+    "registry_kept_safe": "File Registry/Stats tetap aman.",
+    "failed_clean_data": "Gagal membersihkan beberapa data: {error}",
+    "launching_uninstaller": "Menjalankan script uninstaller sistem...",
+    "error_executing_uninstaller": "Error saat menjalankan uninstaller: {error}",
+    "cache_nothing_to_clean": "Cache: Tidak ada yang perlu dibersihkan",
+    "cache_cleared": "Cache dibersihkan.",
+    "nothing_to_clean": "{target}: Tidak ada yang perlu dibersihkan",
+    "wipe_registry_warning": "{warning} Kamu akan menghapus DOWNLOAD REGISTRY.",
+    "will_lose_track": "TetoDL akan kehilangan catatan SEMUA file yang sudah didownload.",
+    "will_also_reset": "Ini juga akan mereset: {items}",
+    "reset_cancelled": "Reset dibatalkan.",
+    "download_history_cleared": "History download dibersihkan.",
+    "config_reset_to_defaults": "Konfigurasi direset ke default.",
+    "registry_nuked": "Database registry telah dihapus.",
+    "about_to_reset": "Kamu akan mereset: {items}"
+  },
+  "search": {
+    "ytdlp_not_found": "yt-dlp tidak ditemukan.",
+    "search_failed": "Pencarian gagal.",
+    "no_results_found": "Tidak ada hasil ditemukan.",
+    "search_results": "Hasil Pencarian untuk '{query}':",
+    "search_error": "Error pencarian: {error}"
+  },
+  "core": {
+    "failed_save_cache": "Gagal menyimpan cache.",
+    "failed_delete_cache": "Gagal menghapus cache: {error}",
+    "failed_save_config": "Gagal menyimpan config.",
+    "failed_save_history": "Gagal menyimpan history: {error}",
+    "failed_delete_history": "Gagal menghapus history: {error}",
+    "failed_reset_cache": "Gagal mereset cache"
+  },
+  "dispatch": {
+    "m3u_auto_group": "Pemberitahuan: '--m3u' otomatis mengaktifkan mode '--group'.",
+    "no_url_provided": "Error: Tidak ada URL untuk didownload.",
+    "moving_files_back": "Memindahkan file kembali ke folder parent...",
+    "moved_files_and_updated": "Memindahkan {count} file dan memperbarui registry.",
+    "no_files_moved": "Tidak ada file yang dipindahkan (Kosong atau Error).",
+    "cannot_share_path_not_found": "Tidak bisa share: Path tidak ditemukan.",
+    "nothing_to_share": "Tidak ada yang bisa dishare (Download gagal dan tidak ada file yang ada).",
+    "operation_cancelled": "Operasi dibatalkan oleh user.",
+    "cleaning_temp_files": "Membersihkan file sementara...",
+    "cleanup_complete": "Pembersihan selesai."
+  },
+  "tagger": {
+    "mutagen_not_found_lyrics": "Library Mutagen tidak ditemukan. Tidak bisa mengembed lirik.",
+    "file_not_found": "File tidak ada: {path}",
+    "failed_embed_lyrics": "Gagal mengembed lirik: {error}",
+    "mutagen_not_found_metadata": "Library Mutagen tidak ditemukan. Tidak bisa mengembed metadata.",
+    "metadata_embedding_error": "Error embedding metadata: {error}"
+  },
+  "net": {
+    "file_dir_not_found": "File/Direktori tidak ditemukan: {path}",
+    "ports_busy": "Semua port dari {start} hingga {end} sibuk.",
+    "wsl_nat_warning": "WSL menggunakan jaringan terpisah (NAT). Perangkat di Wi-Fi lokal kemungkinan TIDAK BISA terhubung ke IP ini.",
+    "wsl_share_tip": "Tip: Pindahkan file ke Windows (/mnt/c/...) dan share dari sana.",
+    "no_lan_ip": "Tidak bisa mendeteksi IP LAN yang valid. Apakah kamu terhubung ke Wi-Fi/Hotspot?",
+    "localhost_only": "Sharing via localhost saja (HP tidak akan terhubung).",
+    "sharing_started": "TetoDL Sharing dimulai!",
+    "not_git_repo": "Bukan repositori git. Tidak bisa auto-update.",
+    "pulling_latest": "Mengambil perubahan terbaru dari remote...",
+    "update_successful": "Update berhasil! Silakan restart TetoDL.",
+    "git_pull_failed": "Git pull gagal. Silakan cek internet atau status git.",
+    "git_command_not_found": "Perintah git tidak ditemukan. Silakan install git."
+  },
+  "spot": {
+    "invalid_url": "URL Spotify tidak valid.",
+    "no_internet": "Tidak ada koneksi internet atau koneksi tidak stabil.",
+    "simple_mode_download": "Simple Mode: Mendownload langsung ke {path}",
+    "cancelled": "Dibatalkan.",
+    "type_detected": "Spotify {type} terdeteksi",
+    "classification_failed": "Klasifikasi URL gagal, URL tidak dikenal.",
+    "downloading": "Mendownload...",
+    "command_debug": "Menjalankan perintah: {command}",
+    "download_complete": "Download Spotify selesai.",
+    "download_failed": "Download gagal.",
+    "error_details": "Detail error:",
+    "no_valid_spotdl_method": "Gagal menemukan metode eksekusi SpotDL yang valid.",
+    "spotdl_binary_path": "Path Binary: {path}",
+    "python_interpreter": "Python Interpreter: {interpreter}"
+  },
+  "files": {
+    "failed_to_move": "Gagal memindahkan {item}: {error}",
+    "failed_create_zip": "Gagal membuat zip: {error}",
+    "zip_source_not_found": "Sumber zip tidak ditemukan: {path}",
+    "archiving_to": "Mengarsipkan ke {name}.zip ...",
+    "archive_created_at": "Arsip dibuat di: {path}",
+    "archive_created": "Arsip dibuat: {name}",
+    "zip_success_but_file_missing": "Zip melaporkan sukses tapi file tidak ditemukan di: {path}",
+    "playlist_generated": "Playlist dibuat: {name}",
+    "failed_create_playlist": "Gagal membuat playlist: {error}",
+    "failed_delete_nomedia": "Gagal menghapus .nomedia: {error}",
+    "cleaned_temp_files": "Membersihkan {count} file sementara"
+  },
+  "daemon": {
+    "not_configured": "Daemon TetoDL belum dikonfigurasi.",
+    "run_setup": "Jalankan 'tetodl daemon --setup' untuk mendaftarkan service systemd,",
+    "or_run_manually": "atau 'tetodl daemon --run' untuk menjalankannya secara manual.",
+    "registered_not_running": "Daemon TetoDL terdaftar tapi saat ini tidak berjalan.",
+    "start_with_systemctl": "Mulai dengan: systemctl --user start tetodl.service",
+    "service_unavailable": "Service daemon TetoDL tidak tersedia.",
+    "could_not_detect_lan_ip": "Tidak bisa mendeteksi IP LAN. Apakah kamu terhubung ke jaringan?",
+    "press_ctrl_c_stop": "Tekan Ctrl+C untuk menghentikan server.",
+    "shutting_down": "Mematikan server...",
+    "daemon_url": "URL TetoDL Daemon: {url}",
+    "daemon_port": "Port: {port}",
+    "scan_qr": "Scan QR di atas dengan kamera HP untuk membuka daemon.",
+    "scan_qr_or_open_url": "Scan kode QR atau buka URL di browser kamu.",
+    "open_url_in_browser": "Buka {url} di browser kamu.",
+    "open_browser": "Buka {url} di browser kamu.",
+    "configuring_systemd": "Mengkonfigurasi service systemd user...",
+    "service_file_created": "File service systemd dibuat di: {path}",
+    "failed_setup_systemd": "Gagal setup service systemd: {error}",
+    "removing_systemd": "Menghapus service systemd...",
+    "daemon_not_installed": "Daemon TetoDL tidak terinstall.",
+    "daemon_removed": "Service daemon berhasil dihapus.",
+    "failed_remove_systemd": "Gagal menghapus service systemd: {error}",
+    "no_windows_service_setup": "Pendaftaran service daemon belum didukung di Windows.",
+    "no_windows_service_remove": "Penghapusan service daemon belum didukung di Windows.",
+    "run_daemon_manually": "Kamu tetap bisa menjalankan daemon secara manual: tetodl daemon --run --host {host} --port {port}"
+  },
+  "ui": {
+    "dependency_update_available": "Pembaruan Dependency Tersedia!",
+    "updating_ytdlp": "Mengupdate yt-dlp...",
+    "update_complete": "Update selesai!",
+    "update_failed_check_connection": "Update gagal. Silakan cek koneksi kamu.",
+    "fatal_error_unsupported_platform": "Fatal Error: Platform Tidak Didukung",
+    "no_windows_support": "Aplikasi ini tidak mendukung Windows native (CMD/PowerShell).",
+    "use_wsl_or_linux": "Silakan gunakan WSL2 (Ubuntu/Debian) atau Linux/Termux.",
+    "checking_core_engine": "Memeriksa status Core Engine (yt-dlp)...",
+    "core_engine_updated_to": "Core Engine diperbarui ke: {version}",
+    "core_engine_up_to_date": "Core Engine sudah versi terbaru: {version}",
+    "core_engine_installed": "Core Engine terinstall: {version} (Pengecekan jaringan dilewati)",
+    "failed_fetch_ytdlp_release": "Gagal mengambil info rilis yt-dlp dari PyPI",
+    "pypi_version_mismatch": "Versi mismatch dari PyPI: diharapkan {expected}, didapat {actual}",
+    "no_compatible_wheel": "Tidak ada wheel yang kompatibel untuk yt-dlp di PyPI",
+    "failed_download_wheel": "Gagal mendownload wheel yt-dlp",
+    "ytdlp_override_installed": "yt-dlp override terinstall (versi: {version}, diharapkan: {expected})",
+    "failed_check_engine_version": "Gagal mengecek versi engine: {error}",
+    "initializing_language_setup": "Memulai Pengaturan Bahasa...",
+    "detected_system_language": "Bahasa Sistem Terdeteksi: {language} | ({code})",
+    "language_set_to": "Bahasa diatur ke: {name}",
+    "selection_cancelled_defaulting": "Pilihan dibatalkan. Menggunakan bahasa sistem terdeteksi: {name}.",
+    "environment_detected": "Environment Terdeteksi: {env}",
+    "wsl_detected": "{wsl_warning} Kami rekomendasikan menyimpan file ke folder Windows",
+    "wsl_file_explorer_access": "Sehingga kamu bisa mengaksesnya dengan mudah via File Explorer.",
+    "default_download_locations": "Lokasi Download Default:",
+    "default_paths_applied": "Path default diterapkan.",
+    "select_custom_music_folder": "Pilih Folder Musik Kustom:",
+    "music_path_set_to": "Music Path diatur ke: {path}",
+    "cancelled_default_music_path": "Dibatalkan. Menggunakan path musik default.",
+    "select_custom_video_folder": "Pilih Folder Video Kustom:",
+    "video_path_set_to": "Video Path diatur ke: {path}",
+    "cancelled_default_video_path": "Dibatalkan. Menggunakan path video default.",
+    "verification_completed": "Verifikasi Selesai!",
+    "access_denied_to": "Akses ditolak ke: {path}",
+    "error_reading_folder": "Error membaca folder: {error}",
+    "unexpected_error": "Error tidak terduga: {error}",
+    "failed_load_content": "Gagal Memuat Konten. Kunjungi: {url}",
+    "header_not_found": "Header '{file}' tidak ditemukan. Menggunakan fallback."
   }
 }

@@ -2,16 +2,13 @@
 Network utilities for CLI: file sharing server (FastAPI).
 Extracted from utils/network.py to separate CLI-specific concerns.
 """
-import os
 import shutil
-import socket
 from pathlib import Path
 from urllib.parse import quote
 
 from tetodl.core.domain.env import env
 from tetodl.utils.console import console
 from tetodl.utils.i18n_keys import Keys
-from tetodl.utils.formatters import console as rich_console
 from tetodl.utils.network import find_free_port, get_best_ip
 
 
@@ -23,12 +20,12 @@ def check_firewall_status(port):
         return
 
     if shutil.which("ufw"):
-        rich_console.print("\n[dim][Tip] If connection fails, allow port in UFW:[/dim]")
-        rich_console.print(f"[dim cyan]  sudo ufw allow {port}/tcp[/dim cyan]")
+        console.rich.print("\n[dim][Tip] If connection fails, allow port in UFW:[/dim]")
+        console.rich.print(f"[dim cyan]  sudo ufw allow {port}/tcp[/dim cyan]")
 
     elif shutil.which("firewall-cmd"):
-        rich_console.print("\n[dim][Tip] If connection fails, allow port in FirewallD:[/dim]")
-        rich_console.print(f"[dim cyan]  sudo firewall-cmd --add-port={port}/tcp --temporary[/dim cyan]")
+        console.rich.print("\n[dim][Tip] If connection fails, allow port in FirewallD:[/dim]")
+        console.rich.print(f"[dim cyan]  sudo firewall-cmd --add-port={port}/tcp --temporary[/dim cyan]")
 
 
 def start_share_server(file_path_str: str, start_port=8989):
@@ -59,7 +56,7 @@ def start_share_server(file_path_str: str, start_port=8989):
         ip_address = get_best_ip()
 
     if env.get("is_wsl"):
-        rich_console.print("\n[bold yellow][!] WSL Environment Detected[/bold yellow]")
+        console.rich.print("\n[bold yellow][!] WSL Environment Detected[/bold yellow]")
         console.warn(Keys.net.wsl_nat_warning)
         console.warn(Keys.net.wsl_share_tip)
 
@@ -92,10 +89,10 @@ def start_share_server(file_path_str: str, start_port=8989):
         _time.sleep(0.05)
 
     console.ok(Keys.net.sharing_started)
-    rich_console.print()
+    console.rich.print()
 
-    rich_console.print(f"Hosting: [cyan]{path.name}[/cyan]")
-    rich_console.print(f"Address: [yellow]{target_url}[/yellow]")
+    console.rich.print(f"Hosting: [cyan]{path.name}[/cyan]")
+    console.rich.print(f"Address: [yellow]{target_url}[/yellow]")
 
     check_firewall_status(port)
 
@@ -103,16 +100,16 @@ def start_share_server(file_path_str: str, start_port=8989):
     qr.add_data(target_url)
     qr.make(fit=True)
 
-    rich_console.print()
+    console.rich.print()
     qr.print_ascii(invert=True)
 
-    rich_console.print()
-    rich_console.print("[dim]Scan QR above with your phone camera.[/dim]")
-    rich_console.print("[bold red]Press Ctrl+C to stop server.[/bold red]")
+    console.rich.print()
+    console.rich.print("[dim]Scan QR above with your phone camera.[/dim]")
+    console.rich.print("[bold red]Press Ctrl+C to stop server.[/bold red]")
 
     try:
         while thread.is_alive():
             thread.join(0.5)
     except KeyboardInterrupt:
-        rich_console.print("\n[yellow]Sharing stopped.[/yellow]")
+        console.rich.print("\n[yellow]Sharing stopped.[/yellow]")
         raise KeyboardInterrupt

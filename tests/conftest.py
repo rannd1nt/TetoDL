@@ -27,7 +27,7 @@ from tetodl.core.domain.models import (
 )
 
 # Register the TetoDL pytest plugin
-pytest_plugins = ["tetodl.tests.plugin"]
+pytest_plugins = ["tests.plugin"]
 
 # ---------------------------------------------------------------------------
 # Temporary directory / file fixtures

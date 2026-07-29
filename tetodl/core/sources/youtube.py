@@ -2,10 +2,12 @@
 YouTubeExtractor — extract metadata from YouTube/YT Music URLs via yt-dlp.
 """
 
+from typing import Any
+
 try:
     import yt_dlp as yt
 except ImportError:
-    yt = None
+    yt = None  # type: ignore[assignment]
 
 from tetodl.core.domain.env import env
 from tetodl.core.extractor import Extractor, register_extractor
@@ -26,7 +28,7 @@ class YouTubeExtractor(Extractor):
 
         try:
             with yt.YoutubeDL({"quiet": True, "no_warnings": True, "extract_flat": False, "cachedir": env.get('ytdlp_cache_dir')}) as ydl:
-                raw = ydl.extract_info(url, download=False)
+                raw: Any = ydl.extract_info(url, download=False)
         except Exception as exc:
             with traced(f'extract failed — {exc}'):
                 raise PipelineError(f"Failed to extract info: {exc}", "extract") from exc

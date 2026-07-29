@@ -6,6 +6,8 @@ import locale
 import os
 from typing import Any
 
+from ..utils.i18n_keys import I18nKey
+
 _current_lang = 'id'
 _translations: dict[str, Any] = {}
 _locales_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "locales")
@@ -30,12 +32,13 @@ def load_language(lang_code: str = "id") -> bool:
         return False
 
 
-def get_text(key: str, **kwargs) -> str:
+def get_text(key: str | I18nKey, **kwargs) -> str:
     """
     Get translated text by key with optional formatting
     
     Args:
         key: Translation key (dot notation supported, example: "menu.main.title")
+             or I18nKey tuple from Keys.callable()
         **kwargs: Format arguments for string formatting
     
     Returns:
@@ -43,14 +46,20 @@ def get_text(key: str, **kwargs) -> str:
     """
     global _translations
     
-    keys = key.split('.')
+    if isinstance(key, tuple):
+        target_key, dynamic_kwargs = key
+        kwargs = {**dynamic_kwargs, **kwargs}
+    else:
+        target_key = key
+    
+    keys = target_key.split('.')
     value = _translations
     
     for k in keys:
         if isinstance(value, dict) and k in value:
             value = value[k]
         else:
-            return key
+            return target_key
     
     if isinstance(value, str) and kwargs:
         try:
@@ -58,7 +67,7 @@ def get_text(key: str, **kwargs) -> str:
         except (KeyError, ValueError):
             return value
     
-    return value if isinstance(value, str) else key
+    return value if isinstance(value, str) else target_key
 
 
 def get_available_languages() -> list:

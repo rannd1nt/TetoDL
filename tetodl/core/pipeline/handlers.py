@@ -144,14 +144,14 @@ def _search_ytmusic(
 
     def _search(search_url: str) -> list[dict]:
         try:
-            with yt.YoutubeDL(opts) as ydl:
+            with yt.YoutubeDL(opts) as ydl:  # type: ignore[arg-type]
                 result = ydl.extract_info(search_url, download=False)
             candidates: list[dict] = []
-            for entry in result.get("entries") or []:
+            for entry in result.get("entries") or []:  # type: ignore[union-attr]
                 entry_url = entry.get("url") or ""
                 if "/watch?" not in entry_url:
                     continue
-                candidates.append(entry)
+                candidates.append(entry)  # type: ignore[arg-type]
             return candidates
         except Exception:
             return []
@@ -297,7 +297,7 @@ def download_spotify(
     if session.playlist_items:
         tracks = [t for i, t in enumerate(tracks, 1) if i in session.playlist_items]
         if not tracks:
-            console.err("No tracks match the specified --items range")
+            console.err(Keys.download.youtube.no_tracks_match_range)
             return DownloadResult(success=False, reason="no_items_match", file_path=None)
 
     precheck_dirs = [config.music_root]
@@ -324,16 +324,16 @@ def download_spotify(
                     found_existing = True
                     break
             if found_existing:
-                console.warn(f"Skipping existing track: {t.title}")
+                console.warn(Keys.download.youtube.skipping_existing_track(title=t.title))
                 skip_quiet += 1
                 continue
         remaining_tracks.append(t)
 
     if skip_quiet:
-        console.warn(f"Skipped {skip_quiet} already-downloaded track(s)")
+        console.warn(Keys.download.youtube.skipped_existing_tracks(count=skip_quiet))
 
     if not remaining_tracks:
-        console.err("All tracks from this URL have already been downloaded")
+        console.err(Keys.download.youtube.all_tracks_already_downloaded)
         existing_path = None
         for t in tracks:
             if t.spotify_id:
@@ -383,10 +383,10 @@ def download_spotify(
                 if sid:
                     yt_match_cache.set(sid, {"y": found, "c": t.cover_url or ""})
             else:
-                console.warn(f"Could not find YouTube result for: {query}")
+                console.warn(Keys.download.youtube.could_not_find_youtube_result(query=query))
 
     if not yt_urls:
-        console.err("No tracks could be resolved from this Spotify URL")
+        console.err(Keys.download.youtube.no_tracks_resolved)
         return DownloadResult(success=False, reason="no_results", file_path=None)
 
     if len(yt_urls) == 1:
@@ -445,14 +445,14 @@ def download_spotify_thumbnail(
         try:
             os.makedirs(target_dir, exist_ok=True)
         except OSError as e:
-            console.err(f"Failed to create thumbnail directory: {e}")
+            console.err(Keys.download.youtube.failed_create_thumb_dir(error=e))
             return DownloadResult(success=False)
 
     resolver = SpotifyResolver()
     try:
         tracks = resolver.resolve(url)
     except Exception as e:
-        console.err(f"Failed to resolve Spotify URL: {e}")
+        console.err(Keys.download.youtube.failed_resolve_spotify_url(error=e))
         return DownloadResult(success=False)
 
     if not tracks:
@@ -460,7 +460,7 @@ def download_spotify_thumbnail(
 
     track = tracks[0]
     if not track.cover_url:
-        console.err("No cover art URL found for this track")
+        console.err(Keys.download.youtube.no_cover_url_found)
         return DownloadResult(success=False)
 
     filename = f"{sanitize_filename(f'{track.artist} - {track.title}')}.{target_format}"
@@ -535,7 +535,7 @@ def _execute(
     if total_items > 1:
         return _handle_playlist(
             urls=urls,
-            content_title=content_title,
+            content_title=content_title, # pyright: ignore[reportArgumentType]
             total_items=total_items,
             target_dir=target_dir,
             config=config,
@@ -1025,8 +1025,8 @@ def _skip_registry_check(
     for check_dir in dirs_to_check:
         exists, metadata = registry.check_existing(video_id, registry_media_type, check_dir)
         if exists:
-            if ordered_files is not None and metadata.get("file_path"):
-                ordered_files.append(os.path.basename(metadata["file_path"]))
+            if ordered_files is not None and metadata.get("file_path"): # pyright: ignore[reportOptionalMemberAccess]
+                ordered_files.append(os.path.basename(metadata["file_path"])) # pyright: ignore[reportOptionalSubscript]
             return True
     return False
 

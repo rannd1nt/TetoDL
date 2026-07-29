@@ -10,11 +10,9 @@ from rich.text import Text
 
 from ..utils.console import console
 from ..utils.files import get_free_space
-from ..utils.i18n import get_text as _
 from ..utils.i18n_keys import Keys
 from ..utils.network import open_url
 from .formatters import clear
-from .formatters import console as rich_console
 
 
 def _assets_dir(is_binary: bool = False) -> Path:
@@ -44,7 +42,7 @@ def show_ascii(filename=None, str_only=False, is_binary: bool = False) -> str | 
         if str_only:
             return header_raw
         text = Text(header_raw, style="bold bright_cyan")
-        rich_console.print(text)
+        console.rich.print(text)
         return None
 
     target_file = filename
@@ -76,8 +74,6 @@ def show_app_info(
     config_mod=None,
 ) -> None:
     """Display System & Configuration Information"""
-    from ..utils.formatters import console as _console
-
     table = Table(
         title=f"TetoDL v{version} - System & Configuration Info",
         box=box.ROUNDED,
@@ -145,9 +141,9 @@ def show_app_info(
         table.add_row("Header Style", "[dim]N/A[/]")
 
     # Render
-    _console.print()
-    _console.print(table)
-    _console.print()
+    console.rich.print()
+    console.rich.print(table)
+    console.rich.print()
 
 def visit_instagram():
     """Open Instagram profile"""
@@ -169,7 +165,7 @@ def wait_and_clear_prompt(msg: str | None = None):
         if msg:
             input(f"\n{msg}")
         else:
-            input(f"\n{_('common.press_enter')}")
+            input(f"\n{Keys.common.press_enter}")
     except (KeyboardInterrupt, EOFError):
         return
     clear()

@@ -5,7 +5,7 @@ from tetodl.core.lyrics.providers.genius import _GENIUS_HEADERS
 from tetodl.core.cover.models import CoverData, CoverQuery
 from tetodl.core.cover.providers.base import CoverProvider
 from tetodl.utils.network import get_session
-from tetodl.utils.text_cleaner import clean_title, get_search_queries
+from tetodl.utils.text_cleaner import get_search_queries
 
 
 class GeniusCoverProvider(CoverProvider):

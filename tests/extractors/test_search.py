@@ -52,7 +52,7 @@ class TestSearchExtractorExtract:
         }
         mock_yt = _mock_ytdlp(mock_raw)
 
-        with patch("tetodl.extractors.search.yt", mock_yt):
+        with patch("tetodl.core.sources.search.yt", mock_yt):
             extractor = SearchExtractor()
             info = extractor.extract("ytsearch1:Never Gonna Give You Up - Rick Astley")
 
@@ -77,7 +77,7 @@ class TestSearchExtractorExtract:
         }
         mock_yt = _mock_ytdlp(mock_raw)
 
-        with patch("tetodl.extractors.search.yt", mock_yt):
+        with patch("tetodl.core.sources.search.yt", mock_yt):
             extractor = SearchExtractor()
             info = extractor.extract("ytsearch1:something")
 
@@ -98,7 +98,7 @@ class TestSearchExtractorExtract:
         mock_ydl.__enter__.return_value = mock_ydl
         mock_yt.YoutubeDL.return_value = mock_ydl
 
-        with patch("tetodl.extractors.search.yt", mock_yt):
+        with patch("tetodl.core.sources.search.yt", mock_yt):
             extractor = SearchExtractor()
             with pytest.raises(PipelineError, match="Search extraction failed"):
                 extractor.extract("ytsearch1:Never Gonna Give You Up")

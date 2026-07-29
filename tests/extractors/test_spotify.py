@@ -30,7 +30,7 @@ class TestSpotifyExtractorExtract:
         fake_tracks = [
             _fake_track(name="Test Song", artist="Test Artist", album="Test Album"),
         ]
-        with patch("tetodl.extractors.spotify.SpotifyResolver") as MockResolver:
+        with patch("tetodl.core.sources.spotify.SpotifyResolver") as MockResolver:
             MockResolver.return_value.resolve.return_value = fake_tracks
             extractor = SpotifyExtractor()
             info = extractor.extract("https://open.spotify.com/track/abc")
@@ -46,7 +46,7 @@ class TestSpotifyExtractorExtract:
             _fake_track(name="Song A", artist="Artist A"),
             _fake_track(name="Song B", artist="Artist B"),
         ]
-        with patch("tetodl.extractors.spotify.SpotifyResolver") as MockResolver:
+        with patch("tetodl.core.sources.spotify.SpotifyResolver") as MockResolver:
             MockResolver.return_value.resolve.return_value = fake_tracks
             extractor = SpotifyExtractor()
             info = extractor.extract("https://open.spotify.com/playlist/pl")
@@ -56,14 +56,14 @@ class TestSpotifyExtractorExtract:
         assert len(info.entries) == 2
 
     def test_extract_empty_tracks_raises(self):
-        with patch("tetodl.extractors.spotify.SpotifyResolver") as MockResolver:
+        with patch("tetodl.core.sources.spotify.SpotifyResolver") as MockResolver:
             MockResolver.return_value.resolve.return_value = []
             extractor = SpotifyExtractor()
             with pytest.raises(PipelineError, match="No tracks found"):
                 extractor.extract("https://open.spotify.com/playlist/empty")
 
     def test_extract_resolver_error_raises(self):
-        with patch("tetodl.extractors.spotify.SpotifyResolver") as MockResolver:
+        with patch("tetodl.core.sources.spotify.SpotifyResolver") as MockResolver:
             MockResolver.return_value.resolve.side_effect = ValueError("Boom")
             extractor = SpotifyExtractor()
             with pytest.raises(PipelineError, match="Spotify extraction failed"):

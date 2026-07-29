@@ -38,7 +38,7 @@ def perform_update() -> bool:
             # Re-install dependencies if venv exists
             pip_exe = str(root_dir / ".venv" / "bin" / "pip")
             if os.path.exists(pip_exe):
-                console.proc("Updating dependencies...")
+                console.proc(Keys.maint.updating_dependencies)
                 subprocess.run(
                     [pip_exe, "install", "-r", str(root_dir / "requirements.txt")],
                     cwd=root_dir, capture_output=True
@@ -69,7 +69,7 @@ def _perform_binary_update() -> bool:
         tag = release["tag_name"]
         latest_ver = tag.lstrip("v")
         if latest_ver == _app_version:
-            console.ok(f"TetoDL is already up to date ({_app_version})")
+            console.ok(Keys.maint.already_up_to_date)
             return True
 
         asset_name = _binary_asset_name()
@@ -80,10 +80,10 @@ def _perform_binary_update() -> bool:
                 break
 
         if not asset_url:
-            console.err(f"No binary found for {asset_name}")
+            console.err(Keys.maint.no_binary_found(asset_name=asset_name))
             return False
 
-        console.proc(f"Downloading {tag} ...")
+        console.proc(Keys.maint.downloading_binary(tag=tag))
         tmp_dir = Path(tempfile.mkdtemp())
         tmp_bin = tmp_dir / asset_name
 
@@ -343,9 +343,9 @@ def reset_data(targets: list[str]):
 
     if 'registry' in valid_targets:
         print()
-        console.warn(f"{color('Warning:', 'y')} You are about to wipe the DOWNLOAD REGISTRY.")
-        console.warn("TetoDL will lose track of ALL downloaded files.")
-        
+        console.warn(Keys.maint.wipe_registry_warning(warning=color('Warning:', 'y')))
+        console.warn(Keys.maint.will_lose_track)
+
         other_valid = [t for t in valid_targets if t != 'registry']
         if other_valid:
             console.warn(Keys.maint.will_also_reset(items=', '.join([t.upper() for t in other_valid])))

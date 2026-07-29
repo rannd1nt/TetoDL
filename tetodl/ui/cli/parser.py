@@ -13,6 +13,8 @@ from ...constants import (
 )
 from ...core.domain import config as cfg
 from ...core.domain import config as config_mgr
+from ...core.domain.env import env
+from ...core.domain import cache as cache_mod
 from ...core import maintenance
 from ...core.domain.models import (
     CliDownload,
@@ -74,7 +76,7 @@ class CLIHandler:
         dl_group.add_argument('--async', dest='async_mode', action='store_true', help="Enable concurrent downloads (YouTube playlists/albums)")
         dl_group.add_argument('--search', metavar='QUERY', help="Search YouTube interactively")
         dl_group.add_argument('-l', '--limit', type=int, default=5, metavar='NUM', help="Search limit")
-        dl_group.add_argument('--quiet', action='store_true', help="Suppress download log and progress output")
+        dl_group.add_argument('-q','--quiet', action='store_true', help="Suppress download log and progress output")
         
         # Processing Flags
         dl_group.add_argument('--cut', metavar='TIME', help="Trim media (e.g. '01:30-02:00')")
@@ -164,7 +166,13 @@ class CLIHandler:
         # Info
         if args.info:
             config_mgr.load_config()
-            show_app_info()
+            show_app_info(
+                version=APP_VERSION,
+                config_path=env.get('config_path') or None,
+                data_dir=env.get('data_dir') or None,
+                cache_mod=cache_mod,
+                config_mod=config_mgr,
+            )
             return True
 
         # History & Analytics
@@ -244,7 +252,7 @@ class CLIHandler:
                 jitter_max = float(m.group(2))
                 changed = True
             else:
-                console.err(f"Invalid jitter format: {args.jitter}. Use MIN-MAX (e.g. 3-5)")
+                console.err(Keys.cli.invalid_jitter_format(value=args.jitter))
                 return changed
             
         if jitter_min is not None or jitter_max is not None or args.retries is not None:
@@ -275,8 +283,8 @@ class CLIHandler:
         # --- Logic Group Resolution ---
         if args.group:
             if not root_path:
-                console.err("To share a group folder, please specify mode: -a (Audio) or -v (Video).")
-                console.warn("Example: tetodl --share -a --group \"My Folder\"")
+                console.err(Keys.cli.share_specify_mode)
+                console.warn(Keys.cli.share_example)
                 return
 
             if isinstance(args.group, str):
@@ -352,11 +360,11 @@ class CLIHandler:
             except KeyboardInterrupt:
                 print()
         else:
-            console.err("Cannot share: Path not found.")
+            console.err(Keys.cli.cannot_share_path_not_found)
             if target_path:
-                console.warn(f"Path: {target_path}")
+                console.warn(Keys.cli.share_path(path=target_path))
             else:
-                console.warn("Usage: tetodl --share [PATH] or --share -a/-v [--group NAME]")
+                console.warn(Keys.cli.share_usage)
 
     def _validate_rules(self, args) -> bool:
         """Perform strict validation rules on arguments."""

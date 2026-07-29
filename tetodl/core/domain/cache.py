@@ -16,6 +16,7 @@ from typing import Any
 
 from ...core.domain.env import env
 from ...utils.console import console
+from ...utils.i18n_keys import Keys
 
 CACHE_DIR = env.get('cache_dir')
 
@@ -318,7 +319,7 @@ def reset_cache() -> bool:
         gc.collect()
         return True
     except OSError:
-        console.err("Failed to reset cache")
+        console.err(Keys.core.failed_reset_cache)
         return False
 
 

@@ -19,13 +19,15 @@ from fastapi.staticfiles import StaticFiles
 
 from ..cli.dispatch import execute_download
 from ...constants import APP_VERSION
+from ...utils.console import console
+from ...utils.i18n_keys import Keys
 from ...core.domain import config as cfg
 from ...core.domain import config as config_mgr
 from ...core.domain.env import env
 from ...core.domain.models import DownloadResult, DownloadSession
 from ...utils.display import get_free_space
 from ...utils.files import TempManager
-from ...utils.formatters import console as rich_console, human_size, icon_for_ext
+from ...utils.formatters import human_size, icon_for_ext
 from ...utils.network import find_free_port, get_best_ip
 from ...utils.processing import parse_playlist_items
 from ..share import SVG as _SHARE_SVG
@@ -132,12 +134,12 @@ def background_task_runner(task_id: str, session: DownloadSession, mode: str = '
     active_tasks[task_id] = task_data
 
     old_stdout = sys.stdout
-    old_console_file = getattr(rich_console, 'file', old_stdout)
+    old_console_file = getattr(console.rich, 'file', old_stdout)
     tee = _LogTee(old_stdout, log_buf, task_data)
 
     sys.stdout = tee
     try:
-        rich_console.file = tee  # type: ignore[assignment]
+        console.rich.file = tee  # type: ignore[assignment]
     except Exception:
         pass
 
@@ -164,7 +166,7 @@ def background_task_runner(task_id: str, session: DownloadSession, mode: str = '
     finally:
         sys.stdout = old_stdout
         try:
-            rich_console.file = old_console_file
+            console.rich.file = old_console_file
         except Exception:
             pass
         task_data["logs"] = log_buf.getvalue()[-8000:]
@@ -383,7 +385,7 @@ async def preview_media(req: PreviewRequest):
 
     formats = []
     resolutions = set()
-    for f in info.get('formats', []): # pyright: ignore[reportOptionalIterable]
+    for f in info.get('formats', []):  # type: ignore[union-attr]
         fmt = {
             'format_id': f.get('format_id'),
             'ext': f.get('ext'),
@@ -816,8 +818,7 @@ def run_server(host: str, port: int, verbose: bool = False):
     import threading as _threading
     import time as _time
 
-    from ...utils.console import console as _console
-    from ...utils.formatters import color as _color
+    from ...utils.formatters import color
     from ...utils.network import get_best_ip
     from .display import _get_ip_from_ip_a
 
@@ -838,7 +839,7 @@ def run_server(host: str, port: int, verbose: bool = False):
     thread = _threading.Thread(target=_run, name="uvicorn-server", daemon=True)
     thread.start()
 
-    with _console.spin("Starting API server..."):
+    with console.spin(Keys.cli.starting_api_server(host=host, port=port)):
         while not server.started:
             _time.sleep(0.05)
 
@@ -848,8 +849,8 @@ def run_server(host: str, port: int, verbose: bool = False):
     url = f"http://{ip}:{port}"
 
     print()
-    _console.ok(f"TetoDL Daemon URL: {_color(url, 'c')}")
-    _console.warn(f"Port: {port}")
+    console.ok(Keys.daemon.daemon_url(url=color(url, 'c')))
+    console.warn(Keys.daemon.daemon_port(port=port))
     print()
 
     try:
@@ -860,17 +861,17 @@ def run_server(host: str, port: int, verbose: bool = False):
         _qr_code.make(fit=True)
         _qr_code.print_ascii(invert=True)
         print()
-        _console.warn("Scan the QR code or open the URL in your browser.")
+        console.warn(Keys.daemon.scan_qr_or_open_url)
     except ImportError:
-        _console.warn(f"Open {url} in your browser.")
+        console.warn(Keys.daemon.open_url_in_browser(url=url))
 
-    _console.warn("Press Ctrl+C to stop the server.")
+    console.warn(Keys.daemon.press_ctrl_c_stop)
 
     try:
         while thread.is_alive():
             _time.sleep(1)
     except KeyboardInterrupt:
         print()
-        _console.warn("Shutting down server...")
+        console.warn(Keys.daemon.shutting_down)
         server.should_exit = True
         thread.join(timeout=5)

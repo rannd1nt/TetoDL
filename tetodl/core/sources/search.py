@@ -6,7 +6,7 @@ from tetodl.core.domain.step import PipelineError
 try:
     import yt_dlp as yt
 except ImportError:
-    yt = None
+    yt = None  # type: ignore[assignment]
 
 
 class SearchExtractor(Extractor):

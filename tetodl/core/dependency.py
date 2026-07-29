@@ -219,7 +219,7 @@ def get_ytdlp_version_info():
         
     try:
         import yt_dlp
-        raw_current = yt_dlp.version.__version__
+        raw_current = yt_dlp.version.__version__  # type: ignore[attr-defined]
         
         response = requests.get("https://pypi.org/pypi/yt-dlp/json", timeout=3)
         if response.status_code == 200:
@@ -249,18 +249,18 @@ def _update_ytdlp_binary_mode(latest_version: str) -> bool:
 
     try:
         print()
-        console.proc("Downloading yt-dlp update (binary mode)...")
+        console.proc(Keys.ui.updating_ytdlp)
 
         resp = requests.get("https://pypi.org/pypi/yt-dlp/json", timeout=10)
         if resp.status_code != 200:
-            console.err("Failed to fetch yt-dlp release info from PyPI")
+            console.err(Keys.ui.failed_fetch_ytdlp_release)
             return False
 
         data = resp.json()
         pypi_latest = data['info']['version']
 
         if pypi_latest != latest_version:
-            console.err(f"Version mismatch from PyPI: expected {latest_version}, got {pypi_latest}")
+            console.err(Keys.ui.pypi_version_mismatch(expected=latest_version, actual=pypi_latest))
             return False
 
         wheel_url = None
@@ -272,12 +272,12 @@ def _update_ytdlp_binary_mode(latest_version: str) -> bool:
                     break
 
         if not wheel_url:
-            console.err("No compatible wheel found for yt-dlp on PyPI")
+            console.err(Keys.ui.no_compatible_wheel)
             return False
 
         wheel_resp = requests.get(wheel_url, timeout=30)
         if wheel_resp.status_code != 200:
-            console.err("Failed to download yt-dlp wheel")
+            console.err(Keys.ui.failed_download_wheel)
             return False
 
         _override = Path(env.get("ytdlp_override_dir"))
@@ -296,17 +296,17 @@ def _update_ytdlp_binary_mode(latest_version: str) -> bool:
                 del sys.modules[key]
 
         import yt_dlp
-        new_version = getattr(yt_dlp.version, '__version__', 'unknown')
+        new_version = getattr(yt_dlp.version, '__version__', 'unknown')  # type: ignore[attr-defined]
 
         if new_version == latest_version:
-            console.ok(f"yt-dlp updated to {new_version}")
+            console.ok(Keys.ui.core_engine_updated_to(version=new_version))
         else:
-            console.warn(f"yt-dlp override installed (version: {new_version}, expected: {latest_version})")
+            console.warn(Keys.ui.ytdlp_override_installed(version=new_version, expected=latest_version))
 
         return True
 
     except Exception as e:
-        console.err(f"yt-dlp update failed: {e}")
+        console.err(Keys.maint.update_failed(error=e))
         override_dir = Path(env.get("ytdlp_override_dir"))
         if override_dir.exists():
             try:

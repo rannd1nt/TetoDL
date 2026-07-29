@@ -4,7 +4,7 @@ import os
 try:
     import yt_dlp as yt
 except ImportError:
-    yt = None
+    yt = None  # type: ignore[assignment]
 
 from yt_dlp.utils import sanitize_filename
 
@@ -72,7 +72,7 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
             opts["force_keyframes_at_cuts"] = True
 
         console.proc(Keys.download.youtube.downloading_item(title=title))
-        with yt.YoutubeDL(opts) as ydl:
+        with yt.YoutubeDL(opts) as ydl:  # type: ignore[arg-type]
             ydl.download([info.url])
 
         container = ctx.config.audio_quality if ctx.media_type == "audio" else ctx.config.video_container

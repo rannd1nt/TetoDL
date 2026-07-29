@@ -128,10 +128,13 @@ class Env:
         self.initdir()
 
     def _write_cache(self):
+        cache_path = self._cache_path
+        if not cache_path:
+            return
         try:
-            dir_path = os.path.dirname(self._cache_path) # pyright: ignore[reportArgumentType, reportCallIssue]
+            dir_path = os.path.dirname(cache_path)
             os.makedirs(dir_path, exist_ok=True)
-            with open(self._cache_path, "w") as f: # pyright: ignore[reportArgumentType, reportCallIssue]
+            with open(cache_path, "w") as f:
                 json.dump(asdict(self._data), f)
         except Exception:
             pass
@@ -177,8 +180,6 @@ class Env:
             temp_dir = cache_dir / "temp"
             ffmpeg_cmd = "/data/data/com.termux/files/usr/bin/ffmpeg"
             spotdl_cmd = "/data/data/com.termux/files/usr/bin/spotdl"
-            wsl_music_override = None
-            wsl_video_override = None
 
         elif is_windows:
             base_path = home / "Downloads" / APP_NAME
@@ -187,8 +188,6 @@ class Env:
             cache_dir = home / ".cache" / APP_NAME
             temp_dir = cache_dir / "temp"
             spotdl_cmd = "spotdl"
-            wsl_music_override = None
-            wsl_video_override = None
 
             if is_binary:
                 assert binary_dir is not None
@@ -220,8 +219,7 @@ class Env:
                     )
                     wsl_home_path = Path(proc_wsl.stdout.strip())
                     base_path = wsl_home_path / "Downloads" / "TetoDL"
-                    wsl_music_override = wsl_home_path / "Music"
-                    wsl_video_override = wsl_home_path / "Videos"
+                    # wsl_music_override and wsl_video_override reserved
                 except Exception as e:
                     print(f"WSL Path Error: {e}")
                     base_path = home / "Downloads" / APP_NAME

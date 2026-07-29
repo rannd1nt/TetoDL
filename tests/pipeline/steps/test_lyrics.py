@@ -84,7 +84,6 @@ class TestLyricsStep:
     ):
         """Uses cover_result.metadata for artist/title when available."""
         app_config.model_copy(update={"lyrics_mode": True})
-        step = LyricsStep()
         info = MediaInfo(
             id="abc123",
             title="Some Other Title",

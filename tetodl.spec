@@ -63,9 +63,9 @@ ROOT = Path(__spec__.origin).resolve().parent if __spec__ else Path.cwd()
 datas = []
 if IS_WIN_BUILD and _ffmpeg_data:
     datas.append((_ffmpeg_data, "."))
-for pattern, dest in [("tetodl/locales/*.json", "tetodl/locales"),
-                       ("tetodl/utils/share_static/*", "tetodl/utils/share_static"),
-                       ("tetodl/daemon/static/*", "tetodl/daemon/static"),
+for pattern, dest in [("tetodl/utils/locales/*.json", "tetodl/utils/locales"),
+                       ("tetodl/ui/static/*", "tetodl/ui/static"),
+                       ("tetodl/ui/daemon/static/*", "tetodl/ui/daemon/static"),
                        ("assets/*", "assets")]:
     for f in ROOT.glob(pattern):
         if f.is_file():

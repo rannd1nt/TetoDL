@@ -15,7 +15,6 @@ from ...ui.tui.components import header
 from ...utils.console import console
 from ...utils.files import remove_nomedia_file
 from ...utils.formatters import clear, menu_style
-from ...utils.formatters import console as rich_console
 from ...utils.i18n import get_text as _
 from ...utils.i18n_keys import Keys
 
@@ -28,18 +27,18 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
 
     while True:
         clear()
-        rich_console.print()
-        rich_console.print(Padding(title, (0, 3)), style='bright_cyan')
+        console.rich.print()
+        console.rich.print(Padding(title, (0, 3)), style='bright_cyan')
 
         loc_text = Text.assemble(
-            (_('download.navigation.current_location'), "bright_cyan"),
+            (_(Keys.download.navigation.current_location), "bright_cyan"),
             (" ", "default"),
             (current_path, "green")
         )
 
-        rich_console.print() 
-        rich_console.print(Padding(loc_text, (0, 3)))
-        rich_console.print()
+        console.rich.print() 
+        console.rich.print(Padding(loc_text, (0, 3)))
+        console.rich.print()
 
         # 1. Ambil list folder
         try:
@@ -69,12 +68,12 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
 
         if can_go_up:
             choices.append(Choice(
-                title=f"- {_('download.navigation.go_up')} (..)", 
+                title=f"- {_(Keys.download.navigation.go_up)} (..)", 
                 value="__UP__"
             ))
 
         choices.append(Choice(
-            title=f"- {_('download.navigation.select_this')}", 
+            title=f"- {_(Keys.download.navigation.select_this)}", 
             value="__SELECT__"
         ))
 
@@ -90,7 +89,7 @@ def navigate_folders(start_path, title="Pilih Folder", restrict_to_start=True):
                 ))
 
         choices.append(Separator("-" * 30))
-        choices.append(Choice(title=f"- {_('common.cancel')}", value="__CANCEL__"))
+        choices.append(Choice(title=f"- {_(Keys.common.cancel)}", value="__CANCEL__"))
 
         selection = questionary.select(
             message="",
@@ -139,9 +138,9 @@ def select_download_folder(root_dir, type_key='Unknown'):
         header()
         
         def path_info():
-            rich_console.print(Padding(
+            console.rich.print(Padding(
                 Text.assemble(
-                    (_('download.folder.select_location', type=type_key), "bright_cyan"),
+                    (_(Keys.download.folder.select_location(type=type_key)), "bright_cyan"),
                     ("\nBase: ", "bright_cyan"),
                     (root_dir, "bright_green")
                 ),
@@ -163,28 +162,28 @@ def select_download_folder(root_dir, type_key='Unknown'):
             choices.append(Separator(' '))
         else:
             choices.append(Choice(
-                title=_('download.folder.no_subfolder'), 
+                title=_(Keys.download.folder.no_subfolder), 
                 disabled="—"
             ))
         
         choices.append(Separator("-------- Action ---------"))
         choices.append(Choice(
-            title=f"- {_('download.folder.save_to_root')}", 
+            title=f"- {_(Keys.download.folder.save_to_root)}", 
             value="__ROOT__"
         ))
         
         choices.append(Choice(
-            title=f"- {_('download.folder.create_new')}", 
+            title=f"- {_(Keys.download.folder.create_new)}", 
             value="__NEW__"
         ))
         
         choices.append(Choice(
-            title=f"- {_('download.folder.browse_system')}", 
+            title=f"- {_(Keys.download.folder.browse_system)}", 
             value="__BROWSE__"
         ))
         
         choices.append(Separator("-------------------------"))
-        choices.append(Choice(title=f"- {_('common.cancel')}", value="__CANCEL__"))
+        choices.append(Choice(title=f"- {_(Keys.common.cancel)}", value="__CANCEL__"))
 
         selection = questionary.select(
             message='',
@@ -216,7 +215,7 @@ def select_download_folder(root_dir, type_key='Unknown'):
             path_info()
             print()
             name = questionary.text(
-                message=_('download.folder.enter_name'),
+                message=_(Keys.download.folder.enter_name),
                 style=menu_style(),
                 qmark=''
             ).ask()
@@ -248,7 +247,7 @@ def select_download_folder(root_dir, type_key='Unknown'):
         elif selection == "__BROWSE__":
             selected_path = navigate_folders(
                 root_dir,
-                f"{_('download.folder.browse_title')} ({os.path.basename(root_dir)})",
+                f"{_(Keys.download.folder.browse_title)} ({os.path.basename(root_dir)})",
                 restrict_to_start=False
             )
             if selected_path:

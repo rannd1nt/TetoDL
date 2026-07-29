@@ -84,8 +84,8 @@ def display_daemon_url():
 
     if not service_exists and not config_exists:
         console.err(Keys.daemon.not_configured)
-        console.warn("Run 'tetodl daemon --setup' to register a systemd service,")
-        console.warn("or 'tetodl daemon --run' to start it manually.")
+        console.warn(Keys.daemon.run_setup)
+        console.warn(Keys.daemon.or_run_manually)
         return 1
 
     running = _is_service_running()
@@ -95,7 +95,7 @@ def display_daemon_url():
             console.warn(Keys.daemon.start_with_systemctl)
         else:
             console.warn(Keys.daemon.service_unavailable)
-            console.warn("Run 'tetodl daemon --setup' to register a systemd service,")
+            console.warn(Keys.daemon.run_setup)
         return 1
 
     # State 3: running
@@ -108,7 +108,7 @@ def display_daemon_url():
 
     url = f"http://{ip}:{port}"
     print()
-    console.ok(f"TetoDL Daemon URL: {color(url, 'c')}")
+    console.ok(Keys.daemon.daemon_url(url=color(url, 'c')))
     console.warn(Keys.daemon.daemon_port(port=port))
     print()
 

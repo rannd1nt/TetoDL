@@ -17,7 +17,7 @@ def _default_ytdlp_cache_dir() -> str:
 try:
     import yt_dlp as yt
 except ImportError:
-    yt = None
+    yt = None  # type: ignore[assignment]
 
 # --- ID EXTRACTION  ---
 def extract_video_id(url):
@@ -75,12 +75,12 @@ def extract_all_urls_from_content(url, ytdlp_cache_dir=None):
     ydl_opts = {'extract_flat': True, 'quiet': True, 'no_warnings': True, 'cachedir': ytdlp_cache_dir}
 
     try:
-        with yt.YoutubeDL(ydl_opts) as ydl:
+        with yt.YoutubeDL(ydl_opts) as ydl:  # type: ignore[arg-type]
             info = ydl.extract_info(url, download=False)
 
             if 'entries' in info:
                 urls = []
-                for entry in info['entries']:
+                for entry in info['entries']:  # type: ignore[union-attr]
                     if entry.get('url'):
                         urls.append(entry['url'])
                     elif entry.get('id'):
