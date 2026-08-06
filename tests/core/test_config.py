@@ -23,7 +23,6 @@ class TestConfigLoad:
             "music_root": "/custom/music",
             "simple_mode": True,
             "max_video_resolution": "1080p",
-            "smart_cover_mode": False,
             "language": "id",
         }
         config_file.write_text(json.dumps(data))
@@ -35,7 +34,6 @@ class TestConfigLoad:
         assert cfg.music_root == "/custom/music"
         assert cfg.simple_mode is True
         assert cfg.max_video_resolution == "1080p"
-        assert cfg.smart_cover_mode is False
         assert cfg.language == "id"
         mock_set.assert_called_once_with("id")
 
@@ -96,18 +94,6 @@ class TestConfigToggles:
         assert cfg.simple_mode is True
         cfg.toggle_simple_mode(False)
         assert cfg.simple_mode is False
-
-    def test_toggle_smart_cover(self, monkeypatch, tmp_path):
-        """toggle_smart_cover updates smart_cover_mode and persists."""
-        import tetodl.core.domain.config as cfg
-        config_file = tmp_path / "config.json"
-        config_file.write_text("{}")
-        monkeypatch.setattr(cfg, "CONFIG_PATH", str(config_file))
-
-        cfg.toggle_smart_cover(False)
-        assert cfg.smart_cover_mode is False
-        cfg.toggle_smart_cover(True)
-        assert cfg.smart_cover_mode is True
 
     def test_toggle_skip_existing(self, monkeypatch, tmp_path):
         """toggle_skip_existing flips skip_existing_files."""

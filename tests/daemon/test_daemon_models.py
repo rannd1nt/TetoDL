@@ -23,9 +23,9 @@ class TestDownloadRequest:
         assert req.items is None
         assert req.group is None
         assert req.m3u is False
-        assert req.smart_cover is False
-        assert req.no_cover is False
-        assert req.force_crop is False
+        assert req.cover is False
+        assert req.metadata is False
+        assert req.no_enrich is False
         assert req.lyrics is False
         assert req.romaji is False
         assert req.share is False
@@ -49,9 +49,9 @@ class TestDownloadRequest:
             items="1,2,5-7",
             group="My Folder",
             m3u=True,
-            smart_cover=True,
-            no_cover=False,
-            force_crop=True,
+            cover=True,
+            metadata=False,
+            no_enrich=True,
             lyrics=True,
             romaji=True,
             share=True,
@@ -70,8 +70,8 @@ class TestDownloadRequest:
         assert req.items == "1,2,5-7"
         assert req.group == "My Folder"
         assert req.m3u is True
-        assert req.smart_cover is True
-        assert req.force_crop is True
+        assert req.cover is True
+        assert req.no_enrich is True
         assert req.lyrics is True
         assert req.romaji is True
         assert req.share is True

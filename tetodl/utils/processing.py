@@ -82,7 +82,7 @@ def extract_all_urls_from_content(url, ytdlp_cache_dir=None):
                 urls = []
                 for entry in info['entries']:  # type: ignore[union-attr]
                     if entry.get('url'):
-                        urls.append(entry['url'])
+                        urls.append(entry['url']) # pyright: ignore[reportTypedDictNotRequiredAccess]
                     elif entry.get('id'):
                         vid = entry['id']
                         base = "https://music.youtube.com/watch?v=" if is_yt_music else "https://www.youtube.com/watch?v="

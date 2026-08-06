@@ -99,8 +99,8 @@ class DownloadStep(PipelineStep[PipelineContext, PipelineContext]):
         config = ctx.config
         fmt = get_audio_format_string(config.audio_quality)
         pps = build_audio_postprocessors(config.audio_quality)
-        if config.no_cover_mode:
-            pps = [pp for pp in pps if pp.get("key") != "FFmpegMetadata"]
+        # FFmpegMetadata always included — enrichment flags control
+        # whether the pipeline embeds cover + rich metadata separately.
 
         return {
             "format": fmt,

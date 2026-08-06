@@ -483,6 +483,283 @@ class _UiK:
     Original template: "Header '{file}' not found. Falling back."
     """
 
+class _ServiceStatusRegisteredCallable:
+    """
+    [Callable Props Type] StatusRegistered
+    
+    Original template: "Registered: {value}"
+    """
+    def __call__(self, *, value: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            value (Any): Dynamic value for {value}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_registered", {"value": value})
+
+class _ServiceStatusActiveCallable:
+    """
+    [Callable Props Type] StatusActive
+    
+    Original template: "Active: {value}"
+    """
+    def __call__(self, *, value: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            value (Any): Dynamic value for {value}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_active", {"value": value})
+
+class _ServiceStatusEnabledCallable:
+    """
+    [Callable Props Type] StatusEnabled
+    
+    Original template: "Enabled: {value}"
+    """
+    def __call__(self, *, value: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            value (Any): Dynamic value for {value}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_enabled", {"value": value})
+
+class _ServiceStatusLingerCallable:
+    """
+    [Callable Props Type] StatusLinger
+    
+    Original template: "Linger: {value}"
+    """
+    def __call__(self, *, value: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            value (Any): Dynamic value for {value}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_linger", {"value": value})
+
+class _ServiceStatusPortCallable:
+    """
+    [Callable Props Type] StatusPort
+    
+    Original template: "Port: {port}"
+    """
+    def __call__(self, *, port: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            port (Any): Dynamic value for {port}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_port", {"port": port})
+
+class _ServiceStatusUrlCallable:
+    """
+    [Callable Props Type] StatusUrl
+    
+    Original template: "URL: {url}"
+    """
+    def __call__(self, *, url: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            url (Any): Dynamic value for {url}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_url", {"url": url})
+
+class _ServiceWindowsSpawnedCallable:
+    """
+    [Callable Props Type] WindowsSpawned
+    
+    Original template: "Daemon process started (PID {pid})."
+    """
+    def __call__(self, *, pid: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            pid (Any): Dynamic value for {pid}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.windows_spawned", {"pid": pid})
+
+class _ServiceWindowsKilledOldCallable:
+    """
+    [Callable Props Type] WindowsKilledOld
+    
+    Original template: "Stopped previous daemon process (PID {pid})."
+    """
+    def __call__(self, *, pid: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            pid (Any): Dynamic value for {pid}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.windows_killed_old", {"pid": pid})
+
+class _ServiceFailedSystemdStartCallable:
+    """
+    [Callable Props Type] FailedSystemdStart
+    
+    Original template: "Failed to start daemon service: {error}"
+    """
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            error (Any): Dynamic value for {error}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.failed_systemd_start", {"error": error})
+
+class _ServiceFailedSystemdRestartCallable:
+    """
+    [Callable Props Type] FailedSystemdRestart
+    
+    Original template: "Failed to restart daemon service: {error}"
+    """
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            error (Any): Dynamic value for {error}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.failed_systemd_restart", {"error": error})
+
+class _ServiceK:
+    """
+    [Key Type] Service
+    """
+    setup_already_installed: str = "service.setup_already_installed"
+    """[Props Type] SetupAlreadyInstalled"""
+    setup_started: str = "service.setup_started"
+    """[Props Type] SetupStarted"""
+    setup_restarted: str = "service.setup_restarted"
+    """[Props Type] SetupRestarted"""
+    setup_complete: str = "service.setup_complete"
+    """[Props Type] SetupComplete"""
+    setup_not_supported: str = "service.setup_not_supported"
+    """[Props Type] SetupNotSupported"""
+    remove_not_supported: str = "service.remove_not_supported"
+    """[Props Type] RemoveNotSupported"""
+    not_supported: str = "service.not_supported"
+    """[Props Type] NotSupported"""
+    status_title: str = "service.status_title"
+    """[Props Type] StatusTitle"""
+    status_registered: _ServiceStatusRegisteredCallable = _ServiceStatusRegisteredCallable()
+    """
+    [Callable Props Type] StatusRegistered
+    
+    Original template: "Registered: {value}"
+    """
+    status_active: _ServiceStatusActiveCallable = _ServiceStatusActiveCallable()
+    """
+    [Callable Props Type] StatusActive
+    
+    Original template: "Active: {value}"
+    """
+    status_enabled: _ServiceStatusEnabledCallable = _ServiceStatusEnabledCallable()
+    """
+    [Callable Props Type] StatusEnabled
+    
+    Original template: "Enabled: {value}"
+    """
+    status_linger: _ServiceStatusLingerCallable = _ServiceStatusLingerCallable()
+    """
+    [Callable Props Type] StatusLinger
+    
+    Original template: "Linger: {value}"
+    """
+    status_port: _ServiceStatusPortCallable = _ServiceStatusPortCallable()
+    """
+    [Callable Props Type] StatusPort
+    
+    Original template: "Port: {port}"
+    """
+    status_url: _ServiceStatusUrlCallable = _ServiceStatusUrlCallable()
+    """
+    [Callable Props Type] StatusUrl
+    
+    Original template: "URL: {url}"
+    """
+    logs_not_available: str = "service.logs_not_available"
+    """[Props Type] LogsNotAvailable"""
+    logs_follow_hint: str = "service.logs_follow_hint"
+    """[Props Type] LogsFollowHint"""
+    windows_shortcut_created: str = "service.windows_shortcut_created"
+    """[Props Type] WindowsShortcutCreated"""
+    windows_shortcut_failed: str = "service.windows_shortcut_failed"
+    """[Props Type] WindowsShortcutFailed"""
+    windows_spawned: _ServiceWindowsSpawnedCallable = _ServiceWindowsSpawnedCallable()
+    """
+    [Callable Props Type] WindowsSpawned
+    
+    Original template: "Daemon process started (PID {pid})."
+    """
+    windows_killed_old: _ServiceWindowsKilledOldCallable = _ServiceWindowsKilledOldCallable()
+    """
+    [Callable Props Type] WindowsKilledOld
+    
+    Original template: "Stopped previous daemon process (PID {pid})."
+    """
+    windows_pid_not_found: str = "service.windows_pid_not_found"
+    """[Props Type] WindowsPidNotFound"""
+    windows_removed_shortcut: str = "service.windows_removed_shortcut"
+    """[Props Type] WindowsRemovedShortcut"""
+    windows_removed_log: str = "service.windows_removed_log"
+    """[Props Type] WindowsRemovedLog"""
+    windows_removed_pid: str = "service.windows_removed_pid"
+    """[Props Type] WindowsRemovedPid"""
+    failed_systemd_start: _ServiceFailedSystemdStartCallable = _ServiceFailedSystemdStartCallable()
+    """
+    [Callable Props Type] FailedSystemdStart
+    
+    Original template: "Failed to start daemon service: {error}"
+    """
+    failed_systemd_restart: _ServiceFailedSystemdRestartCallable = _ServiceFailedSystemdRestartCallable()
+    """
+    [Callable Props Type] FailedSystemdRestart
+    
+    Original template: "Failed to restart daemon service: {error}"
+    """
+
 class _DaemonDaemonUrlCallable:
     """
     [Callable Props Type] DaemonUrl
@@ -613,7 +890,7 @@ class _DaemonRunDaemonManuallyCallable:
     """
     [Callable Props Type] RunDaemonManually
     
-    Original template: "You can still run the daemon manually: tetodl daemon --run --host {host} --port {port}"
+    Original template: "You can still run the daemon manually: tetodl service serve --host {host} --port {port}"
     """
     def __call__(self, *, host: Any, port: Any) -> tuple[str, dict]:
         """
@@ -712,7 +989,7 @@ class _DaemonK:
     """
     [Callable Props Type] RunDaemonManually
     
-    Original template: "You can still run the daemon manually: tetodl daemon --run --host {host} --port {port}"
+    Original template: "You can still run the daemon manually: tetodl service serve --host {host} --port {port}"
     """
 
 class _FilesFailedToMoveCallable:
@@ -3025,10 +3302,6 @@ class _ConfigK:
     """[Props Type] SimpleModeEnabled"""
     simple_mode_disabled: str = "config.simple_mode_disabled"
     """[Props Type] SimpleModeDisabled"""
-    smart_cover_enabled: str = "config.smart_cover_enabled"
-    """[Props Type] SmartCoverEnabled"""
-    smart_cover_disabled: str = "config.smart_cover_disabled"
-    """[Props Type] SmartCoverDisabled"""
     skip_existing_enabled: str = "config.skip_existing_enabled"
     """[Props Type] SkipExistingEnabled"""
     skip_existing_disabled: str = "config.skip_existing_disabled"
@@ -4170,8 +4443,6 @@ class _DownloadYoutubeK:
     """[Props Type] YtMusicDetected"""
     yt_audio_plain: str = "download.youtube.yt_audio_plain"
     """[Props Type] YtAudioPlain"""
-    smart_cover_info: str = "download.youtube.smart_cover_info"
-    """[Props Type] SmartCoverInfo"""
     extracting: str = "download.youtube.extracting"
     """[Props Type] Extracting"""
     extracted: _DownloadYoutubeExtractedCallable = _DownloadYoutubeExtractedCallable()
@@ -4645,24 +4916,6 @@ class _MenuSettingsSimpleModeCallable:
         """
         return ("menu.settings.simple_mode", {"status": status})
 
-class _MenuSettingsSmartCoverCallable:
-    """
-    [Callable Props Type] SmartCover
-    
-    Original template: "Smart Cover Mode: {status}"
-    """
-    def __call__(self, *, status: Any) -> tuple[str, dict]:
-        """
-        Formats the translation string.
-        
-        Args:
-            status (Any): Dynamic value for {status}.
-        
-        Returns:
-            tuple[str, dict]: Key path and formatting dictionary.
-        """
-        return ("menu.settings.smart_cover", {"status": status})
-
 class _MenuSettingsSkipExistingCallable:
     """
     [Callable Props Type] SkipExisting
@@ -4803,18 +5056,6 @@ class _MenuSettingsK:
     """
     simple_mode_desc: str = "menu.settings.simple_mode_desc"
     """[Props Type] SimpleModeDesc"""
-    smart_cover: _MenuSettingsSmartCoverCallable = _MenuSettingsSmartCoverCallable()
-    """
-    [Callable Props Type] SmartCover
-    
-    Original template: "Smart Cover Mode: {status}"
-    """
-    smart_cover_desc_1: str = "menu.settings.smart_cover_desc_1"
-    """[Props Type] SmartCoverDesc1"""
-    smart_cover_desc_2: str = "menu.settings.smart_cover_desc_2"
-    """[Props Type] SmartCoverDesc2"""
-    smart_cover_desc_3: str = "menu.settings.smart_cover_desc_3"
-    """[Props Type] SmartCoverDesc3"""
     skip_existing: _MenuSettingsSkipExistingCallable = _MenuSettingsSkipExistingCallable()
     """
     [Callable Props Type] SkipExisting
@@ -5167,6 +5408,8 @@ class I18nKeysMap:
     """[Key Type] Files"""
     daemon: _DaemonK = _DaemonK()
     """[Key Type] Daemon"""
+    service: _ServiceK = _ServiceK()
+    """[Key Type] Service"""
     ui: _UiK = _UiK()
     """[Key Type] Ui"""
 

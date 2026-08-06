@@ -89,6 +89,8 @@ class TestFinalizeStep:
             title="Test Video",
             url="https://youtube.com/watch?v=abc123",
             uploader="Video Creator",
+            artist="Video Creator",
+            track="Test Video",
         )
         dl_file = DownloadedFile(
             path="/tmp/Test Video.mp4",

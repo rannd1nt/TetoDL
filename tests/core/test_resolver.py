@@ -66,8 +66,6 @@ class TestConfigResolver:
                 romaji=True,
                 zip=True,
                 m3u=True,
-                no_cover=True,
-                force_crop=True,
                 quiet=True,
                 async_mode=True,
             ),
@@ -84,9 +82,6 @@ class TestConfigResolver:
         assert resolved.romaji_mode is True
         assert resolved.zip_mode is True
         assert resolved.create_m3u is True
-        assert resolved.no_cover_mode is True
-        assert resolved.smart_cover_mode is False
-        assert resolved.force_crop is True
         assert resolved.quiet is True
         assert resolved.async_mode is True
 
@@ -100,36 +95,6 @@ class TestConfigResolver:
         session = DownloadSession(url="https://example.com")
         resolved = resolver.resolve(session)
         assert resolved.simple_mode is True
-
-    def test_resolve_cover_smart_cover(self):
-        """Setting smart_cover in overrides enables smart and disables no_cover."""
-        from tetodl.core.domain.models import AppConfig, DownloadSession, SessionOverrides
-        from tetodl.core.resolver import ConfigResolver
-
-        base = AppConfig()
-        resolver = ConfigResolver(base)
-        session = DownloadSession(
-            url="https://example.com",
-            overrides=SessionOverrides(smart_cover=True),
-        )
-        resolved = resolver.resolve(session)
-        assert resolved.smart_cover_mode is True
-        assert resolved.no_cover_mode is False
-
-    def test_resolve_cover_no_cover(self):
-        """Setting no_cover disables smart cover."""
-        from tetodl.core.domain.models import AppConfig, DownloadSession, SessionOverrides
-        from tetodl.core.resolver import ConfigResolver
-
-        base = AppConfig()
-        resolver = ConfigResolver(base)
-        session = DownloadSession(
-            url="https://example.com",
-            overrides=SessionOverrides(no_cover=True),
-        )
-        resolved = resolver.resolve(session)
-        assert resolved.no_cover_mode is True
-        assert resolved.smart_cover_mode is False
 
     def test_m3u_enables_group_mode_if_no_group(self):
         """m3u override enables group_mode when base has no group."""

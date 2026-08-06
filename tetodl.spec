@@ -48,6 +48,14 @@ HIDDEN = [
     "pydantic", "requests", "bs4", "colorama", "rich",
     "questionary", "qrcode",
     "fastapi", "uvicorn",
+    "uvicorn.logging", "uvicorn.config", "uvicorn.server",
+    "uvicorn.loops", "uvicorn.loops.auto",
+    "uvicorn.protocols", "uvicorn.protocols.http",
+    "uvicorn.protocols.http.auto", "uvicorn.protocols.http.h11_impl",
+    "uvicorn.protocols.websockets", "uvicorn.protocols.websockets.auto",
+    "uvicorn.lifespan", "uvicorn.lifespan.on", "uvicorn.lifespan.off",
+    "uvicorn.middleware", "uvicorn.middleware.proxy_headers",
+    "uvicorn.middleware.message_logger",
 ]
 
 # ── Excludes ───────────────────────────────────────────────────

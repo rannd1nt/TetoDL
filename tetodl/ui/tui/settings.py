@@ -20,7 +20,7 @@ from ...core.domain.config import (
     toggle_audio_quality,
     toggle_simple_mode,
     toggle_skip_existing,
-    toggle_smart_cover,
+
     toggle_video_container,
     update_language,
 )
@@ -361,40 +361,33 @@ def menu_settings():
         print(color(f"1) {_(Keys.menu.settings.simple_mode(status=simple_status))}", "c"))
         print(f"{_(Keys.menu.settings.simple_mode_desc)}\n")
 
-        # Smart Cover Mode
-        s_cover_status = colored_switch(cfg.smart_cover_mode, _(Keys.common.active), _(Keys.common.inactive))
-        print(color(f"2) {_(Keys.menu.settings.smart_cover(status=s_cover_status))}", "c"))
-        print(f"{_(Keys.menu.settings.smart_cover_desc_1)}")
-        print(f"{_(Keys.menu.settings.smart_cover_desc_2)}")
-        print(f"{_(Keys.menu.settings.smart_cover_desc_3)}\n")
-        
         # Skip Existing
         skip_status = colored_switch(cfg.skip_existing_files, _(Keys.common.active), _(Keys.common.inactive))
-        print(color(f"3) {_(Keys.menu.settings.skip_existing(status=skip_status))}", "c"))
+        print(color(f"2) {_(Keys.menu.settings.skip_existing(status=skip_status))}", "c"))
         print(f"{_(Keys.menu.settings.skip_existing_desc)}\n")
 
         # Max Resolution
-        print(color(f"4) {_(Keys.menu.settings.max_resolution(resolution=color(cfg.max_video_resolution, 'g')))}", "c"))
+        print(color(f"3) {_(Keys.menu.settings.max_resolution(resolution=color(cfg.max_video_resolution, 'g')))}", "c"))
         print(f"{_(Keys.menu.settings.max_resolution_desc_2)}\n")
 
         # Video Container
-        print(color(f"5) {_(Keys.menu.settings.video_container(container=color(current_container.upper(), 'g')))}", "c"))
+        print(color(f"4) {_(Keys.menu.settings.video_container(container=color(current_container.upper(), 'g')))}", "c"))
         print(f"{_(Keys.menu.settings.video_container_desc)}\n")
 
         # Video Codec
-        print(color(f"6) {_(Keys.menu.settings.video_codec(codec=color(formatted_video_codec(current_codec) or '', 'g')))}", "c"))
+        print(color(f"5) {_(Keys.menu.settings.video_codec(codec=color(formatted_video_codec(current_codec) or '', 'g')))}", "c"))
         print(f"{_(Keys.menu.settings.video_codec_desc)}\n")
 
         # Audio Quality
-        print(color(f"7) {_(Keys.menu.settings.audio_quality(format=color(audio_quality_info['ext'].upper(), 'g')))}", 'c'))
+        print(color(f"6) {_(Keys.menu.settings.audio_quality(format=color(audio_quality_info['ext'].upper(), 'g')))}", 'c'))
         print(f"{_(Keys.menu.settings.audio_quality_desc)}\n")
         
         # Language
-        print(color(f"8) {_(Keys.menu.settings.language(lang=color(lang_name, 'g')))}", "c"))
+        print(color(f"7) {_(Keys.menu.settings.language(lang=color(lang_name, 'g')))}", "c"))
         print(f"{_(Keys.menu.settings.language_desc)}\n")
 
         # Clear Cache
-        print(color(f"9) {_(Keys.menu.settings.clear_cache)} {color(f'(Total Cache: {get_cache_size()})', 'g')}", "c"))
+        print(color(f"8) {_(Keys.menu.settings.clear_cache)} {color(f'(Total Cache: {get_cache_size()})', 'g')}", "c"))
         print(f"{_(Keys.menu.settings.clear_cache_desc)}\n")
 
 
@@ -410,21 +403,15 @@ def menu_settings():
             time.sleep(1)
 
         elif choice == "2":
-            toggle_smart_cover(not cfg.smart_cover_mode)
-            status = _(Keys.config.smart_cover_enabled) if cfg.smart_cover_mode else _(Keys.config.smart_cover_disabled)
-            console.ok(status)
-            time.sleep(1)
-
-        elif choice == "3":
             toggle_skip_existing(not cfg.skip_existing_files)
             status = _(Keys.config.skip_existing_enabled) if cfg.skip_existing_files else _(Keys.config.skip_existing_disabled)
             console.ok(status)
             time.sleep(1)
 
-        elif choice == "4":
+        elif choice == "3":
             menu_video_resolution()
 
-        elif choice == "5":
+        elif choice == "4":
             current = getattr(cfg, 'video_container', 'mp4')
             new_container = "mkv" if current == "mp4" else "mp4"
             
@@ -432,16 +419,16 @@ def menu_settings():
                 console.ok(Keys.config.container_changed(container=new_container.upper()))
             time.sleep(1)
 
-        elif choice == "6":
+        elif choice == "5":
             menu_video_codec()
 
-        elif choice == "7":
+        elif choice == "6":
             menu_audio_quality()
         
-        elif choice == "8":
+        elif choice == "7":
             language_setting()
 
-        elif choice == "9":
+        elif choice == "8":
             confirm = input(_(Keys.config.confirm_clear_cache)).strip().lower()
             if confirm == _(Keys.common.yes):
                 if clear_cache():

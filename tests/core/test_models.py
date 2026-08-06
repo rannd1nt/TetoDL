@@ -15,9 +15,6 @@ class TestAppConfig:
         assert cfg.simple_mode is False
         assert cfg.async_mode is False
         assert cfg.quiet is False
-        assert cfg.smart_cover_mode is True
-        assert cfg.no_cover_mode is False
-        assert cfg.force_crop is False
         assert cfg.thumbnail_format == "jpg"
         assert cfg.group_mode is False
         assert cfg.force_grouping_on_share is False
@@ -63,15 +60,6 @@ class TestAppConfig:
         assert video.container == "mkv"
         assert video.codec == "h265"
         assert video.max_resolution == "1080p"
-
-    def test_sub_config_cover(self):
-        """AppConfig.cover returns CoverConfig populated from flat fields."""
-        from tetodl.core.domain.models import AppConfig
-        cfg = AppConfig(smart_cover_mode=False, no_cover_mode=True, force_crop=True)
-        cover = cfg.cover
-        assert cover.smart_mode is False
-        assert cover.disabled is True
-        assert cover.force_crop is True
 
     def test_sub_config_lyrics(self):
         """AppConfig.lyrics returns LyricsConfig from flat fields."""
@@ -138,9 +126,7 @@ class TestSessionOverrides:
         assert o.romaji is False
         assert o.zip is False
         assert o.m3u is False
-        assert o.smart_cover is False
-        assert o.no_cover is False
-        assert o.force_crop is False
+        assert o.lyrics is False
         assert o.quiet is False
         assert o.async_mode is False
 
@@ -241,9 +227,9 @@ class TestDownloadSession:
             romaji=True,
             zip=True,
             m3u=True,
-            smart_cover=True,
-            no_cover=True,
-            force_crop=True,
+            cover=True,
+            metadata=True,
+            no_enrich=True,
             quiet=True,
             async_mode=True,
         )
@@ -259,9 +245,6 @@ class TestDownloadSession:
         assert merged.romaji is True
         assert merged.zip is True
         assert merged.m3u is True
-        assert merged.smart_cover is True
-        assert merged.no_cover is True
-        assert merged.force_crop is True
         assert merged.quiet is True
         assert merged.async_mode is True
 
@@ -341,14 +324,6 @@ class TestSubModels:
         assert cfg.container == "mp4"
         assert cfg.codec == "h264"
         assert cfg.max_resolution == "720p"
-
-    def test_cover_config_defaults(self):
-        """CoverConfig defaults."""
-        from tetodl.core.domain.models import CoverConfig
-        cfg = CoverConfig()
-        assert cfg.smart_mode is True
-        assert cfg.disabled is False
-        assert cfg.force_crop is False
 
     def test_lyrics_config_defaults(self):
         """LyricsConfig defaults."""

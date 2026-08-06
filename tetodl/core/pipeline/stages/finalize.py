@@ -4,6 +4,7 @@ from tetodl.core.domain.cache import cache_metadata
 from tetodl.core.domain.history import add_to_history
 from tetodl.core.domain.models import PipelineContext
 from tetodl.core.domain.step import PipelineStep
+from tetodl.core.pipeline.metadata import resolve_artist_title
 from tetodl.utils.processing import extract_video_id
 from tetodl.utils.tracer import trace, traced
 
@@ -29,13 +30,14 @@ class FinalizeStep(PipelineStep[PipelineContext, PipelineContext]):
         info = downloaded.info
         if not info:
             return
+        resolved_artist, resolved_title = resolve_artist_title(info, ctx, ctx.cover_result)
         cache_metadata(ctx.url, {
             "title": downloaded.title,
             "duration": downloaded.duration,
             "uploader": info.uploader,
-            "artist": ctx.spotify_artist or info.artist or "",
+            "artist": resolved_artist,
             "album": info.album or "",
-            "track": ctx.spotify_title or info.track or "",
+            "track": resolved_title,
             "thumbnails": info.thumbnails,
         })
 
@@ -45,11 +47,16 @@ class FinalizeStep(PipelineStep[PipelineContext, PipelineContext]):
         assert downloaded is not None
         info = downloaded.info
         video_id = info.id if info else extract_video_id(ctx.url)
-        artist = ctx.spotify_artist or ((info.artist or info.uploader or "Unknown Artist") if info else "Unknown Artist")
+        if info is not None:
+            resolved_artist, resolved_title = resolve_artist_title(
+                info, ctx, ctx.cover_result
+            )
+        else:
+            resolved_artist, resolved_title = "", ""
         album = info.album if info else None
 
         platform = "YouTube Music" if ctx.is_youtube_music else "YouTube Audio"
-        history_title = f"{artist} - {downloaded.title}" if ctx.is_youtube_music else downloaded.title
+        history_title = f"{resolved_artist} - {resolved_title}" if ctx.is_youtube_music else resolved_title
         download_type = "Playlist Track" if "Playlist" in ctx.download_type_label else "Single Track"
         if ctx.media_type == "video":
             download_type = download_type.replace("Track", "Video")
@@ -63,7 +70,7 @@ class FinalizeStep(PipelineStep[PipelineContext, PipelineContext]):
             platform=platform,
             download_type=download_type,
             duration=downloaded.duration,
-            metadata={"artist": artist, "album": album, "title": downloaded.title},
+            metadata={"artist": resolved_artist, "album": album, "title": resolved_title},
             spotify_id=ctx.spotify_id,
         )
 

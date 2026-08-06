@@ -74,40 +74,6 @@ class VideoConfig(BaseModel):
     max_resolution: str = '720p'
 
 
-class CoverConfig(BaseModel):
-    """Cover art processing options.
-
-    Configures how cover art thumbnails are fetched, cropped, and
-    embedded into downloaded media files.
-
-    Parameters
-    ----------
-    smart_mode : bool, optional
-        Enable smart cover selection (default ``True``).
-        When enabled, the best available thumbnail is chosen
-        automatically.
-    disabled : bool, optional
-        Completely disable cover art processing (default ``False``).
-    force_crop : bool, optional
-        Always crop cover art to a square aspect ratio
-        (default ``False``).
-
-    Example
-    -------
-    >>> cfg = CoverConfig(smart_mode=False, disabled=True)
-    >>> cfg.disabled
-    True
-
-    See Also
-    --------
-    :class:`CoverResult` : Output of cover-art processing.
-    :class:`AppConfig.cover` : AppConfig property that builds this.
-    """
-    smart_mode: bool = True
-    disabled: bool = False
-    force_crop: bool = False
-
-
 class LyricsConfig(BaseModel):
     """Lyrics embedding options.
 
@@ -239,7 +205,6 @@ class ThumbnailConfig(BaseModel):
 
     See Also
     --------
-    :class:`CoverConfig` : Cover art processing options.
     :class:`AppConfig` : Root config that uses ``thumbnail_format``.
     """
     format: str = 'jpg'
@@ -328,9 +293,8 @@ class AppConfig(BaseModel):
     :class:`ConfigResolver`.
 
     The flat fields map directly to JSON keys in the config file.
-    Domain-specific sub-configs (:class:`AudioConfig`,
-    :class:`CoverConfig`, …) are available as read-only properties
-    and consumed by pipeline steps.
+    Domain-specific sub-configs (:class:`AudioConfig`, …) are
+    available as read-only properties and consumed by pipeline steps.
 
     Parameters
     ----------
@@ -346,13 +310,6 @@ class AppConfig(BaseModel):
         Enable concurrent / asynchronous downloads (default ``False``).
     quiet : bool, optional
         Suppress all non-critical console output (default ``False``).
-    smart_cover_mode : bool, optional
-        Automatically select the best available thumbnail
-        (default ``True``).
-    no_cover_mode : bool, optional
-        Skip cover art processing entirely (default ``False``).
-    force_crop : bool, optional
-        Always crop cover art to a square (default ``False``).
     thumbnail_format : str, optional
         Thumbnail image format (default ``'jpg'``).
         Supported: ``'jpg'``, ``'png'``, ``'webp'``.
@@ -420,7 +377,6 @@ class AppConfig(BaseModel):
     --------
     :class:`AudioConfig` : Audio sub-config (:attr:`audio`).
     :class:`VideoConfig` : Video sub-config (:attr:`video`).
-    :class:`CoverConfig` : Cover-art sub-config (:attr:`cover`).
     :class:`LyricsConfig` : Lyrics sub-config (:attr:`lyrics`).
     :class:`DownloadConfig` : Download sub-config (:attr:`download`).
     :class:`LibraryConfig` : Library sub-config (:attr:`library`).
@@ -448,12 +404,6 @@ class AppConfig(BaseModel):
     """Suppress non-critical console output."""
 
     # Cover art
-    smart_cover_mode: bool = True
-    """Automatically select the best available thumbnail."""
-    no_cover_mode: bool = False
-    """Skip cover art processing entirely."""
-    force_crop: bool = False
-    """Always crop cover art to a square aspect ratio."""
     thumbnail_format: str = "jpg"
     """Thumbnail image format (``'jpg'``, ``'png'``, ``'webp'``)."""
 
@@ -569,34 +519,6 @@ class AppConfig(BaseModel):
             container=self.video_container,
             codec=self.video_codec,
             max_resolution=self.max_video_resolution,
-        )
-
-    @property
-    def cover(self) -> CoverConfig:
-        """Cover-art options derived from the flat fields.
-
-        Returns
-        -------
-        CoverConfig
-            Configuration with ``smart_mode``, ``disabled``, and
-            ``force_crop`` populated from the corresponding flat
-            fields.
-
-        Example
-        -------
-        >>> cfg = AppConfig(no_cover_mode=True)
-        >>> cfg.cover.disabled
-        True
-
-        See Also
-        --------
-        :class:`CoverConfig` : The returned model.
-        :meth:`AppConfig.lyrics` : Lyrics sub-config accessor.
-        """
-        return CoverConfig(
-            smart_mode=self.smart_cover_mode,
-            disabled=self.no_cover_mode,
-            force_crop=self.force_crop,
         )
 
     @property
@@ -775,12 +697,6 @@ class SessionOverrides(BaseModel):
         Enable ZIP packaging of output (default ``False``).
     m3u : bool, optional
         Enable M3U playlist generation (default ``False``).
-    smart_cover : bool, optional
-        Enable smart cover selection (default ``False``).
-    no_cover : bool, optional
-        Disable cover art entirely (default ``False``).
-    force_crop : bool, optional
-        Force square crop on cover art (default ``False``).
     quiet : bool, optional
         Suppress console output (default ``False``).
     async_mode : bool, optional
@@ -810,9 +726,6 @@ class SessionOverrides(BaseModel):
     romaji: bool = False
     zip: bool = False
     m3u: bool = False
-    smart_cover: bool = False
-    no_cover: bool = False
-    force_crop: bool = False
     quiet: bool = False
     async_mode: bool = False
 
@@ -876,15 +789,6 @@ class DownloadSession(BaseModel):
     m3u : bool, optional
         Flat-field alias for M3U generation toggle
         (default ``False``).
-    smart_cover : bool, optional
-        Flat-field alias for smart cover toggle
-        (default ``False``).
-    no_cover : bool, optional
-        Flat-field alias for disable-cover toggle
-        (default ``False``).
-    force_crop : bool, optional
-        Flat-field alias for force-crop toggle
-        (default ``False``).
     quiet : bool, optional
         Flat-field alias for quiet-mode toggle
         (default ``False``).
@@ -929,13 +833,13 @@ class DownloadSession(BaseModel):
     cut_range: tuple[float, float] | None = None
     playlist_items: set[int] | None = None
     group_folder: bool | str = False
+    cover: bool = False
+    metadata: bool = False
+    no_enrich: bool = False
     lyrics: bool = False
     romaji: bool = False
     zip: bool = False
     m3u: bool = False
-    smart_cover: bool = False
-    no_cover: bool = False
-    force_crop: bool = False
     quiet: bool = False
     async_mode: bool = False
 
@@ -993,11 +897,10 @@ class DownloadSession(BaseModel):
         Example
         -------
         >>> session = DownloadSession(
-        ...     url='...', format='mp3', quiet=True, smart_cover=True,
+        ...     url='...', format='mp3', quiet=True,
         ... )
         >>> session.config_updates()  # doctest: +SKIP
-        {'audio_quality': 'mp3', 'quiet': True,
-         'smart_cover_mode': True, 'no_cover_mode': False}
+        {'audio_quality': 'mp3', 'quiet': True}
 
         See Also
         --------
@@ -1016,12 +919,6 @@ class DownloadSession(BaseModel):
             updates['video_codec'] = self.codec
         if self.resolution:
             updates['max_video_resolution'] = self.resolution
-        if self.smart_cover:
-            updates.update(smart_cover_mode=True, no_cover_mode=False)
-        if self.no_cover:
-            updates.update(smart_cover_mode=False, no_cover_mode=True)
-        if self.force_crop:
-            updates['force_crop'] = True
         if self.lyrics:
             updates['lyrics_mode'] = True
         if self.romaji:
@@ -1085,9 +982,6 @@ class DownloadSession(BaseModel):
             romaji=self.romaji,
             zip=self.zip,
             m3u=self.m3u,
-            smart_cover=self.smart_cover,
-            no_cover=self.no_cover,
-            force_crop=self.force_crop,
             quiet=self.quiet,
             async_mode=self.async_mode,
         )
@@ -1310,7 +1204,6 @@ class CoverResult(BaseModel):
 
     See Also
     --------
-    :class:`CoverConfig` : Configuration that drives cover processing.
     :class:`DownloadedFile` : The file this cover art belongs to.
     """
     thumbnail_path: str
@@ -1466,11 +1359,17 @@ class PipelineContext:
     spotify_artist: str | None = None
     spotify_id: str | None = None
 
+    # Enrichment mode flags — set by handler before pipeline runs
+    cover_mode: bool = False
+    metadata_mode: bool = False
+    lyrics_mode: bool = False
+
     # Populated by steps
     media_info: MediaInfo | None = None
     classification: Classification | None = None
     downloaded_file: DownloadedFile | None = None
     cover_result: CoverResult | None = None
+    enrichment_data: Any = None  # CoverData from ResolveEnrichmentStep
     lyrics_embedded: bool = False
     error: str | None = None
 

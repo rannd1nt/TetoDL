@@ -260,7 +260,7 @@ jobs:
           TETODL_CI: "1"
         run: |
           chmod +x tetodl-linux
-          printf '\n\n\n\n\n' | ./tetodl-linux "https://youtu.be/dQw4w9WgXcQ" -a -f m4a --smart-cover --lyrics -o /tmp/test-dl
+          printf '\n\n\n\n\n' | ./tetodl-linux "https://youtu.be/dQw4w9WgXcQ" -A -f m4a -c --lyrics -o /tmp/test-dl
           test -f /tmp/test-dl/*.m4a
 
   release:

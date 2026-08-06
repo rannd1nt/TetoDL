@@ -2,6 +2,7 @@ import asyncio
 import html as htmlmod
 import io
 import os
+import re
 import sys
 import threading
 import time
@@ -27,12 +28,14 @@ from ...core.domain.env import env
 from ...core.domain.models import DownloadResult, DownloadSession
 from ...utils.display import get_free_space
 from ...utils.files import TempManager
-from ...utils.formatters import human_size, icon_for_ext
+from ...utils.formatters import color, human_size, icon_for_ext
+from ...utils.console.themes import PlainTheme
 from ...utils.network import find_free_port, get_best_ip
 from ...utils.processing import parse_playlist_items
 from ..share import SVG as _SHARE_SVG
 from ..share import create_share_router, list_entries, stream_file
 from ...utils.time_parser import get_cut_seconds
+from .display import detect_lan_ip
 from .models import DownloadRequest, PreviewRequest
 
 share_launchers: dict[str, Any] = {}
@@ -197,7 +200,6 @@ async def get_current_config():
         "max_resolution": cfg.max_video_resolution,
         "daemon_default_temp": getattr(cfg, 'daemon_default_temp', True),
         "daemon_cleanup_interval": getattr(cfg, 'daemon_cleanup_interval', 3600),
-        "smart_cover_mode": cfg.smart_cover_mode,
         "lyrics_mode": cfg.lyrics_mode,
     }
 
@@ -216,8 +218,6 @@ async def update_config(request: Request):
         cfg.audio_quality = data["audio_quality"]
     if "max_resolution" in data:
         cfg.max_video_resolution = data["max_resolution"]
-    if "smart_cover_mode" in data:
-        cfg.smart_cover_mode = data["smart_cover_mode"]
     if "lyrics_mode" in data:
         cfg.lyrics_mode = data["lyrics_mode"]
     
@@ -280,9 +280,9 @@ async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
         playlist_items=playlist_items,
         group_folder=req.group or False,
         m3u=req.m3u or False,
-        smart_cover=req.smart_cover or False,
-        no_cover=req.no_cover or False,
-        force_crop=req.force_crop or False,
+        cover=req.cover or False,
+        metadata=req.metadata or False,
+        no_enrich=req.no_enrich or False,
         lyrics=req.lyrics,
         romaji=req.romaji,
         async_mode=req.async_mode or False,
@@ -802,57 +802,83 @@ async def share_launch(request: Request):
     return {"url": url, "port": port, "ip": ip}
 
 
-def run_server(host: str, port: int, verbose: bool = False):
-    """Run the API daemon with spinner + barcode display.
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
 
-    Parameters
-    ----------
-    host : str
-        Bind address.
-    port : int
-        Bind port.
-    verbose : bool
-        Show uvicorn request logs (default: quiet).
-    """
-    import asyncio as _asyncio
-    import threading as _threading
-    import time as _time
 
-    from ...utils.formatters import color
-    from ...utils.network import get_best_ip
-    from .display import _get_ip_from_ip_a
+class _StripANSI:
+    """Write a stream's output with ANSI escape sequences removed."""
 
-    os.environ["TETODL_PORT"] = str(port)
+    def __init__(self, stream):
+        self._stream = stream
 
-    config = uvicorn.Config(
-        app,
-        host=host,
-        port=port,
-        log_level="warning" if not verbose else "info",
-        access_log=verbose,
-    )
-    server = uvicorn.Server(config)
+    def write(self, data):
+        self._stream.write(_ANSI_RE.sub("", data))
+        return len(data)
 
-    def _run():
-        _asyncio.run(server.serve())
+    def flush(self):
+        self._stream.flush()
 
-    thread = _threading.Thread(target=_run, name="uvicorn-server", daemon=True)
-    thread.start()
+    def isatty(self):
+        return False
 
-    with console.spin(Keys.cli.starting_api_server(host=host, port=port)):
-        while not server.started:
-            _time.sleep(0.05)
+    def fileno(self):
+        return self._stream.fileno()
 
-    ip = _get_ip_from_ip_a()
-    if not ip:
-        ip = get_best_ip()
-    url = f"http://{ip}:{port}"
+    @property
+    def encoding(self):
+        return getattr(self._stream, "encoding", None)
 
-    print()
-    console.ok(Keys.daemon.daemon_url(url=color(url, 'c')))
-    console.warn(Keys.daemon.daemon_port(port=port))
-    print()
 
+class _Tee:
+    """Duplicate writes to a live stream and an ANSI-stripped file."""
+
+    def __init__(self, real, fh):
+        self._real = real
+        self._fh = fh
+
+    def write(self, data):
+        self._real.write(data)
+        self._fh.write(_ANSI_RE.sub("", data))
+        return len(data)
+
+    def flush(self):
+        self._real.flush()
+        self._fh.flush()
+
+    def isatty(self):
+        return self._real.isatty()
+
+    def fileno(self):
+        return self._real.fileno()
+
+    @property
+    def encoding(self):
+        return getattr(self._real, "encoding", None)
+
+
+def _setup_output(log_file, interactive):
+    """Route stdout/stderr according to interactivity and ``--log-file``."""
+    if not interactive:
+        console.theme = PlainTheme
+    if not log_file:
+        return
+    fh = open(log_file, "a", encoding="utf-8", buffering=1)
+    if interactive:
+        sys.stdout = _Tee(sys.__stdout__, fh)
+        sys.stderr = _Tee(sys.__stderr__, fh)
+    else:
+        sys.stdout = _StripANSI(fh)
+        sys.stderr = _StripANSI(fh)
+
+
+def _is_interactive():
+    try:
+        return sys.stdout.isatty()
+    except Exception:
+        return False
+
+
+def _print_qr(url):
     try:
         import qrcode as _qr
 
@@ -865,11 +891,85 @@ def run_server(host: str, port: int, verbose: bool = False):
     except ImportError:
         console.warn(Keys.daemon.open_url_in_browser(url=url))
 
-    console.warn(Keys.daemon.press_ctrl_c_stop)
+
+def _announce(interactive, quiet, url, port):
+    """Print the startup banner (interactive) or one plain URL line."""
+    if interactive:
+        if quiet:
+            return
+        print()
+        console.ok(Keys.daemon.daemon_url(url=color(url, 'c')))
+        console.warn(Keys.daemon.daemon_port(port=port))
+        from ..cli.network import check_firewall_status
+        check_firewall_status(port)
+        print()
+        _print_qr(url)
+        console.warn(Keys.daemon.press_ctrl_c_stop)
+    else:
+        print(f"TetoDL daemon listening at {url}")
+        sys.stdout.flush()
+
+
+def run_server(host: str, port: int, verbose: bool = False,
+               quiet: bool = False, log_file: str | None = None,
+               dev: bool = False):
+    """Run the API server.
+
+    Parameters
+    ----------
+    host : str
+        Bind address.
+    port : int
+        Bind port.
+    verbose : bool
+        Show uvicorn request logs (default: quiet).
+    quiet : bool
+        Suppress the startup banner / QR output.
+    log_file : str | None
+        Tee (interactive) or redirect (non-interactive) output to a file.
+    dev : bool
+        Run uvicorn in reload mode for development.
+    """
+    interactive = _is_interactive()
+    _setup_output(log_file, interactive)
+    console.state.is_quiet = quiet or not interactive
+
+    os.environ["TETODL_PORT"] = str(port)
+
+    ip = detect_lan_ip()
+    url = f"http://{ip}:{port}"
+
+    if dev:
+        _announce(interactive, quiet, url, port)
+        uvicorn.run(app, host=host, port=port, reload=True,
+                    log_level="warning" if not verbose else "info",
+                    access_log=verbose)
+        return
+
+    config = uvicorn.Config(
+        app,
+        host=host,
+        port=port,
+        log_level="warning" if not verbose else "info",
+        access_log=verbose,
+    )
+    server = uvicorn.Server(config)
+
+    def _run():
+        asyncio.run(server.serve())
+
+    thread = threading.Thread(target=_run, name="uvicorn-server", daemon=True)
+    thread.start()
+
+    with console.spin(Keys.cli.starting_api_server(host=host, port=port)):
+        while not server.started:
+            time.sleep(0.05)
+
+    _announce(interactive, quiet, url, port)
 
     try:
         while thread.is_alive():
-            _time.sleep(1)
+            time.sleep(1)
     except KeyboardInterrupt:
         print()
         console.warn(Keys.daemon.shutting_down)

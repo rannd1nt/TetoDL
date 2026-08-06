@@ -57,10 +57,17 @@ def _regex_fallback(raw_title: str) -> tuple[str | None, str | None]:
     for sep in [" - ", " ~ ", " | ", " – ", " — "]:
         if sep in title:
             parts = title.split(sep, 1)
-            artist_part = parts[0].strip()
-            title_part = parts[1].strip()
-            if artist_part and title_part:
-                return artist_part, title_part
+            first, second = parts[0].strip(), parts[1].strip()
+            if first and second:
+                return first, second
+
+    # Try " / " separator (common for dirty titles like "Title / Artist MV")
+    if " / " in title:
+        parts = title.split(" / ", 1)
+        first, second = parts[0].strip(), parts[1].strip()
+        second = re.sub(r"(?i)\s*(mv|official video|official audio|lyrics|live|cover|audio|video|4k|hd).*", "", second).strip()
+        if first and second:
+            return first, second
 
     title = title.replace("-", " ").replace("/", " ").replace("|", " ").replace("_", " ").replace("×", " ")
     title = re.sub(r"\s+", " ", title).strip()

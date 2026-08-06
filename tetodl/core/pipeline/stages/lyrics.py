@@ -13,7 +13,7 @@ from tetodl.utils.tracer import trace, traced
 class LyricsStep(PipelineStep[PipelineContext, PipelineContext]):
     @trace
     def __call__(self, ctx: PipelineContext) -> PipelineContext:
-        if not ctx.config.lyrics_mode or ctx.media_type != "audio":
+        if not (ctx.lyrics_mode or ctx.config.lyrics_mode) or ctx.media_type != "audio":
             return ctx
 
         if ctx.downloaded_file is None:

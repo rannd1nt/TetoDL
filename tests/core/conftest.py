@@ -25,7 +25,6 @@ def sample_config_dict() -> dict[str, Any]:
         "music_root": "/tmp/tetodl/music",
         "video_root": "/tmp/tetodl/video",
         "simple_mode": False,
-        "smart_cover_mode": True,
         "skip_existing_files": True,
         "max_video_resolution": "720p",
         "audio_quality": "m4a",

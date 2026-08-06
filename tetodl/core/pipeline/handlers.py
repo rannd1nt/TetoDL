@@ -10,6 +10,7 @@ from tetodl.core.domain.config import add_user_subfolder
 from tetodl.core.domain.env import env
 from tetodl.core.domain.models import AppConfig, DownloadResult, DownloadSession
 from tetodl.core.domain.registry import registry
+from tetodl.core.pipeline.metadata import resolve_artist_title
 from tetodl.core.pipeline.runner import MediaPipeline
 from tetodl.core.domain.provider import NullUI, UIProvider
 from tetodl.utils.console import console
@@ -23,6 +24,37 @@ from tetodl.utils.network import (
 )
 from tetodl.utils.processing import extract_all_urls_from_content, extract_video_id
 from tetodl.utils.tracer import traced
+
+
+def _resolve_enrichment_flags(
+    session: DownloadSession, is_youtube_music: bool, media_type: str,
+) -> dict:
+    """Resolve enrichment flags from session + source heuristics.
+
+    Behavior A: any explicit flag (cover, metadata, lyrics) overrides
+    auto-detection.  ``-N`` strips everything.
+
+    Returns a dict with ``cover_mode``, ``metadata_mode``, and
+    ``lyrics_mode`` keys set to ``True`` or ``False``.
+    """
+    # -N strips everything unconditionally
+    if session.no_enrich:
+        return {"cover_mode": False, "metadata_mode": False, "lyrics_mode": False}
+
+    # Any explicit flag → override auto (Behavior A)
+    explicit = session.cover or session.metadata or session.lyrics
+    if explicit:
+        return {
+            "cover_mode": session.cover,
+            "metadata_mode": session.metadata,
+            "lyrics_mode": session.lyrics,
+        }
+
+    # No explicit flags → auto for YTM/Spotify
+    if is_youtube_music and media_type == "audio":
+        return {"cover_mode": True, "metadata_mode": True, "lyrics_mode": False}
+
+    return {"cover_mode": False, "metadata_mode": False, "lyrics_mode": False}
 
 
 def download_audio_youtube(
@@ -389,6 +421,8 @@ def download_spotify(
         console.err(Keys.download.youtube.no_tracks_resolved)
         return DownloadResult(success=False, reason="no_results", file_path=None)
 
+    enrichment_flags = _resolve_enrichment_flags(session, True, "audio")
+
     if len(yt_urls) == 1:
         return _handle_single(
             url=yt_urls[0],
@@ -404,6 +438,7 @@ def download_spotify(
             spotify_title=spotify_titles[0] if spotify_titles else None,
             spotify_artist=spotify_artists[0] if spotify_artists else None,
             spotify_id=spotify_ids[0] if spotify_ids else None,
+            enrichment_flags=enrichment_flags,
         )
 
     return _handle_playlist(
@@ -427,6 +462,7 @@ def download_spotify(
         spotify_titles=spotify_titles,
         spotify_artists=spotify_artists,
         spotify_ids=spotify_ids,
+        enrichment_flags=enrichment_flags,
     )
 
 
@@ -513,6 +549,13 @@ def _execute(
     existing = _check_exists(url, media_type, target_dir)
     if existing and (media_type == "audio" or skip):
         with traced('file exists in registry (pre-check)'):
+            if zip_mode and existing.file_path and os.path.exists(existing.file_path):
+                zip_path = create_zip_archive(existing.file_path)
+                if zip_path:
+                    existing = DownloadResult(
+                        success=True, file_path=zip_path,
+                        title=existing.title, skipped=True,
+                    )
             ui.wait_and_clear_prompt()
             return existing
 
@@ -522,8 +565,8 @@ def _execute(
             ui.wait_and_clear_prompt()
             return DownloadResult(success=False, reason="no_internet")
 
-    if config.smart_cover_mode and media_type == "audio":
-        console.warn(Keys.download.youtube.smart_cover_info)
+    # Merge session enrichment flags into config
+    enrichment_flags = _resolve_enrichment_flags(session, is_youtube_music, media_type)
 
     if env.get('is_termux'):
         remove_nomedia_file(target_dir)
@@ -535,7 +578,7 @@ def _execute(
     if total_items > 1:
         return _handle_playlist(
             urls=urls,
-            content_title=content_title, # pyright: ignore[reportArgumentType]
+            content_title=content_title,
             total_items=total_items,
             target_dir=target_dir,
             config=config,
@@ -550,6 +593,7 @@ def _execute(
             share_mode=share_mode,
             simple=simple,
             zip_mode=zip_mode,
+            enrichment_flags=enrichment_flags,
         )
 
     return _handle_single(
@@ -562,6 +606,8 @@ def _execute(
         ui=ui,
         cut_range=cut_range,
         simple=simple,
+        zip_mode=zip_mode,
+        enrichment_flags=enrichment_flags,
     )
 
 
@@ -575,15 +621,16 @@ def _handle_single(
     ui: UIProvider,
     cut_range: tuple[float, float] | None = None,
     simple: bool = False,
+    zip_mode: bool = False,
     cover_url: str | None = None,
     spotify_title: str | None = None,
     spotify_artist: str | None = None,
     spotify_id: str | None = None,
+    enrichment_flags: dict | None = None,
 ) -> DownloadResult:
     pipeline = MediaPipeline(config=config)
 
-    result = pipeline.run(
-        url, target_dir,
+    ctx_kw: dict = dict(
         media_type=media_type,
         is_youtube_music=is_youtube_music,
         cut_range=cut_range,
@@ -592,25 +639,50 @@ def _handle_single(
         spotify_artist=spotify_artist,
         spotify_id=spotify_id,
     )
+    if enrichment_flags:
+        ctx_kw.update(enrichment_flags)
+
+    result = pipeline.run(url, target_dir, **ctx_kw)
 
     if result.classification and result.classification.existing_result:
+        existing = result.classification.existing_result
+        if zip_mode and existing.file_path and os.path.exists(existing.file_path):
+            zip_path = create_zip_archive(existing.file_path)
+            if zip_path:
+                existing = DownloadResult(
+                    success=True, file_path=zip_path,
+                    title=existing.title, skipped=True,
+                )
         ui.wait_and_clear_prompt()
-        return result.classification.existing_result
+        return existing
 
     if result.downloaded_file is None:
         with traced('pipeline returned no file'):
             ui.wait_and_clear_prompt()
             return DownloadResult(success=False)
 
-    if media_type == "audio" and is_youtube_music:
-        console.ok(Keys.download.youtube.complete_metadata(title=result.downloaded_file.title))
+    info = result.media_info
+    resolved_artist, resolved_title = resolve_artist_title(info, result, result.cover_result) if info else ("", result.downloaded_file.title)
+    display_title = f"{resolved_artist} - {resolved_title}" if resolved_artist else resolved_title
+
+    if zip_mode:
+        zip_path = create_zip_archive(result.downloaded_file.path)
+        if zip_path:
+            final_path = zip_path
+        else:
+            final_path = result.downloaded_file.path
     else:
-        console.ok(Keys.download.youtube.complete(title=result.downloaded_file.title))
+        final_path = result.downloaded_file.path
+
+    if media_type == "audio" and is_youtube_music:
+        console.ok(Keys.download.youtube.complete_metadata(title=display_title))
+    else:
+        console.ok(Keys.download.youtube.complete(title=display_title))
     ui.wait_and_clear_prompt()
     return DownloadResult(
         success=True,
-        file_path=result.downloaded_file.path,
-        title=result.downloaded_file.title,
+        file_path=final_path,
+        title=display_title,
     )
 
 
@@ -635,6 +707,7 @@ def _handle_playlist(
     spotify_titles: list[str] | None = None,
     spotify_artists: list[str] | None = None,
     spotify_ids: list[str] | None = None,
+    enrichment_flags: dict | None = None,
 ) -> DownloadResult:
     if cut_range:
         console.warn(color("Warning: '--cut' flag is ignored for playlists.", "y"))
@@ -702,6 +775,7 @@ def _handle_playlist(
             spotify_titles=spotify_titles,
             spotify_artists=spotify_artists,
             spotify_ids=spotify_ids,
+            enrichment_flags=enrichment_flags,
         )
     else:
         success, skipped, failed = _playlist_sequential(
@@ -720,6 +794,7 @@ def _handle_playlist(
             spotify_titles=spotify_titles,
             spotify_artists=spotify_artists,
             spotify_ids=spotify_ids,
+            enrichment_flags=enrichment_flags,
         )
 
     if is_staging and success == 0:
@@ -772,6 +847,7 @@ def _playlist_sequential(
     spotify_titles: list[str] | None = None,
     spotify_artists: list[str] | None = None,
     spotify_ids: list[str] | None = None,
+    enrichment_flags: dict | None = None,
 ) -> tuple[int, int, int]:
     total = len(urls)
     success_count = 0
@@ -815,6 +891,7 @@ def _playlist_sequential(
             spotify_title=spotify_titles[i - 1] if spotify_titles else None,
             spotify_artist=spotify_artists[i - 1] if spotify_artists else None,
             spotify_id=spotify_ids[i - 1] if spotify_ids else None,
+            enrichment_flags=enrichment_flags,
         )
 
         if result is None:
@@ -860,6 +937,7 @@ def _playlist_concurrent(
     spotify_titles: list[str] | None = None,
     spotify_artists: list[str] | None = None,
     spotify_ids: list[str] | None = None,
+    enrichment_flags: dict | None = None,
 ) -> tuple[int, int, int]:
     max_workers = config.async_workers
     if max_workers > 5:
@@ -890,6 +968,7 @@ def _playlist_concurrent(
             spotify_title=spotify_titles[index] if spotify_titles else None,
             spotify_artist=spotify_artists[index] if spotify_artists else None,
             spotify_id=spotify_ids[index] if spotify_ids else None,
+            enrichment_flags=enrichment_flags,
         )
 
         if result is None:
@@ -950,21 +1029,25 @@ def _pipeline_item(
     spotify_title: str | None = None,
     spotify_artist: str | None = None,
     spotify_id: str | None = None,
+    enrichment_flags: dict | None = None,
 ) -> dict | None:
     pipeline = MediaPipeline(config=config)
 
+    ctx_kw: dict = dict(
+        media_type=media_type,
+        is_youtube_music=is_youtube_music,
+        cut_range=cut_range,
+        download_type_label=download_type,
+        cover_url=cover_url,
+        spotify_title=spotify_title,
+        spotify_artist=spotify_artist,
+        spotify_id=spotify_id,
+    )
+    if enrichment_flags:
+        ctx_kw.update(enrichment_flags)
+
     try:
-        result = pipeline.run(
-            url, target_dir,
-            media_type=media_type,
-            is_youtube_music=is_youtube_music,
-            cut_range=cut_range,
-            download_type_label=download_type,
-            cover_url=cover_url,
-            spotify_title=spotify_title,
-            spotify_artist=spotify_artist,
-            spotify_id=spotify_id,
-        )
+        result = pipeline.run(url, target_dir, **ctx_kw)
     except KeyboardInterrupt:
         raise
     except Exception as exc:

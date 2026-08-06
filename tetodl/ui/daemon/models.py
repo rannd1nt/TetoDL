@@ -20,9 +20,9 @@ class DownloadRequest(BaseModel):
     items: str | None = Field(None, description="Playlist items")
     group: str | bool | None = Field(None, description="Group downloads into a subfolder")
     m3u: bool = False
-    smart_cover: bool = False
-    no_cover: bool = False
-    force_crop: bool = False
+    cover: bool = False
+    metadata: bool = False
+    no_enrich: bool = False
     lyrics: bool = False
     romaji: bool = False
 
@@ -35,7 +35,8 @@ class DownloadRequest(BaseModel):
             "example": {
                 "url": "https://youtu.be/...",
                 "audio_only": True,
-                "smart_cover": True,
+                "cover": True,
+                "metadata": True,
                 "lyrics": True
             }
         }

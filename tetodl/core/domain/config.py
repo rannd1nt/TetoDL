@@ -42,10 +42,7 @@ user_subfolders: dict = {}
 simple_mode: bool = False
 async_mode: bool = False
 quiet: bool = False
-smart_cover_mode: bool = True
 thumbnail_format: str = "jpg"
-no_cover_mode: bool = False
-force_crop: bool = False
 group_mode: bool = False
 force_grouping_on_share: bool = False
 lyrics_mode: bool = False
@@ -113,7 +110,7 @@ def load_config():
     global music_root, video_root, user_subfolders, simple_mode
     global max_video_resolution, video_container, video_codec, audio_quality
     global progress_style, header_style, skip_existing_files
-    global verified_dependencies, smart_cover_mode, max_retries
+    global verified_dependencies, max_retries
     global jitter_min, jitter_max
     global media_scanner_enabled, daemon_default_temp
     global daemon_cleanup_interval, language
@@ -141,7 +138,6 @@ def load_config():
         header_style = data.get("header_style", "default")
         skip_existing_files = data.get("skip_existing_files", skip_existing_files)
         verified_dependencies = data.get("verified_dependencies", verified_dependencies)
-        smart_cover_mode = data.get("smart_cover_mode", smart_cover_mode)
         jitter_min = data.get("jitter_min", JITTER[0])
         jitter_max = data.get("jitter_max", JITTER[1])
         max_retries = data.get("max_retries", 3)
@@ -200,9 +196,6 @@ def load_app_config() -> AppConfig:
         simple_mode=simple_mode,
         async_mode=async_mode,
         quiet=quiet,
-        smart_cover_mode=smart_cover_mode,
-        no_cover_mode=no_cover_mode,
-        force_crop=force_crop,
         thumbnail_format=thumbnail_format,
         group_mode=group_mode,
         lyrics_mode=lyrics_mode,
@@ -269,7 +262,6 @@ def save_config():
         "jitter_max": jitter_max,
         "max_retries": max_retries,
         "media_scanner_enabled": media_scanner_enabled,
-        "smart_cover_mode": smart_cover_mode,
         "verified_dependencies": verified_dependencies,
         "language": language,
         "daemon_default_temp": daemon_default_temp,
@@ -454,35 +446,6 @@ def toggle_simple_mode(enabled: bool):
     """
     global simple_mode
     simple_mode = enabled
-    save_config()
-
-def toggle_smart_cover(enabled: bool):
-    """Enable or disable smart cover-art selection.
-
-    When enabled, the most-square thumbnail is automatically chosen;
-    when disabled, the first available thumbnail is used.
-
-    Parameters
-    ----------
-    enabled : bool
-        ``True`` to enable smart cover selection, ``False`` to disable it.
-
-    Returns
-    -------
-    None
-
-    Example
-    -------
-    >>> from tetodl.core.config import toggle_smart_cover
-    >>> toggle_smart_cover(True)
-
-    See Also
-    --------
-    :data:`smart_cover_mode` : Module-level state variable.
-    :func:`toggle_smart_cover` is also used by the daemon API.
-    """
-    global smart_cover_mode
-    smart_cover_mode = enabled
     save_config()
 
 def toggle_skip_existing(enabled: bool):

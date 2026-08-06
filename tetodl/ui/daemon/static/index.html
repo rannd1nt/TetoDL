@@ -276,8 +276,8 @@ select option { background: #1e293b; color: var(--text-main); }
 .settings-btn svg { width: 14px; height: 14px; display: block; }
 
 /* --- Audio options row --- */
-.audio-opt-row { display: flex; gap: 10px; margin-top: 8px; }
-.audio-opt-row .checkbox-group { flex: 1; margin-top: 0; }
+.audio-opt-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.audio-opt-row .checkbox-group { flex: 1 1 150px; margin-top: 0; }
 
 /* --- Permanent save row --- */
 .permanent-row {
@@ -394,7 +394,8 @@ select option { background: #1e293b; color: var(--text-main); }
           <div id="d_audio_opts" style="display:none;margin-top:8px">
             <div class="audio-opt-row">
               <label class="checkbox-group"><input type="checkbox" id="d_lyrics"> Fetch Lyrics</label>
-              <label class="checkbox-group"><input type="checkbox" id="d_cover" checked> Smart Cover</label>
+              <label class="checkbox-group"><input type="checkbox" id="d_cover" checked> Cover Art</label>
+              <label class="checkbox-group"><input type="checkbox" id="d_metadata" checked> Metadata</label>
             </div>
           </div>
 
@@ -407,7 +408,8 @@ select option { background: #1e293b; color: var(--text-main); }
           </div>
 
           <div id="d_thumb_opts" style="display:none;margin-top:8px">
-            <label class="checkbox-group"><input type="checkbox" id="d_external_cover"> External Cover Fetch</label>
+            <label class="checkbox-group"><input type="checkbox" id="d_cover" checked> Cover Art</label>
+            <label class="checkbox-group"><input type="checkbox" id="d_metadata"> Metadata</label>
           </div>
 
           <div id="d_permanent_row" class="permanent-row">
@@ -625,7 +627,7 @@ document.getElementById('d_thumb_opts').style.display='none';
 document.getElementById('d_permanent_row').style.display='block';
 document.getElementById('d_cut_row').style.display='block';
 document.getElementById('d_cover').checked=true;
-document.getElementById('d_external_cover').checked=false;
+const _ext=document.getElementById('d_external_cover');if(_ext)_ext.checked=false;
 }
 
 document.getElementById('d_type').addEventListener('change',function(){
@@ -655,19 +657,20 @@ format:document.getElementById('d_format').value,
 title:_lastPreviewData ? _lastPreviewData.title : ''
 };
 
-if(type==='audio'){
-payload.audio_only=true;
-payload.lyrics=document.getElementById('d_lyrics').checked;
-payload.smart_cover=document.getElementById('d_cover').checked;
-}else if(type==='video'){
-payload.video_only=true;
-payload.resolution=document.getElementById('d_res').value;
-payload.codec=document.getElementById('d_codec').value;
-}else{
-payload.thumbnail_only=true;
-payload.smart_cover=document.getElementById('d_external_cover').checked;
-payload.no_cover=true;
-}
+    if(type==='audio'){
+      payload.audio_only=true;
+      payload.lyrics=document.getElementById('d_lyrics').checked;
+      payload.cover=document.getElementById('d_cover').checked;
+      payload.metadata=document.getElementById('d_metadata').checked;
+    }else if(type==='video'){
+      payload.video_only=true;
+      payload.resolution=document.getElementById('d_res').value;
+      payload.codec=document.getElementById('d_codec').value;
+    }else{
+      payload.thumbnail_only=true;
+      payload.cover=document.getElementById('d_cover').checked;
+      payload.metadata=document.getElementById('d_metadata').checked;
+    }
 
 if(type!=='thumbnail')payload.cut_time=document.getElementById('d_cut').value||null;
 payload.group=document.getElementById('d_group').value||null;

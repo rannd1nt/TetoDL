@@ -128,7 +128,7 @@ class CoverService:
                 else:
                     new_name = f"{final_title}.{ext}"
 
-                safe_name = sanitize_filename(new_name)
+                safe_name = sanitize_filename(new_name) # pyright: ignore[reportPossiblyUnboundVariable]
                 new_path = os.path.join(target_dir, safe_name)
 
                 if os.path.exists(new_path):

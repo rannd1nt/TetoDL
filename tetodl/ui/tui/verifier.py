@@ -162,7 +162,7 @@ def verify_dependencies(header_title=None):
         else:
             clear()
             verification_header()
-            from ...ui.settings import prompt_language_selection
+            from ...ui.tui.settings import prompt_language_selection
             
             selected_code = prompt_language_selection(force_selection=True)
             

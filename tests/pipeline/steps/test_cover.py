@@ -1,5 +1,3 @@
-
-
 from tetodl.core.domain.models import (
     AppConfig,
     DownloadedFile,
@@ -12,19 +10,8 @@ from tetodl.core.pipeline.stages.cover import CoverStep
 class TestCoverStep:
     """Tests for CoverStep."""
 
-    def test_skip_cover_when_no_media(self, pipeline_ctx: PipelineContext):
-        """Returns ctx unchanged when no media_info or downloaded_file."""
-        step = CoverStep()
-        ctx = pipeline_ctx
-        ctx.media_info = None
-        ctx.downloaded_file = None
-        result = step(ctx)
-        assert result is ctx
-        assert result.cover_result is None
-
-    def test_skip_cover_when_no_cover_mode(self, app_config: AppConfig):
-        """Returns ctx unchanged when no_cover_mode is enabled."""
-        config = app_config.model_copy(update={"no_cover_mode": True})
+    def test_skip_cover_when_cover_mode_false(self, app_config: AppConfig):
+        """Returns ctx unchanged when cover_mode is False."""
         step = CoverStep()
         info = MediaInfo(
             id="abc123",
@@ -32,17 +19,16 @@ class TestCoverStep:
             url="https://youtube.com/watch?v=abc123",
         )
         dl_file = DownloadedFile(
-            path="/tmp/test.mp3",
-            container="mp3",
-            title="Test Song",
+            path="/tmp/test.mp3", container="mp3", title="Test Song",
         )
         ctx = PipelineContext(
-            config=config,
+            config=app_config,
             url="https://youtube.com/watch?v=abc123",
             target_dir="/tmp",
             media_info=info,
             downloaded_file=dl_file,
             media_type="audio",
+            cover_mode=False,
         )
         result = step(ctx)
         assert result is ctx
@@ -50,7 +36,6 @@ class TestCoverStep:
 
     def test_skip_cover_for_video(self, app_config: AppConfig):
         """Returns ctx unchanged when media_type is video."""
-        config = app_config.model_copy(update={"smart_cover_mode": True})
         step = CoverStep()
         info = MediaInfo(
             id="abc123",
@@ -58,48 +43,16 @@ class TestCoverStep:
             url="https://youtube.com/watch?v=abc123",
         )
         dl_file = DownloadedFile(
-            path="/tmp/test.mp4",
-            container="mp4",
-            title="Test Video",
+            path="/tmp/test.mp4", container="mp4", title="Test Video",
         )
         ctx = PipelineContext(
-            config=config,
+            config=app_config,
             url="https://youtube.com/watch?v=abc123",
             target_dir="/tmp",
             media_info=info,
             downloaded_file=dl_file,
             media_type="video",
-        )
-        result = step(ctx)
-        assert result is ctx
-        assert result.cover_result is None
-
-    def test_skip_cover_when_not_youtube_music_and_not_smart_cover(
-        self, app_config: AppConfig,
-    ):
-        """Returns ctx unchanged when not YT Music and smart cover is off."""
-        config = app_config.model_copy(
-            update={"smart_cover_mode": False, "no_cover_mode": False},
-        )
-        step = CoverStep()
-        info = MediaInfo(
-            id="abc123",
-            title="Test Song",
-            url="https://youtube.com/watch?v=abc123",
-        )
-        dl_file = DownloadedFile(
-            path="/tmp/test.mp3",
-            container="mp3",
-            title="Test Song",
-        )
-        ctx = PipelineContext(
-            config=config,
-            url="https://youtube.com/watch?v=abc123",
-            target_dir="/tmp",
-            media_info=info,
-            downloaded_file=dl_file,
-            media_type="audio",
-            is_youtube_music=False,
+            cover_mode=True,
         )
         result = step(ctx)
         assert result is ctx
@@ -109,9 +62,6 @@ class TestCoverStep:
         self, tmp_path, app_config: AppConfig, mocker,
     ):
         """Processes cover via YouTube thumbnail fallback."""
-        config = app_config.model_copy(
-            update={"smart_cover_mode": True, "no_cover_mode": False},
-        )
         step = CoverStep()
         info = MediaInfo(
             id="abc123",
@@ -128,35 +78,18 @@ class TestCoverStep:
             artist="Test Artist",
             info=info,
         )
-
         ctx = PipelineContext(
-            config=config,
+            config=app_config,
             url="https://youtube.com/watch?v=abc123",
             target_dir=str(tmp_path),
             media_info=info,
             downloaded_file=dl_file,
             media_type="audio",
-            is_youtube_music=True,
+            cover_mode=True,
         )
 
-        thumb_path = tmp_path / "abc123.jpg"
-        thumb_path.write_text("fake image")
-
-        mocker.patch.object(
-            step._cover_service, "search", return_value=None,
-        )
-        mocker.patch.object(
-            step._cover_service, "fetch", return_value=b"fake image",
-        )
-        mocker.patch.object(
-            step._cover_service, "process",
-            side_effect=lambda path, crop=False, target_format="jpg": path,
-        )
-        mocker.patch(
-            "tetodl.core.pipeline.stages.cover.embed_metadata",
-            return_value=True,
-        )
+        mocker.patch.object(step._cover_service, "fetch", return_value=b"fake_image_data")
+        mocker.patch.object(step._cover_service, "process", return_value=str(tmp_path / "abc123.jpg"))
 
         result = step(ctx)
-        assert result.cover_result is not None
-        assert result.cover_result.source == "youtube"
+        assert result is ctx

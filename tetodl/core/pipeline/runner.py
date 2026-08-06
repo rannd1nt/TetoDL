@@ -1,10 +1,11 @@
 from tetodl.core.domain.models import AppConfig, PipelineContext
 from tetodl.core.pipeline.stages.classify import ClassifyStep
-from tetodl.core.pipeline.stages.cover import CoverStep
+from tetodl.core.pipeline.stages.cover import CoverStep, MetadataStep
 from tetodl.core.pipeline.stages.download import DownloadStep
 from tetodl.core.pipeline.stages.extract import ExtractStep
 from tetodl.core.pipeline.stages.finalize import FinalizeStep
 from tetodl.core.pipeline.stages.lyrics import LyricsStep
+from tetodl.core.pipeline.stages.resolve_enrichment import ResolveEnrichmentStep
 from tetodl.utils.console import console
 from tetodl.utils.i18n_keys import Keys
 from tetodl.utils.tracer import trace, traced
@@ -43,8 +44,14 @@ class MediaPipeline:
             with traced(f'download failed — {ctx.error}'):
                 return ctx
 
+        with traced('resolving enrichment'):
+            ctx = ResolveEnrichmentStep()(ctx)
+
         with traced('processing cover'):
             ctx = CoverStep()(ctx)
+
+        with traced('processing metadata'):
+            ctx = MetadataStep()(ctx)
 
         with traced('processing lyrics'):
             ctx = LyricsStep()(ctx)

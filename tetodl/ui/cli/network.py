@@ -2,6 +2,7 @@
 Network utilities for CLI: file sharing server (FastAPI).
 Extracted from utils/network.py to separate CLI-specific concerns.
 """
+import re
 import shutil
 from pathlib import Path
 from urllib.parse import quote
@@ -12,16 +13,34 @@ from tetodl.utils.i18n_keys import Keys
 from tetodl.utils.network import find_free_port, get_best_ip
 
 
+def _ufw_active() -> bool:
+    """True if UFW is enabled (reads config; no sudo needed)."""
+    try:
+        return "ENABLED=yes" in Path("/etc/ufw/ufw.conf").read_text()
+    except OSError:
+        return False
+
+
+def _ufw_allows_port(port) -> bool:
+    """True if the port appears in the UFW user rules allow-list."""
+    try:
+        rules = Path("/etc/ufw/user.rules").read_text()
+    except OSError:
+        return True
+    return re.search(rf"dport\s+{port}\b", rules) is not None
+
+
 def check_firewall_status(port):
     """
-    Memberikan HINTS kepada user jika terdeteksi di Distro yang ketat.
+    Memberikan HINTS kepada user jika port diblokir oleh firewall yang ketat.
     """
     if env.get("is_wsl"):
         return
 
     if shutil.which("ufw"):
-        console.rich.print("\n[dim][Tip] If connection fails, allow port in UFW:[/dim]")
-        console.rich.print(f"[dim cyan]  sudo ufw allow {port}/tcp[/dim cyan]")
+        if _ufw_active() and not _ufw_allows_port(port):
+            console.rich.print("\n[dim][Tip] Connection to your phone may be blocked by UFW:[/dim]")
+            console.rich.print(f"[dim cyan]  sudo ufw allow {port}/tcp[/dim cyan]")
 
     elif shutil.which("firewall-cmd"):
         console.rich.print("\n[dim][Tip] If connection fails, allow port in FirewallD:[/dim]")

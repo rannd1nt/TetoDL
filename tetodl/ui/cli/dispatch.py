@@ -46,7 +46,7 @@ def execute_download(session: DownloadSession):
                             url,
                             target_dir=app_config.thumbnail_root,
                             target_format=fmt,
-                            smart_cover_mode=app_config.smart_cover_mode,
+                            smart_cover_mode=True,
                         )
                 return result
 

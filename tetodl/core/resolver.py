@@ -101,16 +101,6 @@ class ConfigResolver:
         if o.resolution:
             updates['max_video_resolution'] = o.resolution
 
-        # --- cover art ---
-        if o.no_cover:
-            updates['no_cover_mode'] = True
-            updates['smart_cover_mode'] = False
-        elif o.smart_cover:
-            updates['smart_cover_mode'] = True
-            updates['no_cover_mode'] = False
-        if o.force_crop:
-            updates['force_crop'] = True
-
         # --- feature toggles ---
         if o.lyrics:
             updates['lyrics_mode'] = True

@@ -1,6 +1,11 @@
 """
-Daemon URL display utility (--display flag).
-Parses ip a for LAN IP, reads port from config/service, prints URL + QR.
+Daemon URL display utility.
+Prints URL + QR for a running daemon, and exposes shared helpers used by
+both ``service daemon display`` and ``service serve``:
+
+* :func:`detect_lan_ip` -- cross-platform LAN IPv4 detection.
+* :func:`get_daemon_port` -- reads the configured daemon port.
+* :func:`is_service_running` -- checks whether the daemon process is alive.
 """
 import json
 import os
@@ -12,6 +17,7 @@ from ...core.domain.env import env
 from ...utils.console import console
 from ...utils.formatters import color
 from ...utils.i18n_keys import Keys
+from ...utils.network import get_best_ip
 
 
 def _get_ip_from_ip_a():
@@ -40,8 +46,59 @@ def _get_ip_from_ip_a():
     return None
 
 
-def _get_daemon_port():
-    """Read port from systemd service file, or fall back to default 7370."""
+def _get_ip_from_ipconfig():
+    """Parse `ipconfig` for a non-loopback IPv4 address (Windows)."""
+    try:
+        out = subprocess.check_output(
+            ["ipconfig"],
+            stderr=subprocess.DEVNULL, text=True
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+
+    for line in out.splitlines():
+        m = re.search(r'IPv4[^\n]*[:\s]+(\d+\.\d+\.\d+\.\d+)', line)
+        if m:
+            ip = m.group(1)
+            if not ip.startswith("127."):
+                return ip
+    return None
+
+
+def detect_lan_ip():
+    """Best-effort LAN IP detection, cross-platform.
+
+    Tries the native route first (``ip`` on Linux, ``ipconfig`` on
+    Windows), then falls back to :func:`get_best_ip`.
+    """
+    if env.get('is_windows'):
+        ip = _get_ip_from_ipconfig()
+    else:
+        ip = _get_ip_from_ip_a()
+    return ip or get_best_ip()
+
+
+def _pid_is_alive(pid: int) -> bool:
+    """Check whether a PID refers to a live process."""
+    if not pid or pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
+def get_daemon_port() -> int:
+    """Read the daemon port from the platform service state.
+
+    Order: systemd service file (Linux) -> ``<data_dir>/daemon.json``
+    (Windows) -> ``config.json`` ``daemon_port`` -> default 7370.
+    """
     service_path = env.get('service_path')
     config_path = env.get('config_path')
     if os.path.exists(service_path):
@@ -50,11 +107,22 @@ def _get_daemon_port():
         if m:
             return int(m.group(1))
 
+    daemon_json = Path(env.get('data_dir')) / 'daemon.json'
+    if daemon_json.exists():
+        try:
+            with open(daemon_json) as f:
+                cfg = json.load(f)
+            port = cfg.get('port')
+            if port:
+                return int(port)
+        except Exception:
+            pass
+
     if os.path.exists(config_path):
         try:
             with open(config_path) as f:
                 cfg = json.load(f)
-            port = cfg.get("daemon_port")
+            port = cfg.get('daemon_port')
             if port:
                 return int(port)
         except Exception:
@@ -63,8 +131,15 @@ def _get_daemon_port():
     return 7370
 
 
-def _is_service_running():
-    """Check if the systemd tetodl service is currently active."""
+def is_service_running() -> bool:
+    """Check whether the daemon service is currently active.
+
+    Linux: systemd unit is-active. Windows: PID from ``daemon.pid``.
+    """
+    if env.get('is_windows'):
+        pid = _read_windows_pid()
+        return _pid_is_alive(pid)
+
     try:
         out = subprocess.check_output(
             ["systemctl", "--user", "is-active", "tetodl.service"],
@@ -75,34 +150,42 @@ def _is_service_running():
         return False
 
 
+def _read_windows_pid() -> int:
+    """Read the PID stored by ``WindowsServiceManager`` at setup."""
+    pid_file = Path(env.get('data_dir')) / 'daemon.pid'
+    try:
+        return int(pid_file.read_text().strip())
+    except Exception:
+        return 0
+
+
 def display_daemon_url():
-    """Main entry for `tetodl daemon --display`."""
-    _service_path = env.get('service_path')
-    _config_path = env.get('config_path')
-    service_exists = os.path.exists(_service_path)
-    config_exists = os.path.exists(_config_path)
-
-    if not service_exists and not config_exists:
-        console.err(Keys.daemon.not_configured)
-        console.warn(Keys.daemon.run_setup)
-        console.warn(Keys.daemon.or_run_manually)
-        return 1
-
-    running = _is_service_running()
+    """Main entry for `tetodl service daemon display`."""
+    running = is_service_running()
     if not running:
-        if service_exists:
-            console.warn(Keys.daemon.registered_not_running)
-            console.warn(Keys.daemon.start_with_systemctl)
-        else:
-            console.warn(Keys.daemon.service_unavailable)
+        service_path = env.get('service_path')
+        config_path = env.get('config_path')
+        daemon_json = Path(env.get('data_dir')) / 'daemon.json'
+        has_state = (os.path.exists(service_path)
+                     or os.path.exists(config_path)
+                     or daemon_json.exists())
+        if not has_state:
+            console.err(Keys.daemon.not_configured)
             console.warn(Keys.daemon.run_setup)
+            console.warn(Keys.daemon.or_run_manually)
+        else:
+            console.warn(Keys.daemon.registered_not_running)
+            if not env.get('is_windows'):
+                console.warn(Keys.daemon.start_with_systemctl)
+            else:
+                console.warn(Keys.daemon.run_setup)
         return 1
 
-    # State 3: running
-    port = _get_daemon_port()
-    ip = _get_ip_from_ip_a()
+    # State: running
+    port = get_daemon_port()
+    ip = detect_lan_ip()
 
-    if not ip:
+    if not ip or ip.startswith("127."):
         console.err(Keys.daemon.could_not_detect_lan_ip)
         return 1
 
