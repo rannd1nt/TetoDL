@@ -292,10 +292,15 @@ class WindowsServiceManager(ServiceManager):
                 self._kill_pid(p)
 
     def _kill_pid(self, pid: int) -> None:
+        # /T kills the whole tree. The frozen binary is a PyInstaller
+        # onefile: a bootloader parent + an app child that actually owns
+        # the listening socket, so killing only the parent would orphan
+        # the child and leave the port bound.
         try:
             subprocess.run(
-                ["taskkill", "/PID", str(pid), "/F"],
+                ["taskkill", "/PID", str(pid), "/F", "/T"],
                 stderr=subprocess.DEVNULL,
+                timeout=20,
             )
         except Exception:
             pass
@@ -353,6 +358,7 @@ class WindowsServiceManager(ServiceManager):
             exec_path, "service", "serve",
             "--host", host, "--port", str(port),
             "--log-file", str(log_file),
+            "--quiet",
         ]
         try:
             proc = subprocess.Popen(
@@ -368,7 +374,24 @@ class WindowsServiceManager(ServiceManager):
             detail = tail or "no log output captured."
             console.err(Keys.service.windows_spawn_exited(log=detail))
             return 1
-        self._pid_file().write_text(str(proc.pid))
+        # The frozen binary is a PyInstaller onefile: ``proc.pid`` is the
+        # bootloader, but the app child owns the listening socket. Store
+        # the PID(s) that are actually bound so status/stop target the
+        # right process instead of an orphan.
+        bound = self._port_pids(port)
+        if not bound:
+            # Wait a little longer; uvicorn may still be starting up.
+            time.sleep(1.5)
+            bound = self._port_pids(port)
+        if not bound:
+            tail = self._read_log_tail(20)
+            detail = tail or "daemon started but no process bound the port."
+            console.err(Keys.service.windows_spawn_exited(log=detail))
+            return 1
+        # Prefer the bound (child) PID over the bootloader PID.
+        live = [p for p in bound if _pid_is_alive(p)]
+        target = live[0] if live else bound[0]
+        self._pid_file().write_text(str(target))
         self._conf_file().write_text(json.dumps({
             "host": host,
             "port": port,
@@ -376,7 +399,7 @@ class WindowsServiceManager(ServiceManager):
         }))
         self._create_shortcut(exec_path, cmd[1:])
         console.ok(Keys.service.windows_shortcut_created)
-        console.ok(Keys.service.windows_spawned(pid=proc.pid))
+        console.ok(Keys.service.windows_spawned(pid=target))
         console.ok(Keys.service.setup_complete)
         return 0
 

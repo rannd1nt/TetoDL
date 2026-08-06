@@ -936,6 +936,10 @@ def run_server(host: str, port: int, verbose: bool = False,
 
     os.environ["TETODL_PORT"] = str(port)
 
+    if env.get("is_windows"):
+        from ..cli.network import ensure_windows_firewall_allow
+        ensure_windows_firewall_allow(port)
+
     ip = detect_lan_ip()
     url = f"http://{ip}:{port}"
 

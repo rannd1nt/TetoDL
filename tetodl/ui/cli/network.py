@@ -4,6 +4,7 @@ Extracted from utils/network.py to separate CLI-specific concerns.
 """
 import re
 import shutil
+import subprocess
 from pathlib import Path
 from urllib.parse import quote
 
@@ -45,6 +46,33 @@ def check_firewall_status(port):
     elif shutil.which("firewall-cmd"):
         console.rich.print("\n[dim][Tip] If connection fails, allow port in FirewallD:[/dim]")
         console.rich.print(f"[dim cyan]  sudo firewall-cmd --add-port={port}/tcp --temporary[/dim cyan]")
+
+
+def ensure_windows_firewall_allow(port):
+    """Open an inbound TCP port in Windows Defender Firewall.
+
+    Without this rule the API server still binds ``0.0.0.0`` but the
+    OS firewall silently drops packets, so phones on the same Wi-Fi /
+    hotspot can't reach ``http://<lan-ip>:<port>`` even though the
+    server is running. Idempotent: netsh re-adding an identical rule
+    just replaces it.
+    """
+    if not env.get("is_windows"):
+        return
+    rule = f"TetoDL API {port}"
+    try:
+        subprocess.run(
+            ["netsh", "advfirewall", "firewall", "add", "rule",
+             f"name={rule}", "dir=in", "action=allow",
+             "protocol=TCP", f"localport={port}",
+             "profile=private"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=20,
+        )
+    except Exception:
+        pass
 
 
 def start_share_server(file_path_str: str, start_port=8989):

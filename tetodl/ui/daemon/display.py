@@ -79,9 +79,17 @@ def detect_lan_ip():
 
 
 def _pid_is_alive(pid: int) -> bool:
-    """Check whether a PID refers to a live process."""
+    """Check whether a PID refers to a live process.
+
+    NOTE: ``os.kill(pid, 0)`` is only safe on POSIX. On Windows, any
+    signal other than ``CTRL_C_EVENT``/``CTRL_BREAK_EVENT`` is sent via
+    ``TerminateProcess`` -- i.e. it *kills* the process instead of
+    probing it. So on Windows we probe with ``tasklist`` instead.
+    """
     if not pid or pid <= 0:
         return False
+    if env.get("is_windows"):
+        return _win_pid_is_alive(pid)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -91,6 +99,20 @@ def _pid_is_alive(pid: int) -> bool:
     except OSError:
         return False
     return True
+
+
+def _win_pid_is_alive(pid: int) -> bool:
+    """Probe a PID on Windows without killing it (tasklist filter)."""
+    try:
+        out = subprocess.check_output(
+            ["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=15,
+        )
+        return re.search(rf"\b{pid}\b", out) is not None
+    except Exception:
+        return False
 
 
 def get_daemon_port() -> int:

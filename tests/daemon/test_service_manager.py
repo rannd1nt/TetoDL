@@ -163,6 +163,8 @@ class TestWindowsServiceManager:
         proc.poll.return_value = None
         mock_popen = mocker.patch("subprocess.Popen", return_value=proc)
         mocker.patch("subprocess.run")
+        mocker.patch.object(mgr, "_port_pids", return_value=[4242])
+        mocker.patch("tetodl.ui.daemon.service._pid_is_alive", return_value=True)
 
         assert mgr.setup("0.0.0.0", 9000) == 0
 
@@ -299,7 +301,7 @@ class TestGetServiceManager:
         mgr._stop_old()
 
         calls = [c.args[0] if c.args else None for c in mock_run.call_args_list]
-        assert ["taskkill", "/PID", "5555", "/F"] in calls
+        assert ["taskkill", "/PID", "5555", "/F", "/T"] in calls
 
     def test_port_pids_parses_netstat(self, mocker):
         from tetodl.ui.daemon.service import WindowsServiceManager
@@ -315,3 +317,48 @@ class TestGetServiceManager:
 
         mgr = WindowsServiceManager()
         assert mgr._port_pids(7370) == [5555]
+
+    def test_setup_prefers_bound_child_pid(self, mocker, tmp_path):
+        """Windows setup stores the PID actually bound to the port, not the
+        bootloader PID (PyInstaller onefile parent/child split)."""
+        from tetodl.ui.daemon.service import WindowsServiceManager
+
+        mgr = WindowsServiceManager()
+        data_dir = tmp_path / "data"
+        mocker.patch.object(mgr, "_data_dir", return_value=data_dir)
+        mocker.patch.object(mgr, "_shortcut",
+                            return_value=tmp_path / "Startup" / "TetoDL Daemon.lnk")
+        mocker.patch.object(mgr, "_stop_old")
+        mocker.patch.object(mgr, "_create_shortcut")
+
+        proc = mocker.MagicMock()
+        proc.pid = 4242
+        proc.poll.return_value = None
+        mocker.patch("subprocess.Popen", return_value=proc)
+        mocker.patch("subprocess.run")
+        mocker.patch.object(mgr, "_port_pids", return_value=[7777])
+        mocker.patch("tetodl.ui.daemon.service._pid_is_alive", return_value=True)
+
+        assert mgr.setup("0.0.0.0", 9000) == 0
+        assert (data_dir / "daemon.pid").read_text() == "7777"
+
+    def test_setup_reports_port_not_bound(self, mocker, tmp_path):
+        """Windows setup fails loudly when no process binds the port."""
+        from tetodl.ui.daemon.service import WindowsServiceManager
+
+        mgr = WindowsServiceManager()
+        data_dir = tmp_path / "data"
+        mocker.patch.object(mgr, "_data_dir", return_value=data_dir)
+        mocker.patch.object(mgr, "_stop_old")
+        mocker.patch.object(mgr, "_create_shortcut")
+        mocker.patch.object(mgr, "_read_log_tail", return_value="boom")
+
+        proc = mocker.MagicMock()
+        proc.pid = 4242
+        proc.poll.return_value = None
+        mocker.patch("subprocess.Popen", return_value=proc)
+        mocker.patch("subprocess.run")
+        mocker.patch.object(mgr, "_port_pids", return_value=[])
+
+        assert mgr.setup("0.0.0.0", 9000) == 1
+        assert not (data_dir / "daemon.pid").exists()
