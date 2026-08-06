@@ -56,21 +56,42 @@ def ensure_windows_firewall_allow(port):
     hotspot can't reach ``http://<lan-ip>:<port>`` even though the
     server is running. Idempotent: netsh re-adding an identical rule
     just replaces it.
+
+    ``netsh advfirewall`` requires elevation, so when we're not running
+    as admin we detect the failure and print an actionable tip instead
+    of silently pretending the port is open.
     """
     if not env.get("is_windows"):
         return
     rule = f"TetoDL API {port}"
     try:
-        subprocess.run(
+        check = subprocess.run(
+            ["netsh", "advfirewall", "firewall", "show", "rule",
+             f"name={rule}"],
+            capture_output=True, text=True, timeout=20,
+        )
+        if check.returncode == 0 and f"name={rule}" in check.stdout:
+            return
+    except Exception:
+        pass
+    try:
+        add = subprocess.run(
             ["netsh", "advfirewall", "firewall", "add", "rule",
              f"name={rule}", "dir=in", "action=allow",
              "protocol=TCP", f"localport={port}",
-             "profile=private"],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            timeout=20,
+             "profile=any"],
+            capture_output=True, text=True, timeout=20,
         )
+        if add.returncode != 0:
+            console.rich.print(
+                "\n[dim][Tip] Phone can't reach the server if Windows Firewall blocks the port."
+            )
+            console.rich.print(
+                "[dim cyan]  Run this as Administrator (or once, permanently):[/dim cyan]"
+            )
+            console.rich.print(
+                f"[dim cyan]  netsh advfirewall firewall add rule name=\"TetoDL API {port}\" dir=in action=allow protocol=TCP localport={port} profile=any[/dim cyan]"
+            )
     except Exception:
         pass
 
