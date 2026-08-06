@@ -12,7 +12,19 @@ param(
 )
 
 $ProgressPreference = 'SilentlyContinue'
-$Host.UI.RawUI.WindowTitle = "TetoDL Installer"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+try { $Host.UI.RawUI.WindowTitle = "TetoDL Installer" } catch {}
+
+function Fail-Install([string]$msg) {
+    Write-Host ""
+    Write-Host "  [!] $msg" -ForegroundColor Red
+    Write-Host "  Download manually from: https://github.com/rannd1nt/tetodl/releases" -ForegroundColor Yellow
+    if (-not $Force) {
+        Read-Host "  Press Enter to exit"
+    }
+    exit 1
+}
 
 Write-Host ""
 Write-Host "  ------------------------------" -ForegroundColor Cyan
@@ -50,38 +62,61 @@ try {
     Write-Host "  Latest version: $tag" -ForegroundColor Green
 }
 catch {
-    Write-Host "  [!] Failed to fetch release info: $_" -ForegroundColor Red
-    Write-Host "  Download manually from: https://github.com/$repo/releases" -ForegroundColor Yellow
-    exit 1
+    Fail-Install "Failed to fetch release info: $_"
 }
 
 # ─────────────────────────────────────────────────
-# 4. Download binary
+# 4. Download binary (with retries + validation)
 # ─────────────────────────────────────────────────
 $downloadUrl = "https://github.com/$repo/releases/download/$tag/tetodl.exe"
 $outputPath = "$installDir\tetodl.exe"
 
-Write-Host ""
-Write-Host "  Downloading tetodl.exe" -NoNewline -ForegroundColor Yellow
+$downloaded = $false
+foreach ($attempt in 1..3) {
+    Write-Host ""
+    if ($attempt -gt 1) {
+        Write-Host "  Downloading tetodl.exe (attempt $attempt/3)" -ForegroundColor Yellow
+    } else {
+        Write-Host "  Downloading tetodl.exe" -NoNewline -ForegroundColor Yellow
+    }
 
-$wc = [System.Net.WebClient]::new()
-$task = $wc.DownloadFileTaskAsync($downloadUrl, $outputPath)
-$dots = 0
+    $wc = [System.Net.WebClient]::new()
+    try {
+        $task = $wc.DownloadFileTaskAsync($downloadUrl, $outputPath)
+        $dots = 0
+        $deadline = [datetime]::Now.AddMinutes(20)
+        while (-not $task.IsCompleted) {
+            if ([datetime]::Now -gt $deadline) {
+                $wc.CancelAsync()
+                break
+            }
+            Write-Host "`r  Downloading tetodl.exe$('.' * $dots)$(' ' * (3 - $dots))" -NoNewline
+            $dots = ($dots + 1) % 4
+            Start-Sleep -Milliseconds 500
+        }
+        $task.GetAwaiter().GetResult()
 
-while (-not $task.IsCompleted) {
-    Write-Host "`r  Downloading tetodl.exe$('.' * $dots)$(' ' * (3 - $dots))" -NoNewline
-    $dots = ($dots + 1) % 4
-    Start-Sleep -Milliseconds 500
+        if ((Test-Path $outputPath) -and (Get-Item $outputPath).Length -gt 5MB) {
+            $downloaded = $true
+            Write-Host "`r  Downloading tetodl.exe ... Done!" -ForegroundColor Green
+            break
+        }
+        Write-Host "`r  Downloading tetodl.exe ... invalid file (too small)." -ForegroundColor Red
+    }
+    catch {
+        Write-Host "`r  Downloading tetodl.exe ... failed: $_" -ForegroundColor Red
+    }
+    finally {
+        $wc.Dispose()
+        if (-not $downloaded -and (Test-Path $outputPath)) {
+            Remove-Item $outputPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+    if ($attempt -lt 3) { Start-Sleep -Seconds 3 }
 }
 
-try {
-    $task.GetAwaiter().GetResult()
-    Write-Host "`r  Downloading tetodl.exe ... Done!" -ForegroundColor Green
-} catch {
-    Write-Host "`r  [!] Download failed: $_" -ForegroundColor Red
-    exit 1
-} finally {
-    $wc.Dispose()
+if (-not $downloaded) {
+    Fail-Install "Could not download tetodl.exe"
 }
 
 # ─────────────────────────────────────────────────
@@ -107,6 +142,7 @@ if (-not $Force) {
     Write-Host ""
     $runNow = Read-Host "  Run tetodl now? (Y/n)"
     if ($runNow -ne "n") {
-        & "$installDir\tetodl.exe"
+        Write-Host "  Launching TetoDL in a new window..." -ForegroundColor Yellow
+        Start-Process -FilePath "$installDir\tetodl.exe"
     }
 }

@@ -192,12 +192,12 @@ Write-Host "`n========================================" -ForegroundColor Yellow
 Write-Host "  PHASE 2: Video Downloads" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 
-$r, $ec, $out = Run-Test "video-basic" "-v `"$TestUrl`""
+$r, $ec, $out = Run-Test "video-basic" "-V `"$TestUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
-$r, $ec, $out = Run-Test "video-resolution" "-v -r 720p `"$TestUrl`""
+$r, $ec, $out = Run-Test "video-resolution" "-V -r 720p `"$TestUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
@@ -209,47 +209,47 @@ Write-Host "`n========================================" -ForegroundColor Yellow
 Write-Host "  PHASE 3: Audio Downloads" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 
-$r, $ec, $out = Run-Test "audio-basic" "-a `"$TestUrl`""
+$r, $ec, $out = Run-Test "audio-basic" "-A `"$TestUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
-$r, $ec, $out = Run-Test "audio-format-mp3" "-a -f mp3 `"$TestUrl`""
+$r, $ec, $out = Run-Test "audio-format-mp3" "-A -f mp3 `"$TestUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
-$r, $ec, $out = Run-Test "audio-format-m4a" "-a -f m4a `"$TestUrl`""
+$r, $ec, $out = Run-Test "audio-format-m4a" "-A -f m4a `"$TestUrl`""
 Assert-ExitCode $ec 0
 Record $r
 
-$r, $ec, $out = Run-Test "audio-smart-cover" "-a --smart-cover `"$TestUrl`""
+$r, $ec, $out = Run-Test "audio-cover" "-A -c `"$TestUrl`""
 Assert-ExitCode $ec 0
 Record $r
 
-$r, $ec, $out = Run-Test "audio-no-cover" "-a --no-cover `"$TestUrl`""
+$r, $ec, $out = Run-Test "audio-no-enrich" "-A -N `"$TestUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "Processing cover|Embedding cover"
 Record $r
 
-$r, $ec, $out = Run-Test "audio-lyrics" "-a --lyrics `"$TestUrl`""
+$r, $ec, $out = Run-Test "audio-lyrics" "-A -l `"$TestUrl`""
 Assert-ExitCode $ec 0
 Record $r
 
-$r, $ec, $out = Run-Test "audio-cut" "-a --cut 0:10-0:20 `"$TestUrl`""
+$r, $ec, $out = Run-Test "audio-cut" "-A --cut 0:10-0:20 `"$TestUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
-$r, $ec, $out = Run-Test "audio-quiet" "-a --quiet `"$TestUrl`""
+$r, $ec, $out = Run-Test "audio-quiet" "-A -q `"$TestUrl`""
 Assert-ExitCode $ec 0
 Record $r
 
-$r, $ec, $out = Run-Test "audio-output-path" "-a -o `"$outDir\custom_output`" `"$TestUrl`""
+$r, $ec, $out = Run-Test "audio-output-path" "-A -o `"$outDir\custom_output`" `"$TestUrl`""
 Assert-ExitCode $ec 0
 Record $r
 
-$r, $ec, $out = Run-Test "audio-combo" "-a --smart-cover --lyrics -f m4a `"$TestUrl`""
+$r, $ec, $out = Run-Test "audio-combo" "-A -c -m -l -f m4a `"$TestUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
@@ -261,11 +261,11 @@ Write-Host "`n========================================" -ForegroundColor Yellow
 Write-Host "  PHASE 4: Thumbnail" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 
-$r, $ec, $out = Run-Test "thumbnail-only" "--thumbnail-only `"$TestUrl`""
+$r, $ec, $out = Run-Test "thumbnail-only" "-T `"$TestUrl`""
 Assert-ExitCode $ec 0
 Record $r
 
-$r, $ec, $out = Run-Test "thumbnail-format-png" "--thumbnail-only -f png `"$TestUrl`""
+$r, $ec, $out = Run-Test "thumbnail-format-png" "-T -f png `"$TestUrl`""
 Assert-ExitCode $ec 0
 Record $r
 
@@ -276,48 +276,57 @@ Write-Host "`n========================================" -ForegroundColor Yellow
 Write-Host "  PHASE 5: Playlists" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 
-$r, $ec, $out = Run-Test "playlist-basic" "-a `"$PlaylistUrl`""
+$r, $ec, $out = Run-Test "playlist-basic" "-A `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
-$r, $ec, $out = Run-Test "playlist-items" "-a --items 1 `"$PlaylistUrl`""
+$r, $ec, $out = Run-Test "playlist-items" "-A --items 1 `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
-$r, $ec, $out = Run-Test "playlist-async" "-a --async `"$PlaylistUrl`""
+$r, $ec, $out = Run-Test "playlist-async" "-A -a `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
-$r, $ec, $out = Run-Test "playlist-async-items" "-a --async --items 1 `"$PlaylistUrl`""
+$r, $ec, $out = Run-Test "playlist-async-items" "-A -a --items 1 `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
-$r, $ec, $out = Run-Test "playlist-group" "-a --group `"TestGroup`" `"$PlaylistUrl`""
+$r, $ec, $out = Run-Test "playlist-group" "-A -g `"TestGroup`" `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
 Record $r
 
-$r, $ec, $out = Run-Test "playlist-m3u" "-a --m3u `"$PlaylistUrl`""
+$r, $ec, $out = Run-Test "playlist-m3u" "-A --m3u `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
-$r, $ec, $out = Run-Test "playlist-async-group-m3u" "-a --async --group TestFull --m3u `"$PlaylistUrl`""
+$r, $ec, $out = Run-Test "playlist-async-group-m3u" "-A -a -g TestFull --m3u `"$PlaylistUrl`""
 Assert-ExitCode $ec 0
 Assert-NotMatch $out "ffmpeg is not installed"
 Record $r
 
 # ---------------------------------------------------------------------------
-# 6. DAEMON (skipped — deadlock in GHA pipe redirection)
+# 6. SERVICE (non-interactive smoke — daemon-run skipped: deadlock in CI pipes)
 # ---------------------------------------------------------------------------
 Write-Host "`n========================================" -ForegroundColor Yellow
-Write-Host "  PHASE 6: Daemon (SKIPPED)" -ForegroundColor Yellow
+Write-Host "  PHASE 6: Service" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
-Write-Host "  SKIPPED (pipe deadlock in CI)" -ForegroundColor DarkYellow
+
+$r, $ec, $out = Run-Test "service-help" "service --help"
+Assert-Match $out "(serve|daemon)"
+Record $r
+
+$r, $ec, $out = Run-Test "service-status" "service daemon status"
+Assert-Match $out "(Registered|Port)"
+Record $r
+
 $skipped += "daemon-run"
+$skipped += "service-serve"
 
 # ---------------------------------------------------------------------------
 # 8. YT-DLP UPDATE (optional, requires network)

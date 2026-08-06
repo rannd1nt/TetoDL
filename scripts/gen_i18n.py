@@ -54,11 +54,7 @@ def generate_classes(name: str, data: dict, path_parts: list | None = None) -> l
                 unique_vars = list(dict.fromkeys(vars_in_string))
 
                 def param_type(name: str) -> str:
-                    if name == "error":
-                        return "Exception | str | int"
-                    if name == "path":
-                        return "str | int | Path"
-                    return "str | int"
+                    return "Any"
 
                 args_str = ", ".join(f"{v}: {param_type(v)}" for v in unique_vars)
                 dict_str = ", ".join(f'"{v}": {v}' for v in unique_vars)
@@ -104,7 +100,7 @@ def generate_classes(name: str, data: dict, path_parts: list | None = None) -> l
     return functor_lines + class_lines + [""]
 
 def run_generator():
-    locales_path = Path("tetodl/locales/en.json")
+    locales_path = Path("tetodl/utils/locales/en.json")
     output_path = Path("tetodl/utils/i18n_keys.py")
     
     with open(locales_path, 'r', encoding='utf-8') as f:
@@ -114,8 +110,7 @@ def run_generator():
     
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write('"""AUTO-GENERATED FILE. DO NOT EDIT."""\n')
-        f.write('from pathlib import Path\n')
-        f.write('from typing import TypeAlias, Tuple, Dict, Any, Union\n\n')
+        f.write('from typing import Any, TypeAlias, Tuple, Dict, Union\n\n')
         f.write('I18nKey: TypeAlias = Union[str, Tuple[str, Dict[str, Any]]]\n\n')
         
         f.write("\n".join(final_lines))

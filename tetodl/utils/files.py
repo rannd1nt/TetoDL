@@ -5,30 +5,43 @@ import atexit
 import glob
 import os
 import shutil
+import tempfile
+from pathlib import Path
 
 from tetodl.utils.tracer import trace, traced
 
-from ..constants import TEMP_DIR
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
 
 
 class TempManager:
     """Singleton helper for managing temporary files."""
-    
-    @staticmethod
-    def get_temp_dir():
-        """Ensure that the temp folder exists and return its path."""
-        if not TEMP_DIR.exists():
-            TEMP_DIR.mkdir(parents=True, exist_ok=True)
-        return TEMP_DIR
+
+    _temp_dir = None
+
+    @classmethod
+    def _resolve_temp_dir(cls):
+        if cls._temp_dir is None:
+            cls._temp_dir = Path(tempfile.gettempdir()) / "TetoDL"
+        return cls._temp_dir
 
     @staticmethod
-    def cleanup():
+    def get_temp_dir(temp_dir=None):
+        """Ensure that the temp folder exists and return its path."""
+        if temp_dir is None:
+            temp_dir = TempManager._resolve_temp_dir()
+        if not temp_dir.exists():
+            temp_dir.mkdir(parents=True, exist_ok=True)
+        return temp_dir
+
+    @staticmethod
+    def cleanup(temp_dir=None):
         """Delete all contents of the TetoDL temp folder."""
-        if TEMP_DIR.exists():
+        if temp_dir is None:
+            temp_dir = TempManager._resolve_temp_dir()
+        if temp_dir.exists():
             try:
-                for item in TEMP_DIR.iterdir():
+                for item in temp_dir.iterdir():
                     if item.is_dir():
                         shutil.rmtree(item)
                     else:

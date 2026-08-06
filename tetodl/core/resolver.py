@@ -13,7 +13,7 @@ See Also
 
 from typing import Any
 
-from .models import AppConfig, DownloadSession
+from .domain.models import AppConfig, DownloadSession
 
 
 class ConfigResolver:
@@ -28,7 +28,7 @@ class ConfigResolver:
 
     Examples
     --------
-    >>> from tetodl.core.models import AppConfig
+    >>> from tetodl.core.domain.models import AppConfig
     >>> from tetodl.core.resolver import ConfigResolver
     >>> base = AppConfig()
     >>> resolver = ConfigResolver(base)
@@ -66,7 +66,7 @@ class ConfigResolver:
 
         Examples
         --------
-        >>> from tetodl.core.models import AppConfig, DownloadSession
+        >>> from tetodl.core.domain.models import AppConfig, DownloadSession
         >>> from tetodl.core.resolver import ConfigResolver
         >>> base = AppConfig()
         >>> resolver = ConfigResolver(base)
@@ -100,16 +100,6 @@ class ConfigResolver:
             updates['video_codec'] = o.codec
         if o.resolution:
             updates['max_video_resolution'] = o.resolution
-
-        # --- cover art ---
-        if o.no_cover:
-            updates['no_cover_mode'] = True
-            updates['smart_cover_mode'] = False
-        elif o.smart_cover:
-            updates['smart_cover_mode'] = True
-            updates['no_cover_mode'] = False
-        if o.force_crop:
-            updates['force_crop'] = True
 
         # --- feature toggles ---
         if o.lyrics:

@@ -7,7 +7,6 @@ import subprocess
 
 from tetodl.utils.tracer import trace, traced
 
-from ..constants import IS_TERMUX
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
 
@@ -46,7 +45,8 @@ def scan_media_files(target_path):
     --------
     :data:`tetodl.constants.IS_TERMUX` : Platform constant that gates the scan logic.
     """
-    if not IS_TERMUX:
+    _is_termux = shutil.which("termux-media-scan") is not None
+    if not _is_termux:
         return
 
     if not os.path.exists(target_path):
@@ -54,7 +54,7 @@ def scan_media_files(target_path):
             return
 
     try:
-        with traced('starting media scan'), console.spin("Scanning media..."):
+        with traced('starting media scan'), console.spin(Keys.media.scanning):
             if shutil.which("termux-media-scan"):
                 cmd = ["termux-media-scan"]
                 if os.path.isdir(target_path):

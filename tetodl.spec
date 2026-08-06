@@ -48,6 +48,14 @@ HIDDEN = [
     "pydantic", "requests", "bs4", "colorama", "rich",
     "questionary", "qrcode",
     "fastapi", "uvicorn",
+    "uvicorn.logging", "uvicorn.config", "uvicorn.server",
+    "uvicorn.loops", "uvicorn.loops.auto",
+    "uvicorn.protocols", "uvicorn.protocols.http",
+    "uvicorn.protocols.http.auto", "uvicorn.protocols.http.h11_impl",
+    "uvicorn.protocols.websockets", "uvicorn.protocols.websockets.auto",
+    "uvicorn.lifespan", "uvicorn.lifespan.on", "uvicorn.lifespan.off",
+    "uvicorn.middleware", "uvicorn.middleware.proxy_headers",
+    "uvicorn.middleware.message_logger",
 ]
 
 # ── Excludes ───────────────────────────────────────────────────
@@ -63,9 +71,9 @@ ROOT = Path(__spec__.origin).resolve().parent if __spec__ else Path.cwd()
 datas = []
 if IS_WIN_BUILD and _ffmpeg_data:
     datas.append((_ffmpeg_data, "."))
-for pattern, dest in [("tetodl/locales/*.json", "tetodl/locales"),
-                       ("tetodl/utils/share_static/*", "tetodl/utils/share_static"),
-                       ("tetodl/daemon/static/*", "tetodl/daemon/static"),
+for pattern, dest in [("tetodl/utils/locales/*.json", "tetodl/utils/locales"),
+                       ("tetodl/ui/static/*", "tetodl/ui/static"),
+                       ("tetodl/ui/daemon/static/*", "tetodl/ui/daemon/static"),
                        ("assets/*", "assets")]:
     for f in ROOT.glob(pattern):
         if f.is_file():

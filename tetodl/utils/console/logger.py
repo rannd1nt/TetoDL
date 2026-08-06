@@ -16,6 +16,7 @@ import sys
 from dataclasses import dataclass
 
 from colorama import init
+from rich.console import Console as RichConsole
 from typing_extensions import deprecated
 
 from ..i18n import get_text
@@ -83,6 +84,18 @@ class Console:
         auto-detected :class:`LogTheme`."""
         self.state = ConsoleState()
         self.theme: LogTheme = detect_terminal_theme()
+        self._rich: RichConsole | None = None
+
+    @property
+    def rich(self) -> RichConsole:
+        """Access the underlying :class:`rich.console.Console` instance.
+
+        Use this for rich-formatted output (tables, panels, markup)
+        that bypasses the themed ``ok()``/``warn()``/etc. methods.
+        """
+        if self._rich is None:
+            self._rich = RichConsole()
+        return self._rich
 
     def _resolve_text(self, message: str | I18nKey, **kwargs) -> str:
         """Resolve an i18n key into a display string, substituting

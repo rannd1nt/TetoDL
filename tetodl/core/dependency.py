@@ -15,13 +15,14 @@ import os
 import shutil
 import sys
 import time
+from pathlib import Path
 
 import requests
 
-from ..constants import IS_BINARY, IS_WINDOWS, YTDLP_OVERRIDE_DIR
 from ..utils.console import console
 from ..utils.i18n_keys import Keys
-from . import config as cfg
+from .domain import config as cfg
+from .domain.env import env
 
 
 def check_python_version():
@@ -119,7 +120,7 @@ def check_ffmpeg():
         except Exception:
             pass
 
-    if IS_WINDOWS and IS_BINARY:
+    if env.get("is_windows") and env.get("is_binary"):
         console.warn(Keys.dependency.ffmpeg_not_found)
         return True  # non-fatal on Windows binary — PyAV handles thumbnails
 
@@ -218,7 +219,7 @@ def get_ytdlp_version_info():
         
     try:
         import yt_dlp
-        raw_current = yt_dlp.version.__version__
+        raw_current = yt_dlp.version.__version__  # type: ignore[attr-defined]
         
         response = requests.get("https://pypi.org/pypi/yt-dlp/json", timeout=3)
         if response.status_code == 200:
@@ -248,18 +249,18 @@ def _update_ytdlp_binary_mode(latest_version: str) -> bool:
 
     try:
         print()
-        console.proc("Downloading yt-dlp update (binary mode)...")
+        console.proc(Keys.ui.updating_ytdlp)
 
         resp = requests.get("https://pypi.org/pypi/yt-dlp/json", timeout=10)
         if resp.status_code != 200:
-            console.err("Failed to fetch yt-dlp release info from PyPI")
+            console.err(Keys.ui.failed_fetch_ytdlp_release)
             return False
 
         data = resp.json()
         pypi_latest = data['info']['version']
 
         if pypi_latest != latest_version:
-            console.err(f"Version mismatch from PyPI: expected {latest_version}, got {pypi_latest}")
+            console.err(Keys.ui.pypi_version_mismatch(expected=latest_version, actual=pypi_latest))
             return False
 
         wheel_url = None
@@ -271,43 +272,45 @@ def _update_ytdlp_binary_mode(latest_version: str) -> bool:
                     break
 
         if not wheel_url:
-            console.err("No compatible wheel found for yt-dlp on PyPI")
+            console.err(Keys.ui.no_compatible_wheel)
             return False
 
         wheel_resp = requests.get(wheel_url, timeout=30)
         if wheel_resp.status_code != 200:
-            console.err("Failed to download yt-dlp wheel")
+            console.err(Keys.ui.failed_download_wheel)
             return False
 
-        if YTDLP_OVERRIDE_DIR.exists():
-            shutil.rmtree(YTDLP_OVERRIDE_DIR)
-        YTDLP_OVERRIDE_DIR.mkdir(parents=True, exist_ok=True)
+        _override = Path(env.get("ytdlp_override_dir"))
+        if _override.exists():
+            shutil.rmtree(_override)
+        _override.mkdir(parents=True, exist_ok=True)
 
         with zipfile.ZipFile(io.BytesIO(wheel_resp.content)) as zf:
-            zf.extractall(path=str(YTDLP_OVERRIDE_DIR))
+            zf.extractall(path=str(_override))
 
-        if str(YTDLP_OVERRIDE_DIR) not in sys.path:
-            sys.path.insert(0, str(YTDLP_OVERRIDE_DIR))
+        if str(_override) not in sys.path:
+            sys.path.insert(0, str(_override))
 
         for key in list(sys.modules.keys()):
             if key.startswith('yt_dlp') or key.startswith('yt-dlp'):
                 del sys.modules[key]
 
         import yt_dlp
-        new_version = getattr(yt_dlp.version, '__version__', 'unknown')
+        new_version = getattr(yt_dlp.version, '__version__', 'unknown')  # type: ignore[attr-defined]
 
         if new_version == latest_version:
-            console.ok(f"yt-dlp updated to {new_version}")
+            console.ok(Keys.ui.core_engine_updated_to(version=new_version))
         else:
-            console.warn(f"yt-dlp override installed (version: {new_version}, expected: {latest_version})")
+            console.warn(Keys.ui.ytdlp_override_installed(version=new_version, expected=latest_version))
 
         return True
 
     except Exception as e:
-        console.err(f"yt-dlp update failed: {e}")
-        if YTDLP_OVERRIDE_DIR.exists():
+        console.err(Keys.maint.update_failed(error=e))
+        override_dir = Path(env.get("ytdlp_override_dir"))
+        if override_dir.exists():
             try:
-                shutil.rmtree(YTDLP_OVERRIDE_DIR)
+                shutil.rmtree(override_dir)
             except Exception:
                 pass
         return False

@@ -15,8 +15,8 @@ Usage::
 
 from abc import ABC, abstractmethod
 
-from .models import MediaInfo
-from .step import PipelineError
+from .domain.models import MediaInfo
+from .domain.step import PipelineError
 
 
 class Extractor(ABC):

@@ -77,46 +77,41 @@ Basic flags to control what and how to download.
 
 | Flag | Argument | Description |
 |:-----|:-----|:-----|
-| `-a`, `--audio` | - | Audio Mode. Download & convert to audio. |
-| `-v`, `--video` | - | Video Mode. Download video (Default). |
-| `--thumbnail-only` | - | Download Cover Art/Thumbnail only (No media file). |
-|`--async`| - | Concurrent Mode. Download playlists using multi-threading.<br> This mode does not display detailed logs for each download process.|
-|`--search`| QUERY | Search YouTube interactively. (Replaces URL argument). |
-|`-l`, `--limit`| NUM | (Requires `--search`) Number of search results (Default: 5). |
+| `-A`, `--audio` | - | Audio Mode. Download & convert to audio. |
+| `-V`, `--video` | - | Video Mode. Download video (Default). |
+| `-T`, `--thumbnail` | - | Download Cover Art/Thumbnail only (No media file). |
+| `-S`, `--search` | QUERY | Search YouTube interactively. (Replaces URL argument). |
+| `-a`, `--async`| - | Concurrent Mode. Download playlists using multi-threading. |
+| `-l`, `--limit`| NUM | (Requires `--search`) Number of search results (Default: 5). |
 | `-f`, `--format`| FORMAT | Force format: <br> **• Audio:** `mp3`, `m4a`, `opus` <br> **• Video:** `mp4`, `mkv` <br> **• Thumb**: `jpg`, `png`, `webp` |
-|`-r`, `--resolution`| RES | Max video resolution limit: `480p`, `720p`, `1080p`, `2k`, `4k`, `8k`. |
-| `-c`, `--codec` | CODEC | Set video codec: `default` (speed), `h264` (compat), `h265` (size).|
-|`-o`, `--output`| PATH | Save to a custom output directory (Overrides TUI Base Path). |
-|`--quiet`| - | Suppress process logs and progress hook |
+| `-r`, `--resolution`| RES | Max video resolution limit: `480p`, `720p`, `1080p`, `2k`, `4k`, `8k`. |
+| `--codec` | CODEC | Set video codec: `default` (speed), `h264` (compat), `h265` (size).|
+| `-o`, `--output`| PATH | Save to a custom output directory (Overrides TUI Base Path). |
+| `-q`, `--quiet`| - | Suppress process logs and progress hook |
 
 **2. Metadata & Processing**<br>
-Control FFmpeg slicing and the Smart Metadata engine.
+Control enrichment flags and FFmpeg slicing.
 
 | Flag | Argument | Description |
 |:-----|:-----|:-----|
-| `--cut` | TIME | Trim media. Formats:<br>• `Start-End`: Specific range (e.g. `1:30-2:00`).<br>• `Start-`: From timestamp to end (e.g. `1:30-`).<br>• `-End`: From beginning to timestamp (e.g. `-2:00`). |
-|`--smart-cover`| - | **Force ON** Smart Cover (iTunes Search & Metadata) for this session. |
-|`--lyrics` | - | Fetch & embed lyrics from Genius. |
+| `-c`, `--cover` | - | Fetch & embed cover art (auto-enabled for YTM/Spotify). |
+| `-m`, `--metadata` | - | Fetch & embed rich metadata (auto-enabled for YTM/Spotify). |
+| `-l`, `--lyrics` | - | Fetch & embed lyrics from Genius. |
 | `--romaji` | - | Prioritize Romanized lyrics (e.g. for JP/KR songs). |
-|`--no-cover`| - | **Force OFF** (Kill Switch). Disable all cover art, thumbnails, and metadata embedding. |
-| `--force-crop` | - | Force crop YouTube thumbnail to 1:1 square if iTunes & Genius fails. Require `--smart-cover`.|
+| `-N`, `--no-enrich`| - | Disable ALL enrichment (cover, metadata, lyrics). |
+| `--cut` | TIME | Trim media. Formats:<br>• `Start-End`: Specific range (e.g. `1:30-2:00`).<br>• `Start-`: From timestamp to end (e.g. `1:30-`).<br>• `-End`: From beginning to timestamp (e.g. `-2:00`). |
 
 **3. Organization & Playlist**<br>
 Manage folders, file selection, and archives.
 
 | Flag | Argument | Description |
 |:-----|:-----|:-----|
-| `--group` | [NAME]| Save to a subfolder. If `NAME` is empty, uses Playlist/Album title. |
-|`--m3u` | - | Generate `.m3u8` playlist file (Requires `--group`). |
-| `--zip` | - | Archive the output into a `.zip` file. (Requires `--group` OR `--share-temp`). |
-| `--items` |	LIST | Download specific indices (e.g., `--items 1,3,5-10`). |
-
-**4. Network Sharing (Web Suite)**<br>
-Host files via HTTP Server & QR Code.
-| Flag | Argument | Description |
-|:-----|:-----|:-----|
-| `--share` | [PATH] | Staging/Local Mode. <br> • With URL: Downloads delta (missing files) to staging → Hosts → Merges to root. <br> • With Path: Hosts existing local folder.| 
-| `--share-temp` | - | Volatile Mode. <br> Downloads to Temp → Hosts → Auto-Deletes on exit.
+| `-g`, `--group` | [NAME]| Save to a subfolder. If `NAME` is empty, uses Playlist/Album title. |
+| `--m3u` | - | Generate `.m3u8` playlist file (Requires `--group`). |
+| `-z`, `--zip` | - | Archive the output into a `.zip` file. |
+| `--items` | LIST | Download specific indices (e.g., `--items 1,3,5-10`). |
+| `-s`, `--share` | [PATH] | Staging/Local Mode. <br> • With URL: Downloads delta (missing files) to staging → Hosts → Merges to root. <br> • With Path: Hosts existing local folder.|
+| `-t`, `--temp` | - | Volatile Mode. Downloads to Temp → Hosts → Auto-Deletes on exit (Requires `-s`). |
 
 
 **5. Utility, Maintance & History**<br>
@@ -183,30 +178,27 @@ tetodl "https://youtube.be/playlist" -a --async
 **Music Mode (M4A + Smart Metadata)**<br>
 Forces audio conversion and activates the metadata engine.
 ```bash
-tetodl "https://youtu.be/track" -a -f m4a --smart-cover --lyrics
+ tetodl "https://youtu.be/track" -A -f m4a -c -m -l
 ```
 
-What is `--smart-cover`?<br>
-It uses a 3-Tier Logic to find the best metadata:
-* **iTunes API :** Searches for official Album Art(HD) & Metadata.
-* **Genius API :** Fetches Lyrics, Year, and fallback Cover Art if iTunes fails.
-* **YouTube Fallback :** If both fail, uses the video thumbnail (Auto-cropped 1:1 if `--force-crop` is used).
+Enrichment flags (`-c`, `-m`, `-l`) are automatically enabled for YouTube Music / Spotify sources.
+For regular YouTube audio, specify them explicitly.
 
 ### 3. Video & Asset Extraction
 **Power User Video Mode:**<br>
 Full control. Fetches high-quality video in **.mkv**, caps resolution at 1080p, forces h264 codec for compatibility, and saves to a custom path.
 ```bash
-tetodl "https://youtu.be/track" -v -f mkv -r 1080p -c h264 -o "/home/user/Videos"
+ tetodl "https://youtu.be/track" -V -f mkv -r 1080p --codec h264 -o "/home/user/Videos"
 ```
 
 **Thumbnail Extraction:**<br>
 Download the highest resolution cover art/thumbnail without the media file.
 ```bash
 # Save youtube thumbnail as PNG
-tetodl "https://youtu.be/track" --thumbnail-only -f png
+tetodl "https://youtu.be/track" -T -f png
 
-# You can also use smart cover mode here to get music cover art
-tetodl "https://youtu.be/track" --thumbnail-only --smart-cover -f jpg
+# With cover art from enrichment
+tetodl "https://youtu.be/track" -T -c -f jpg
 ```
 
 ### 4. Precision Editing (Cut & Raw)
@@ -221,7 +213,7 @@ tetodl "https://youtu.be/track" -a --cut 21:20-22:50
 Ideal for video editors who need raw sound effects without embedded images/tags.
 
 ```bash
-tetodl "https://youtu.be/track" -a --no-cover
+tetodl "https://youtu.be/track" -A -N
 ```
 
 ### 5. Interactive Discovery
@@ -233,7 +225,7 @@ tetodl --search "Never Gonna Give You Up"
 
 # Advanced Search + Download Workflow
 # Searches, selects, downloads as Audio, and fetches Full Metadata and Lyrics.
-tetodl --search "Joji Sanctuary" -a -f m4a --smart-cover --lyrics
+tetodl -S "Joji Sanctuary" -A -f m4a -c -m -l
 ```
 
 ### 6. Organization (Groups)
@@ -289,10 +281,10 @@ Download content from YouTube and immediately share it.
 Downloads to a temporary folder (ignoring your existing library). Hosts the files, then permanently deletes them when the server stops.
     ```bash
     # Perfect for quick transfers without cluttering your storage.
-    tetodl --search "Rust Programming Course for babies" -v --share-temp
+    tetodl -S "Rust Programming Course for babies" -V -s -t
 
     # Or use zip to make it easier to share playlists/albums
-    tetodl "https://youtu.be/playlist" -a --share-temp --zip
+    tetodl "https://youtu.be/playlist" -A -s -t -z
     ```
 
 - **Staging Share (`--share`):**<br>

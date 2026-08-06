@@ -201,8 +201,8 @@ echo "========================================"
 echo "  PHASE 2: Video Downloads"
 echo "========================================"
 
-execute_and_assert "video-basic" "-v \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
-execute_and_assert "video-resolution" "-v -r 720p \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "video-basic" "-V \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "video-resolution" "-V -r 720p \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
 
 # ===========================================================================
 # PHASE 3: Audio Downloads (core features)
@@ -212,16 +212,16 @@ echo "========================================"
 echo "  PHASE 3: Audio Downloads"
 echo "========================================"
 
-execute_and_assert "audio-basic" "-a \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
-execute_and_assert "audio-format-mp3" "-a -f mp3 \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
-execute_and_assert "audio-format-m4a" "-a -f m4a \"$TEST_URL\"" --exit 0
-execute_and_assert "audio-smart-cover" "-a --smart-cover \"$TEST_URL\"" --exit 0
-execute_and_assert "audio-no-cover" "-a --no-cover \"$TEST_URL\"" --exit 0 --not-match "Processing cover|Embedding cover"
-execute_and_assert "audio-lyrics" "-a --lyrics \"$TEST_URL\"" --exit 0
-execute_and_assert "audio-cut" "-a --cut 0:10-0:20 \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
-execute_and_assert "audio-quiet" "-a --quiet \"$TEST_URL\"" --exit 0
-execute_and_assert "audio-output-path" "-a -o \"$OUT_DIR/custom_output\" \"$TEST_URL\"" --exit 0
-execute_and_assert "audio-combo" "-a --smart-cover --lyrics -f m4a \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "audio-basic" "-A \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "audio-format-mp3" "-A -f mp3 \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "audio-format-m4a" "-A -f m4a \"$TEST_URL\"" --exit 0
+execute_and_assert "audio-cover" "-A -c \"$TEST_URL\"" --exit 0
+execute_and_assert "audio-no-enrich" "-A -N \"$TEST_URL\"" --exit 0 --not-match "Processing cover|Embedding cover"
+execute_and_assert "audio-lyrics" "-A -l \"$TEST_URL\"" --exit 0
+execute_and_assert "audio-cut" "-A --cut 0:10-0:20 \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "audio-quiet" "-A -q \"$TEST_URL\"" --exit 0
+execute_and_assert "audio-output-path" "-A -o \"$OUT_DIR/custom_output\" \"$TEST_URL\"" --exit 0
+execute_and_assert "audio-combo" "-A -c -m -l -f m4a \"$TEST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
 
 # ===========================================================================
 # PHASE 4: Thumbnail
@@ -231,8 +231,8 @@ echo "========================================"
 echo "  PHASE 4: Thumbnail"
 echo "========================================"
 
-execute_and_assert "thumbnail-only" "--thumbnail-only \"$TEST_URL\"" --exit 0
-execute_and_assert "thumbnail-format-png" "--thumbnail-only -f png \"$TEST_URL\"" --exit 0
+execute_and_assert "thumbnail-only" "-T \"$TEST_URL\"" --exit 0
+execute_and_assert "thumbnail-format-png" "-T -f png \"$TEST_URL\"" --exit 0
 
 # ===========================================================================
 # PHASE 5: Playlists
@@ -242,23 +242,26 @@ echo "========================================"
 echo "  PHASE 5: Playlists"
 echo "========================================"
 
-execute_and_assert "playlist-basic" "-a \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
-execute_and_assert "playlist-items" "-a --items 1 \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
-execute_and_assert "playlist-async" "-a --async \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
-execute_and_assert "playlist-async-items" "-a --async --items 1 \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
-execute_and_assert "playlist-group" "-a --group TestGroup \"$PLAYLIST_URL\"" --exit 0
-execute_and_assert "playlist-m3u" "-a --m3u \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
-execute_and_assert "playlist-async-group-m3u" "-a --async --group TestFull --m3u \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "playlist-basic" "-A \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "playlist-items" "-A --items 1 \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "playlist-async" "-A -a \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "playlist-async-items" "-A -a --items 1 \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "playlist-group" "-A -g TestGroup \"$PLAYLIST_URL\"" --exit 0
+execute_and_assert "playlist-m3u" "-A --m3u \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
+execute_and_assert "playlist-async-group-m3u" "-A -a -g TestFull --m3u \"$PLAYLIST_URL\"" --exit 0 --not-match "ffmpeg is not installed"
 
 # ===========================================================================
-# PHASE 6: Daemon
+# PHASE 6: Service (daemon)
 # ===========================================================================
 echo ""
 echo "========================================"
-echo "  PHASE 6: Daemon"
+echo "  PHASE 6: Service"
 echo "========================================"
 
-run_test_blocking "daemon-run" "daemon -r" 8 || true
+run_test_blocking "service-serve" "service serve" 8 || true
+run_test_blocking "service-serve-noninteractive" "service serve -q" 8 || true
+execute_and_assert "service-help" "service --help" --exit 0 --match "serve|daemon"
+execute_and_assert "service-status" "service daemon status" --exit 0 --match "Registered|Port"
 
 # ===========================================================================
 # PHASE 7: yt-dlp Update Check (optional)

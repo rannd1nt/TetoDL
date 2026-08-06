@@ -46,8 +46,8 @@ include = ["tetodl*"]
 version = {attr = "tetodl.constants.APP_VERSION"}
 
 [tool.pytest.ini_options]
-testpaths = ["tetodl/tests"]
-pythonpath = ["tetodl"]
+testpaths = ["tests"]
+pythonpath = ["."]
 filterwarnings = ["ignore::DeprecationWarning"]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -57,7 +57,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["tetodl"]
-omit = ["tetodl/tests/*"]
+omit = ["tests/*"]
 
 [tool.coverage.report]
 exclude_lines = [

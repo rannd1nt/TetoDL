@@ -77,9 +77,22 @@ OUTPUT_PATH="${INSTALL_DIR}/tetodl"
 
 echo -e "${YELLOW}  Downloading ${BINARY_NAME} ...${NC}"
 if command -v curl &>/dev/null; then
-    curl -sL "$DOWNLOAD_URL" -o "$OUTPUT_PATH"
+    curl -fL --retry 3 --retry-delay 2 "$DOWNLOAD_URL" -o "$OUTPUT_PATH" || {
+        echo -e "${RED}  [!] Download failed${NC}"
+        echo -e "${YELLOW}  Download manually from: https://github.com/${REPO}/releases${NC}"
+        exit 1
+    }
 elif command -v wget &>/dev/null; then
-    wget -q "$DOWNLOAD_URL" -O "$OUTPUT_PATH"
+    wget -q "$DOWNLOAD_URL" -O "$OUTPUT_PATH" || {
+        echo -e "${RED}  [!] Download failed${NC}"
+        echo -e "${YELLOW}  Download manually from: https://github.com/${REPO}/releases${NC}"
+        exit 1
+    }
+fi
+
+if [ ! -s "$OUTPUT_PATH" ]; then
+    echo -e "${RED}  [!] Downloaded file is empty (invalid response)${NC}"
+    exit 1
 fi
 
 chmod +x "$OUTPUT_PATH"

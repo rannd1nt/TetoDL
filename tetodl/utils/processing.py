@@ -2,18 +2,22 @@
 Core processing utilities for extraction, validation, and formatting.
 Absorbs logic from old 'yt_helpers' and 'extract_video_id'.
 """
+import os
 import re
+import tempfile
 
 from tetodl.utils.tracer import trace, traced
 
-from ..constants import YTDLP_CACHE_DIR
-from ..core import config as cfg
 from ..utils.network import is_youtube_music_url
+
+
+def _default_ytdlp_cache_dir() -> str:
+    return os.path.join(tempfile.gettempdir(), "TetoDL", "ytdlp_cache")
 
 try:
     import yt_dlp as yt
 except ImportError:
-    yt = None
+    yt = None  # type: ignore[assignment]
 
 # --- ID EXTRACTION  ---
 def extract_video_id(url):
@@ -32,8 +36,8 @@ def extract_video_id(url):
 
 
 # --- FORMAT STRING BUILDERS ---
-def get_audio_extension():
-    return cfg.audio_quality
+def get_audio_extension(audio_quality: str = "m4a"):
+    return audio_quality
 
 def get_audio_format_string(audio_format):
     if audio_format == "m4a":
@@ -63,20 +67,22 @@ def build_audio_postprocessors(audio_format, is_youtube_music=False):
 
 # --- URL EXTRACTION ---
 @trace
-def extract_all_urls_from_content(url):
+def extract_all_urls_from_content(url, ytdlp_cache_dir=None):
     """Extract URLs from Playlist/Album/Single"""
+    if ytdlp_cache_dir is None:
+        ytdlp_cache_dir = _default_ytdlp_cache_dir()
     is_yt_music = is_youtube_music_url(url)
-    ydl_opts = {'extract_flat': True, 'quiet': True, 'no_warnings': True, 'cachedir': YTDLP_CACHE_DIR}
+    ydl_opts = {'extract_flat': True, 'quiet': True, 'no_warnings': True, 'cachedir': ytdlp_cache_dir}
 
     try:
-        with yt.YoutubeDL(ydl_opts) as ydl:
+        with yt.YoutubeDL(ydl_opts) as ydl:  # type: ignore[arg-type]
             info = ydl.extract_info(url, download=False)
 
             if 'entries' in info:
                 urls = []
-                for entry in info['entries']:
+                for entry in info['entries']:  # type: ignore[union-attr]
                     if entry.get('url'):
-                        urls.append(entry['url'])
+                        urls.append(entry['url']) # pyright: ignore[reportTypedDictNotRequiredAccess]
                     elif entry.get('id'):
                         vid = entry['id']
                         base = "https://music.youtube.com/watch?v=" if is_yt_music else "https://www.youtube.com/watch?v="

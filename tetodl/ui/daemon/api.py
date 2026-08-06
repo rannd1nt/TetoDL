@@ -1,0 +1,977 @@
+import asyncio
+import html as htmlmod
+import io
+import os
+import re
+import sys
+import threading
+import time
+import urllib.parse
+import uuid
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any, Literal
+
+import uvicorn
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
+
+from ..cli.dispatch import execute_download
+from ...constants import APP_VERSION
+from ...utils.console import console
+from ...utils.i18n_keys import Keys
+from ...core.domain import config as cfg
+from ...core.domain import config as config_mgr
+from ...core.domain.env import env
+from ...core.domain.models import DownloadResult, DownloadSession
+from ...utils.display import get_free_space
+from ...utils.files import TempManager
+from ...utils.formatters import color, human_size, icon_for_ext
+from ...utils.console.themes import PlainTheme
+from ...utils.network import find_free_port, get_best_ip
+from ...utils.processing import parse_playlist_items
+from ..share import SVG as _SHARE_SVG
+from ..share import create_share_router, list_entries, stream_file
+from ...utils.time_parser import get_cut_seconds
+from .display import detect_lan_ip
+from .models import DownloadRequest, PreviewRequest
+
+share_launchers: dict[str, Any] = {}
+
+active_tasks: dict[str, Any] = {}
+
+# --- BACKGROUND WORKERS ---
+async def cleanup_worker():
+    while True:
+        # Ambil interval dari config (default 3600 detik / 1 jam)
+        interval = getattr(cfg, 'daemon_cleanup_interval', 3600)
+        temp_dir = TempManager.get_temp_dir()
+        current_time = time.time()
+
+        if temp_dir.exists():
+            for file_path in temp_dir.glob("*"):
+                if file_path.is_file():
+                    file_age = current_time - file_path.stat().st_mtime
+                    if file_age > interval:
+                        try:
+                            file_path.unlink()
+                            print(f"[Daemon] Auto-cleaned temp file: {file_path.name}")
+                        except Exception:
+                            pass
+        
+        # Cek setiap 5 menit (300 detik)
+        await asyncio.sleep(300)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    os.makedirs(TempManager.get_temp_dir(), exist_ok=True)
+    cleanup_task = asyncio.create_task(cleanup_worker())
+    yield
+    cleanup_task.cancel()
+
+# --- APP INITIALIZATION ---
+app = FastAPI(
+    title="TetoDL Service API", 
+    version=APP_VERSION, 
+    description="Full-Featured Web Services for TetoDL",
+    lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# --- STATIC FILES & ROUTING ---
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+
+if STATIC_DIR.is_dir():
+    app.mount("/web", StaticFiles(directory=str(STATIC_DIR), html=True), name="static_web")
+
+@app.get("/")
+@app.get("/web")
+async def root():
+    return RedirectResponse(url="/web/")
+
+# Mount Folder Media untuk Streaming Lokal
+app.mount("/media/music", StaticFiles(directory=cfg.music_root), name="music_media")
+app.mount("/media/videos", StaticFiles(directory=cfg.video_root), name="video_media")
+app.mount("/media/temp", StaticFiles(directory=TempManager.get_temp_dir()), name="temp_media")
+
+
+# --- CORE LOGIC WRAPPER (with realtime log capture) ---
+class _LogTee:
+    """Tee: tulis ke original stdout AND buffer, update task logs live."""
+    def __init__(self, original, buf, task_ref):
+        self.original = original
+        self.buf = buf
+        self.task_ref = task_ref
+
+    def write(self, data):
+        self.original.write(data)
+        self.buf.write(data)
+        self.task_ref["logs"] = self.buf.getvalue()[-8000:]
+
+    def flush(self):
+        self.original.flush()
+        self.buf.flush()
+
+    def isatty(self):
+        return False
+
+def background_task_runner(task_id: str, session: DownloadSession, mode: str = 'cli_download', task_title: str = ''):
+    log_buf = io.StringIO()
+    task_data = {
+        "status": "processing",
+        "details": session.url or 'Task Queued',
+        "title": task_title or '',
+        "file_path": None,
+        "logs": "",
+    }
+    active_tasks[task_id] = task_data
+
+    old_stdout = sys.stdout
+    old_console_file = getattr(console.rich, 'file', old_stdout)
+    tee = _LogTee(old_stdout, log_buf, task_data)
+
+    sys.stdout = tee
+    try:
+        console.rich.file = tee  # type: ignore[assignment]
+    except Exception:
+        pass
+
+    try:
+        result = execute_download(session) or DownloadResult(success=False)
+        task = active_tasks[task_id]
+        task["status"] = "completed"
+        if isinstance(result, DownloadResult):
+            fp = result.file_path
+            if fp:
+                fp_abs = os.path.abspath(fp)
+                task["file_path"] = fp_abs
+                task["is_dir"] = os.path.isdir(fp_abs)
+                if task["is_dir"]:
+                    task["dir_path"] = fp_abs
+                else:
+                    task["dir_path"] = os.path.dirname(fp_abs)
+            fc = result.file_count
+            if fc:
+                task["file_count"] = fc
+    except Exception as e:
+        active_tasks[task_id]["status"] = f"error: {e!s}"
+        active_tasks[task_id]["file_path"] = None
+    finally:
+        sys.stdout = old_stdout
+        try:
+            console.rich.file = old_console_file
+        except Exception:
+            pass
+        task_data["logs"] = log_buf.getvalue()[-8000:]
+
+
+# ==========================================
+#              API ENDPOINTS
+# ==========================================
+
+# --- 1. SYSTEM & CONFIG ---
+@app.get("/api/v1/system/status")
+async def get_system_status():
+    return {
+        "status": "online",
+        "storage": {
+            "music_free_space": get_free_space(cfg.music_root),
+            "video_free_space": get_free_space(cfg.video_root)
+        }
+    }
+
+@app.get("/api/v1/config")
+async def get_current_config():
+    """Membaca konfigurasi yang tersimpan (termasuk setting Daemon)"""
+    config_mgr.load_config()
+    return {
+        "audio_quality": cfg.audio_quality,
+        "video_container": cfg.video_container,
+        "max_resolution": cfg.max_video_resolution,
+        "daemon_default_temp": getattr(cfg, 'daemon_default_temp', True),
+        "daemon_cleanup_interval": getattr(cfg, 'daemon_cleanup_interval', 3600),
+        "lyrics_mode": cfg.lyrics_mode,
+    }
+
+@app.patch("/api/v1/config")
+async def update_config(request: Request):
+    """Menerima setting baru dari HP dan menyimpannya ke config.json secara permanen"""
+    data = await request.json()
+    config_mgr.load_config()
+    
+    # Petakan request JSON ke objek konfigurasi
+    if "daemon_default_temp" in data:
+        cfg.daemon_default_temp = data["daemon_default_temp"]
+    if "daemon_cleanup_interval" in data:
+        cfg.daemon_cleanup_interval = data["daemon_cleanup_interval"]
+    if "audio_quality" in data:
+        cfg.audio_quality = data["audio_quality"]
+    if "max_resolution" in data:
+        cfg.max_video_resolution = data["max_resolution"]
+    if "lyrics_mode" in data:
+        cfg.lyrics_mode = data["lyrics_mode"]
+    
+    config_mgr.save_config() # Simpan ke disk
+    return {"status": "success", "message": "Configuration updated persistently."}
+
+
+# --- 2. ORCHESTRATION (THE BIG BRAIN) ---
+@app.post("/api/v1/download")
+async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
+    if not req.url and not req.search_query:
+        raise HTTPException(status_code=400, detail="Must provide 'url' or 'search_query'")
+
+    task_id = str(uuid.uuid4())[:8]
+
+    # --- TEMP VS PERMANENT STORAGE LOGIC ---
+    if req.share_temp:
+        is_temp = True
+    elif req.share:
+        is_temp = False
+    else:
+        is_temp = getattr(cfg, 'daemon_default_temp', True)
+
+    output_path: str | None = None
+    if is_temp:
+        task_dir = Path(str(TempManager.get_temp_dir())) / task_id
+        task_dir.mkdir(parents=True, exist_ok=True)
+        output_path = str(task_dir)
+
+    media_type: Literal['audio', 'video', 'thumbnail'] = 'audio'
+    if req.video_only:
+        media_type = 'video'
+    elif req.thumbnail_only:
+        media_type = 'thumbnail'
+
+    cut_range: tuple[float, float] | None = None
+    if req.cut_time:
+        try:
+            cut_range = get_cut_seconds(req.cut_time)
+        except ValueError:
+            pass
+
+    playlist_items: set[int] | None = None
+    if req.items:
+        try:
+            playlist_items = parse_playlist_items(req.items)
+        except ValueError:
+            pass
+
+    is_spotify = bool(req.spotify or (req.url and "spotify.com" in req.url.lower()))
+
+    session = DownloadSession(
+        url=req.url or '',
+        media_type=media_type,
+        output_path=output_path,
+        format=req.format or None,
+        resolution=req.resolution or None,
+        codec=req.codec or None,
+        cut_range=cut_range,
+        playlist_items=playlist_items,
+        group_folder=req.group or False,
+        m3u=req.m3u or False,
+        cover=req.cover or False,
+        metadata=req.metadata or False,
+        no_enrich=req.no_enrich or False,
+        lyrics=req.lyrics,
+        romaji=req.romaji,
+        async_mode=req.async_mode or False,
+        is_temp_session=False,
+        is_spotify=is_spotify,
+    )
+
+    mode = 'cli_download' if req.url else 'cli_search'
+
+    bg_tasks.add_task(background_task_runner, task_id, session, mode, req.title or '')
+
+    target_loc = "Temporary Storage" if is_temp else "Permanent Library"
+    return {
+        "status": "queued",
+        "task_id": task_id,
+        "message": f"Download task dispatched. Target: {target_loc}"
+    }
+
+@app.get("/api/v1/tasks")
+async def get_active_tasks():
+    return active_tasks
+
+@app.get("/api/v1/tasks/{task_id}/logs")
+async def get_task_logs(task_id: str):
+    task = active_tasks.get(task_id)
+    if not task:
+        raise HTTPException(404, "Task not found")
+    return {"logs": task.get("logs", ""), "status": task["status"]}
+
+
+# --- 3. PREVIEW (via yt-dlp extract_info) ---
+@app.post("/api/v1/preview")
+async def preview_media(req: PreviewRequest):
+    # --- Spotify preview path ---
+    if req.url and "spotify.com" in req.url.lower():
+        from ...core.clients.spotify import SpotifyResolver
+        resolver = SpotifyResolver()
+        try:
+            container_name, tracks = resolver.resolve_meta(req.url)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Spotify extraction failed: {e}")
+
+        if not tracks:
+            raise HTTPException(status_code=400, detail="No tracks found")
+
+        entries = [
+            {
+                "id": t.spotify_id,
+                "title": t.title,
+                "artist": t.artist,
+                "artists": t.artists,
+                "album": t.album,
+                "duration": t.duration_ms // 1000,
+                "thumbnail": t.cover_url,
+            }
+            for t in tracks
+        ]
+
+        return {
+            "id": container_name or tracks[0].spotify_id,
+            "title": container_name or f"{tracks[0].title} - {tracks[0].artist}",
+            "duration": sum(t.duration_ms for t in tracks) // 1000,
+            "uploader": tracks[0].artist if tracks else None,
+            "thumbnail": tracks[0].cover_url or None,
+            "description": None,
+            "webpage_url": req.url,
+            "formats": [],
+            "is_playlist": len(tracks) > 1,
+            "available_resolutions": [],
+            "entries": entries,
+            "source": "spotify",
+        }
+
+    # --- YouTube / general preview path ---
+    import asyncio as _asyncio
+
+    try:
+        import yt_dlp as yt
+        loop = _asyncio.get_event_loop()
+        with yt.YoutubeDL({
+            'quiet': True,
+            'no_warnings': True,
+            'extract_flat': 'in_playlist',
+            'cachedir': env.get('ytdlp_cache_dir'),
+        }) as ydl:
+            try:
+                info = await _asyncio.wait_for(
+                    loop.run_in_executor(None, lambda: ydl.extract_info(req.url, download=False)),
+                    timeout=45.0,
+                )
+            except TimeoutError:
+                raise HTTPException(
+                    status_code=504,
+                    detail="Preview timed out. The URL may point to a very large playlist. Try a single video URL."
+                )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Extraction failed: {e}")
+
+    formats = []
+    resolutions = set()
+    for f in info.get('formats', []):  # type: ignore[union-attr]
+        fmt = {
+            'format_id': f.get('format_id'),
+            'ext': f.get('ext'),
+            'resolution': f.get('resolution'),
+            'filesize': f.get('filesize'),
+            'abr': f.get('abr'),
+            'vbr': f.get('vbr'),
+            'fps': f.get('fps'),
+            'format_note': f.get('format_note'),
+            'vcodec': f.get('vcodec'),
+            'acodec': f.get('acodec'),
+            'height': f.get('height'),
+            'width': f.get('width'),
+        }
+        formats.append(fmt)
+        vc = f.get('vcodec')
+        h = f.get('height')
+        if vc and vc != 'none' and h:
+            resolutions.add(h)
+
+    thumbnails = info.get('thumbnails', [])
+    thumbnail = thumbnails[-1].get('url') if thumbnails else None
+
+    is_playlist = info.get('_type') == 'playlist' or 'entries' in info
+
+    return {
+        'id': info.get('id'),
+        'title': info.get('title'),
+        'duration': info.get('duration'),
+        'uploader': info.get('uploader'),
+        'thumbnail': thumbnail,
+        'description': (info.get('description') or '')[:500],
+        'webpage_url': info.get('webpage_url'),
+        'formats': formats,
+        'is_playlist': is_playlist,
+        'available_resolutions': sorted(resolutions, reverse=True),
+    }
+
+
+# --- 4. SHARE BROWSE (JSON directory listing) ---
+@app.get("/api/v1/share/browse")
+async def share_browse(path: str = ""):
+    display_path = path or "/"
+    try:
+        root_map = {
+            "MUSIC": env.get('default_music_root'),
+            "VIDEO": env.get('default_video_root'),
+            "TEMP": str(TempManager.get_temp_dir()),
+        }
+        quick = {k: os.path.abspath(v) for k, v in root_map.items()}
+
+        if path.startswith("quick:"):
+            key = path.replace("quick:", "")
+            real = quick.get(key)
+            if not real:
+                raise HTTPException(400, f"Unknown quick path: {key}")
+            entries = list_entries(real)
+            return {"path": real, "display": key, "entries": entries, "quick": list(quick.keys())}
+
+        real = os.path.abspath(path) if path else "/"
+        if not os.path.isdir(real):
+            raise HTTPException(400, "Not a directory")
+        entries = list_entries(real)
+        return {"path": real, "display": display_path, "entries": entries, "quick": list(quick.keys())}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(400, f"Browse error: {e}")
+
+
+# --- 5. SHARE STREAM (raw file serving, no HTML, supports Range for <video>/<audio>) ---
+@app.get("/api/v1/share/stream")
+async def share_stream(request: Request):
+    path_raw = request.query_params.get("path", "")
+    if not path_raw:
+        raise HTTPException(400, "Missing 'path' query param")
+    real = os.path.abspath(path_raw)
+    if not os.path.isfile(real):
+        raise HTTPException(404, "File not found")
+    range_header = request.headers.get("range")
+    return await stream_file(real, range_header or "")
+
+
+# --- 5B. SHARE DOWNLOAD (dedicated endpoint, always attachment, no Range interference) ---
+@app.get("/api/v1/share/download")
+async def share_download(request: Request):
+    path_raw = request.query_params.get("path", "")
+    if not path_raw:
+        raise HTTPException(400, "Missing 'path' query param")
+    real = os.path.abspath(path_raw)
+    if not os.path.isfile(real):
+        raise HTTPException(404, "File not found")
+    filename = os.path.basename(real)
+    safe_name = filename.encode('ascii', 'ignore').decode('ascii') or 'download'
+    encoded_name = urllib.parse.quote(filename, safe='')
+    return FileResponse(
+        real,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}"; filename*=UTF-8\'\'{encoded_name}'
+        },
+    )
+
+
+# --- 6. SHARE BROWSER HTML (dir listing, same glassmorphism as TetoDL Share) ---
+
+def _icon(ext: str):
+    return _SHARE_SVG.get(icon_for_ext(ext), _SHARE_SVG['file'])
+
+@app.get("/api/v1/share/browse_html")
+async def share_browse_html(request: Request):
+    path = request.query_params.get("path", "")
+    root_raw = request.query_params.get("root") or path
+    real = os.path.abspath(path) if path else ""
+    root_abs = os.path.abspath(root_raw)
+    if not real or not os.path.isdir(real):
+        detail = f"Directory not found: {htmlmod.escape(real)}"
+        return HTMLResponse(_error_html(detail), status_code=404)
+
+    css = _player_css()
+    dirname = htmlmod.escape(os.path.basename(real) or real)
+
+    entries = []
+    for name in sorted(os.listdir(real), key=str.lower):
+        full = os.path.join(real, name)
+        is_dir = os.path.isdir(full)
+        ext = os.path.splitext(name)[1].lower()
+        if is_dir:
+            meta = "Directory"
+            icon = _SHARE_SVG['folder']
+            link = f"/api/v1/share/browse_html?path={urllib.parse.quote(os.path.abspath(full))}&root={urllib.parse.quote(root_abs)}"
+        else:
+            sz = 0
+            try:
+                sz = os.path.getsize(full)
+            except Exception:
+                pass
+            meta = human_size(sz)
+            icon = _icon(ext)
+            link = f"/api/v1/share/player?path={urllib.parse.quote(os.path.abspath(full))}"
+        entries.append((name, icon, link, meta))
+
+    rows = ""
+    is_root = os.path.normpath(real) == os.path.normpath(root_abs)
+    if not is_root:
+        parent = os.path.normpath(os.path.dirname(real))
+        if not parent.startswith(root_abs + os.sep) and parent != root_abs:
+            parent = root_abs
+        p_enc = urllib.parse.quote(parent)
+        rows += f'<li class="file-item parent-dir"><a class="file-link" href="/api/v1/share/browse_html?path={p_enc}&root={urllib.parse.quote(root_abs)}"><div class="icon-box">{_SHARE_SVG["back"]}</div><div class="info"><span class="name">Go Back</span><span class="meta">Parent Directory</span></div></a></li>'
+    else:
+        rows += f'<li class="file-item parent-dir"><a class="file-link" href="/web/"><div class="icon-box">{_SHARE_SVG["back"]}</div><div class="info"><span class="name">Back to Orchestrator</span><span class="meta">Return to task panel</span></div></a></li>'
+
+    for name, icon, link, meta in entries:
+        rows += f'<li class="file-item"><a class="file-link" href="{link}"><div class="icon-box">{icon}</div><div class="info"><span class="name">{htmlmod.escape(name)}</span><span class="meta">{meta}</span></div></a></li>'
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>{dirname} - TetoDL</title>
+<style>{css}</style>
+</head>
+<body>
+<div class="branding"><h1>TetoDL Download</h1><p>Task Results</p></div>
+<div class="glass-container">
+<div class="header-section">
+<div class="path-header">{_SHARE_SVG["folder"]} <span>{dirname}</span></div>
+<input type="text" class="search-box" onkeyup="filterList()" placeholder="Type to search...">
+</div>
+<div class="scroll-area"><ul class="file-list" id="fileList">{rows}</ul></div>
+</div>
+<div class="footer">TetoDL Orchestrator — Task Results</div>
+<script>{_player_js()}</script>
+</body>
+</html>"""
+    return HTMLResponse(html)
+
+
+# --- 7. SHARE PLAYER (full HTML player page with metadata) ---
+
+_SVG_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>'
+_SVG_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
+_SVG_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
+_SVG_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
+_SVG_MUSIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'
+
+def _player_css() -> str:
+    p = Path(__file__).resolve().parent.parent / "static" / "styles.css"
+    return p.read_text() if p.exists() else ""
+
+def _player_js() -> str:
+    p = Path(__file__).resolve().parent.parent / "static" / "player.js"
+    return p.read_text() if p.exists() else ""
+
+def _get_meta(path: str) -> dict:
+    import base64
+    meta = {"title": "", "artist": "", "album": "", "cover_b64": "", "cover_mime": "image/jpeg"}
+    try:
+        ext = os.path.splitext(path)[1].lower()
+        if ext == ".mp3":
+            from mutagen.id3 import APIC
+            from mutagen.mp3 import MP3
+            a: Any = MP3(path)
+            meta["title"] = str(a.tags.get("TIT2", "")) if a.tags else ""
+            meta["artist"] = str(a.tags.get("TPE1", "")) if a.tags else ""
+            meta["album"] = str(a.tags.get("TALB", "")) if a.tags else ""
+            if a.tags:
+                for t in a.tags.values():
+                    if isinstance(t, APIC):
+                        meta["cover_b64"] = base64.b64encode(t.data).decode()  # type: ignore[attr-defined]
+                        meta["cover_mime"] = t.mime  # type: ignore[attr-defined]
+                        break
+        elif ext == ".m4a":
+            from mutagen.mp4 import MP4
+            a = MP4(path)
+            meta["title"] = a.get("\xa9nam", [""])[0]
+            meta["artist"] = a.get("\xa9ART", [""])[0]
+            meta["album"] = a.get("\xa9alb", [""])[0]
+            if "covr" in a:
+                d = a["covr"][0]
+                if isinstance(d, bytes):
+                    meta["cover_b64"] = base64.b64encode(d).decode()
+                    meta["cover_mime"] = "image/png" if d[:8] == b"\x89PNG\r\n\x1a\n" else "image/jpeg"
+        elif ext == ".flac":
+            from mutagen.flac import FLAC
+            a = FLAC(path)
+            meta["title"] = a.get("title", [""])[0]
+            meta["artist"] = a.get("artist", [""])[0]
+            meta["album"] = a.get("album", [""])[0]
+            if a.pictures:
+                meta["cover_b64"] = base64.b64encode(a.pictures[0].data).decode()
+                meta["cover_mime"] = a.pictures[0].mime
+        elif ext == ".opus":
+            from mutagen.oggopus import OggOpus
+            a = OggOpus(path)
+            meta["title"] = a.get("title", [""])[0]
+            meta["artist"] = a.get("artist", [""])[0]
+            meta["album"] = a.get("album", [""])[0]
+    except Exception:
+        pass 
+    return meta
+
+def _error_html(detail: str) -> str:
+    """Return a standalone HTML error page matching the daemon's glassmorphism theme."""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Error - TetoDL Player</title>
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{font-family:'Outfit',-apple-system,sans-serif;background:#0f172a;color:#fff;height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px}}
+.glass{{background:rgba(20,20,35,0.65);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:30px;max-width:480px;text-align:center}}
+h1{{color:#f43f5e;margin-bottom:12px;font-size:1.3rem}}
+p{{color:#94a3b8;font-size:0.9rem;word-break:break-all}}
+</style>
+</head>
+<body>
+<div class="glass">
+<h1>Cannot Open Player</h1>
+<p>{htmlmod.escape(detail)}</p>
+</div>
+</body>
+</html>"""
+
+
+@app.get("/api/v1/share/player")
+async def share_player(request: Request):
+    path = request.query_params.get("path", "")
+    if not path:
+        return HTMLResponse(_error_html("Missing file path"), status_code=400)
+    real = os.path.abspath(path)
+    if not os.path.isfile(real):
+        detail = f"File not found: {htmlmod.escape(real)}"
+        return HTMLResponse(_error_html(detail), status_code=404)
+
+    filename = os.path.basename(real)
+    ext = os.path.splitext(filename)[1].lower()
+    from ...utils.formatters import AUDIO_EXTS as _AUDIO, VIDEO_EXTS as _VIDEO
+    is_video = ext in _VIDEO
+    is_audio = ext in _AUDIO
+    stream_url = f"/api/v1/share/stream?path={urllib.parse.quote(real)}"
+    back_url = request.headers.get("referer", "/web/")
+
+    meta = _get_meta(real) if is_audio else {}
+    title = htmlmod.escape(meta.get("title") or filename)
+    artist = htmlmod.escape(meta.get("artist") or "")
+    album = htmlmod.escape(meta.get("album") or "")
+    cover_b64 = meta.get("cover_b64", "")
+
+    if is_video:
+        media_html = f'<div class="video-container"><video id="mediaElement" class="video-element" src="{stream_url}" playsinline preload="metadata"></video></div>'
+    elif is_audio and cover_b64:
+        mime = meta.get("cover_mime", "image/jpeg")
+        media_html = f'<div id="mediaCover" class="media-cover" style="background-image:none"><img src="data:{mime};base64,{cover_b64}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:30px"></div><audio id="mediaElement" src="{stream_url}" preload="metadata"></audio>'
+    elif is_audio:
+        media_html = f'<div id="mediaCover" class="media-cover">{_SVG_MUSIC}</div><audio id="mediaElement" src="{stream_url}" preload="metadata"></audio>'
+    else:
+        media_html = f'<div class="video-container"><video id="mediaElement" class="video-element" src="{stream_url}" playsinline preload="metadata"></video></div>'
+
+    meta_lines = ""
+    if title and title != htmlmod.escape(filename):
+        meta_lines += f'<div class="media-title-large">{title}</div>'
+    if artist:
+        meta_lines += f'<div class="media-artist">{artist}</div>'
+    if album:
+        meta_lines += f'<div class="media-album">{album}</div>'
+
+    css = _player_css()
+    js = _player_js()
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>{htmlmod.escape(filename)} - TetoDL</title>
+<style>{css}</style>
+</head>
+<body>
+<div class="branding"><h1>TetoDL Player</h1><p>Secured Stream</p></div>
+<div class="glass-container">
+<div class="player-layout">
+<div class="header-section">
+<div class="path-header">
+<a href="{htmlmod.escape(back_url)}" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:8px;width:100%">
+{_SVG_BACK} <span>Back to Orchestrator</span>
+</a>
+</div>
+</div>
+<div class="player-content">
+{media_html}
+{meta_lines if meta_lines else f'<div class="media-title-large">{htmlmod.escape(filename)}</div>'}
+<div class="custom-controls">
+<input type="range" id="progressBar" min="0" max="100" value="0" step="0.1">
+<div class="time-labels"><span id="currTime">0:00</span><span id="totalTime">0:00</span></div>
+<div class="btn-row">
+<a href="/api/v1/share/download?path={urllib.parse.quote(real)}" download="{htmlmod.escape(filename)}" class="btn-dl">{_SVG_DOWNLOAD}<span>Save</span></a>
+<button id="playBtn" class="btn-control btn-play">{_SVG_PLAY}</button>
+<div style="width:20px"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="footer">TetoDL Orchestrator - Secure Stream</div>
+<script>{js}</script>
+</body>
+</html>"""
+    return HTMLResponse(html)
+
+
+# --- 7. SHARE LAUNCH (start background uvicorn on new port) ---
+@app.post("/api/v1/share/launch")
+async def share_launch(request: Request):
+    data = await request.json()
+    path = data.get("path", "")
+    norm = os.path.abspath(path) if path else ""
+
+    if not norm or not os.path.exists(norm):
+        raise HTTPException(400, "Path not found")
+
+    if norm in share_launchers:
+        return {"url": share_launchers[norm]["url"]}
+
+    if os.path.isfile(norm):
+        serve_root = os.path.dirname(norm)
+        serve_file = os.path.basename(norm)
+    elif os.path.isdir(norm):
+        serve_root = norm
+        serve_file = None
+    else:
+        raise HTTPException(400, "Not a file or directory")
+
+    ip = get_best_ip()
+    share_app = FastAPI()
+    share_app.include_router(create_share_router(serve_root))
+
+    port = find_free_port(8989)
+    if port is None:
+        raise HTTPException(500, "No free ports available")
+
+    def _run():
+        try:
+            uvicorn.run(share_app, host="0.0.0.0", port=port, log_level="error")
+        except Exception:
+            pass
+
+    t = threading.Thread(target=_run, daemon=True)
+    t.start()
+
+    url = f"http://{ip}:{port}/{urllib.parse.quote(serve_file)}" if serve_file else f"http://{ip}:{port}/"
+
+    # Tunggu server siap (max 5 detik)
+    import time as _time
+    import urllib.error as _uerr
+    import urllib.request as _ureq
+    deadline = _time.time() + 5
+    ready = False
+    while _time.time() < deadline:
+        try:
+            _ureq.urlopen(f"http://127.0.0.1:{port}/", timeout=1)
+            ready = True
+            break
+        except (_uerr.URLError, ConnectionRefusedError, OSError):
+            _time.sleep(0.15)
+    if not ready:
+        raise HTTPException(500, "Server failed to start in time")
+
+    share_launchers[norm] = {"url": url, "thread": t, "port": port}
+    return {"url": url, "port": port, "ip": ip}
+
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+
+
+class _StripANSI:
+    """Write a stream's output with ANSI escape sequences removed."""
+
+    def __init__(self, stream):
+        self._stream = stream
+
+    def write(self, data):
+        self._stream.write(_ANSI_RE.sub("", data))
+        return len(data)
+
+    def flush(self):
+        self._stream.flush()
+
+    def isatty(self):
+        return False
+
+    def fileno(self):
+        return self._stream.fileno()
+
+    @property
+    def encoding(self):
+        return getattr(self._stream, "encoding", None)
+
+
+class _Tee:
+    """Duplicate writes to a live stream and an ANSI-stripped file."""
+
+    def __init__(self, real, fh):
+        self._real = real
+        self._fh = fh
+
+    def write(self, data):
+        self._real.write(data)
+        self._fh.write(_ANSI_RE.sub("", data))
+        return len(data)
+
+    def flush(self):
+        self._real.flush()
+        self._fh.flush()
+
+    def isatty(self):
+        return self._real.isatty()
+
+    def fileno(self):
+        return self._real.fileno()
+
+    @property
+    def encoding(self):
+        return getattr(self._real, "encoding", None)
+
+
+def _setup_output(log_file, interactive):
+    """Route stdout/stderr according to interactivity and ``--log-file``."""
+    if not interactive:
+        console.theme = PlainTheme
+    if not log_file:
+        return
+    fh = open(log_file, "a", encoding="utf-8", buffering=1)
+    if interactive:
+        sys.stdout = _Tee(sys.__stdout__, fh)
+        sys.stderr = _Tee(sys.__stderr__, fh)
+    else:
+        sys.stdout = _StripANSI(fh)
+        sys.stderr = _StripANSI(fh)
+
+
+def _is_interactive():
+    try:
+        return sys.stdout.isatty()
+    except Exception:
+        return False
+
+
+def _print_qr(url):
+    try:
+        import qrcode as _qr
+
+        _qr_code = _qr.QRCode(version=1, box_size=1, border=1)
+        _qr_code.add_data(url)
+        _qr_code.make(fit=True)
+        _qr_code.print_ascii(invert=True)
+        print()
+        console.warn(Keys.daemon.scan_qr_or_open_url)
+    except ImportError:
+        console.warn(Keys.daemon.open_url_in_browser(url=url))
+
+
+def _announce(interactive, quiet, url, port):
+    """Print the startup banner (interactive) or one plain URL line."""
+    if interactive:
+        if quiet:
+            return
+        print()
+        console.ok(Keys.daemon.daemon_url(url=color(url, 'c')))
+        console.warn(Keys.daemon.daemon_port(port=port))
+        from ..cli.network import check_firewall_status
+        check_firewall_status(port)
+        print()
+        _print_qr(url)
+        console.warn(Keys.daemon.press_ctrl_c_stop)
+    else:
+        print(f"TetoDL daemon listening at {url}")
+        sys.stdout.flush()
+
+
+def run_server(host: str, port: int, verbose: bool = False,
+               quiet: bool = False, log_file: str | None = None,
+               dev: bool = False):
+    """Run the API server.
+
+    Parameters
+    ----------
+    host : str
+        Bind address.
+    port : int
+        Bind port.
+    verbose : bool
+        Show uvicorn request logs (default: quiet).
+    quiet : bool
+        Suppress the startup banner / QR output.
+    log_file : str | None
+        Tee (interactive) or redirect (non-interactive) output to a file.
+    dev : bool
+        Run uvicorn in reload mode for development.
+    """
+    interactive = _is_interactive()
+    _setup_output(log_file, interactive)
+    console.state.is_quiet = quiet or not interactive
+
+    os.environ["TETODL_PORT"] = str(port)
+
+    ip = detect_lan_ip()
+    url = f"http://{ip}:{port}"
+
+    if dev:
+        _announce(interactive, quiet, url, port)
+        uvicorn.run(app, host=host, port=port, reload=True,
+                    log_level="warning" if not verbose else "info",
+                    access_log=verbose)
+        return
+
+    config = uvicorn.Config(
+        app,
+        host=host,
+        port=port,
+        log_level="warning" if not verbose else "info",
+        access_log=verbose,
+    )
+    server = uvicorn.Server(config)
+
+    def _run():
+        asyncio.run(server.serve())
+
+    thread = threading.Thread(target=_run, name="uvicorn-server", daemon=True)
+    thread.start()
+
+    with console.spin(Keys.cli.starting_api_server(host=host, port=port)):
+        while not server.started:
+            time.sleep(0.05)
+
+    _announce(interactive, quiet, url, port)
+
+    try:
+        while thread.is_alive():
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print()
+        console.warn(Keys.daemon.shutting_down)
+        server.should_exit = True
+        thread.join(timeout=5)

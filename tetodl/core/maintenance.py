@@ -7,20 +7,10 @@ import time
 import urllib.request
 from pathlib import Path
 
-from ..constants import (
-    CACHE_DIR,
-    CACHE_PATH,
-    CONFIG_DIR,
-    CONFIG_PATH,
-    DATA_DIR,
-    HISTORY_PATH,
-    IS_BINARY,
-    REGISTRY_PATH,
-    TEMP_DIR,
-)
-from ..core.config import reset_config
-from ..core.history import reset_history
-from ..core.registry import registry
+from ..core.domain.config import reset_config
+from ..core.domain.env import env
+from ..core.domain.history import reset_history
+from ..core.domain.registry import registry
 from ..utils.console import console
 from ..utils.files import TempManager
 from ..utils.formatters import color
@@ -33,7 +23,7 @@ def get_project_root() -> Path:
 def perform_update() -> bool:
     """Update the application — git pull (source) or binary self-destructive update."""
 
-    if IS_BINARY:
+    if env.get("is_binary"):
         return _perform_binary_update()
 
     # ── Source mode (git clone / git pull) ──
@@ -48,7 +38,7 @@ def perform_update() -> bool:
             # Re-install dependencies if venv exists
             pip_exe = str(root_dir / ".venv" / "bin" / "pip")
             if os.path.exists(pip_exe):
-                console.proc("Updating dependencies...")
+                console.proc(Keys.maint.updating_dependencies)
                 subprocess.run(
                     [pip_exe, "install", "-r", str(root_dir / "requirements.txt")],
                     cwd=root_dir, capture_output=True
@@ -66,8 +56,7 @@ def _perform_binary_update() -> bool:
     """Self-destructive binary update: download → rename → spawn updater."""
     import tempfile
 
-    from ..constants import APP_VERSION
-
+    from ..constants import APP_VERSION as _app_version
     repo = "rannd1nt/tetodl"
     current_exe = sys.executable
 
@@ -79,8 +68,8 @@ def _perform_binary_update() -> bool:
 
         tag = release["tag_name"]
         latest_ver = tag.lstrip("v")
-        if latest_ver == APP_VERSION:
-            console.ok(f"TetoDL is already up to date ({APP_VERSION})")
+        if latest_ver == _app_version:
+            console.ok(Keys.maint.already_up_to_date)
             return True
 
         asset_name = _binary_asset_name()
@@ -91,10 +80,10 @@ def _perform_binary_update() -> bool:
                 break
 
         if not asset_url:
-            console.err(f"No binary found for {asset_name}")
+            console.err(Keys.maint.no_binary_found(asset_name=asset_name))
             return False
 
-        console.proc(f"Downloading {tag} ...")
+        console.proc(Keys.maint.downloading_binary(tag=tag))
         tmp_dir = Path(tempfile.mkdtemp())
         tmp_bin = tmp_dir / asset_name
 
@@ -153,7 +142,7 @@ def perform_uninstall():
     root_dir = get_project_root()
     script_path = root_dir / "uninstall.sh"
 
-    if not IS_BINARY and not script_path.exists():
+    if not env.get("is_binary") and not script_path.exists():
         console.err(Keys.maint.uninstaller_script_not_found(path=script_path))
         return
 
@@ -196,20 +185,24 @@ def perform_uninstall():
 
     # --- EXECUTE CLEANUP DATA ---
     if wipe_mode != "none":
+        _cache_dir = Path(env.get("cache_dir"))
+        _config_dir = Path(env.get("config_dir"))
+        _data_dir = Path(env.get("data_dir"))
+
         console.warn(Keys.maint.cleaning_user_data)
         try:
-            if CACHE_DIR.exists():
-                shutil.rmtree(CACHE_DIR)
+            if _cache_dir.exists():
+                shutil.rmtree(_cache_dir)
                 console.ok(Keys.maint.cache_dir_removed)
-            if CONFIG_DIR.exists():
-                shutil.rmtree(CONFIG_DIR)
+            if _config_dir.exists():
+                shutil.rmtree(_config_dir)
                 console.ok(Keys.maint.config_dir_removed)
-            if DATA_DIR.exists():
+            if _data_dir.exists():
                 if wipe_mode == "full":
-                    shutil.rmtree(DATA_DIR)
+                    shutil.rmtree(_data_dir)
                     console.ok(Keys.maint.data_dir_removed)
                 else:
-                    history_file = DATA_DIR / "history.json"
+                    history_file = _data_dir / "history.json"
                     if history_file.exists():
                         os.remove(history_file)
                         console.ok(Keys.maint.history_file_removed)
@@ -218,7 +211,7 @@ def perform_uninstall():
             console.err(Keys.maint.failed_clean_data(error=e))
 
     # --- FINAL STEP: binary self-destruct or bash uninstaller ---
-    if IS_BINARY:
+    if env.get("is_binary"):
         _spawn_self_destruct()
     else:
         console.warn(Keys.maint.launching_uninstaller)
@@ -272,20 +265,24 @@ def reset_data(targets: list[str]):
 
     # 2. Handle CACHE first
     if 'cache' in targets:
-        from ..core.cache import reset_cache as _reset_cache
+        from ..core.domain.cache import reset_cache as _reset_cache
+
+        _cache_dir = env.get("cache_dir")
+        _cache_path = env.get("cache_path")
+        _temp_dir = env.get("temp_dir")
 
         has_garbage = False
-        cache_root = Path(CACHE_DIR) / "cache"
+        cache_root = Path(_cache_dir) / "cache"
 
         if cache_root.is_dir():
             has_garbage = True
 
-        if not has_garbage and os.path.exists(CACHE_PATH):
+        if not has_garbage and os.path.exists(_cache_path):
             has_garbage = True
 
-        if not has_garbage and os.path.exists(TEMP_DIR):
+        if not has_garbage and os.path.exists(_temp_dir):
             try:
-                if len(os.listdir(TEMP_DIR)) > 0:
+                if len(os.listdir(_temp_dir)) > 0:
                     has_garbage = True
             except OSError:
                 pass
@@ -302,9 +299,9 @@ def reset_data(targets: list[str]):
                 except OSError:
                     pass
 
-            if os.path.exists(CACHE_PATH):
+            if os.path.exists(_cache_path):
                 try:
-                    os.remove(CACHE_PATH)
+                    os.remove(_cache_path)
                 except OSError:
                     pass
 
@@ -318,10 +315,14 @@ def reset_data(targets: list[str]):
     if not danger_targets:
         return
 
+    _history_path = env.get("history_path")
+    _config_path = env.get("config_path")
+    _registry_path = env.get("registry_path")
+
     files_to_check = {
-        'history': HISTORY_PATH,
-        'config': CONFIG_PATH,
-        'registry': REGISTRY_PATH
+        'history': _history_path,
+        'config': _config_path,
+        'registry': _registry_path
     }
     
     valid_targets = []
@@ -342,9 +343,9 @@ def reset_data(targets: list[str]):
 
     if 'registry' in valid_targets:
         print()
-        console.warn(f"{color('Warning:', 'y')} You are about to wipe the DOWNLOAD REGISTRY.")
-        console.warn("TetoDL will lose track of ALL downloaded files.")
-        
+        console.warn(Keys.maint.wipe_registry_warning(warning=color('Warning:', 'y')))
+        console.warn(Keys.maint.will_lose_track)
+
         other_valid = [t for t in valid_targets if t != 'registry']
         if other_valid:
             console.warn(Keys.maint.will_also_reset(items=', '.join([t.upper() for t in other_valid])))

@@ -1,8 +1,7 @@
 """AUTO-GENERATED FILE. DO NOT EDIT."""
-from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, Tuple, Dict, Union
 
-I18nKey: TypeAlias = str | tuple[str, dict[str, Any]]
+I18nKey: TypeAlias = Union[str, Tuple[str, Dict[str, Any]]]
 
 class _UiCoreEngineUpdatedToCallable:
     """
@@ -10,12 +9,12 @@ class _UiCoreEngineUpdatedToCallable:
     
     Original template: "Core Engine updated to: {version}"
     """
-    def __call__(self, *, version: str | int) -> tuple[str, dict]:
+    def __call__(self, *, version: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            version (str | int): Dynamic value for {version}.
+            version (Any): Dynamic value for {version}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -28,12 +27,12 @@ class _UiCoreEngineUpToDateCallable:
     
     Original template: "Core Engine is up to date: {version}"
     """
-    def __call__(self, *, version: str | int) -> tuple[str, dict]:
+    def __call__(self, *, version: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            version (str | int): Dynamic value for {version}.
+            version (Any): Dynamic value for {version}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -46,17 +45,55 @@ class _UiCoreEngineInstalledCallable:
     
     Original template: "Core Engine installed: {version} (Network check skipped)"
     """
-    def __call__(self, *, version: str | int) -> tuple[str, dict]:
+    def __call__(self, *, version: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            version (str | int): Dynamic value for {version}.
+            version (Any): Dynamic value for {version}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
         """
         return ("ui.core_engine_installed", {"version": version})
+
+class _UiPypiVersionMismatchCallable:
+    """
+    [Callable Props Type] PypiVersionMismatch
+    
+    Original template: "Version mismatch from PyPI: expected {expected}, got {actual}"
+    """
+    def __call__(self, *, expected: Any, actual: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            expected (Any): Dynamic value for {expected}.
+            actual (Any): Dynamic value for {actual}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("ui.pypi_version_mismatch", {"expected": expected, "actual": actual})
+
+class _UiYtdlpOverrideInstalledCallable:
+    """
+    [Callable Props Type] YtdlpOverrideInstalled
+    
+    Original template: "yt-dlp override installed (version: {version}, expected: {expected})"
+    """
+    def __call__(self, *, version: Any, expected: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            version (Any): Dynamic value for {version}.
+            expected (Any): Dynamic value for {expected}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("ui.ytdlp_override_installed", {"version": version, "expected": expected})
 
 class _UiFailedCheckEngineVersionCallable:
     """
@@ -64,12 +101,12 @@ class _UiFailedCheckEngineVersionCallable:
     
     Original template: "Failed to check engine version: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -82,13 +119,13 @@ class _UiDetectedSystemLanguageCallable:
     
     Original template: "Detected System Language: {language} | ({code})"
     """
-    def __call__(self, *, language: str | int, code: str | int) -> tuple[str, dict]:
+    def __call__(self, *, language: Any, code: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            language (str | int): Dynamic value for {language}.
-            code (str | int): Dynamic value for {code}.
+            language (Any): Dynamic value for {language}.
+            code (Any): Dynamic value for {code}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -101,12 +138,12 @@ class _UiLanguageSetToCallable:
     
     Original template: "Language set to: {name}"
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -119,12 +156,12 @@ class _UiSelectionCancelledDefaultingCallable:
     
     Original template: "Selection cancelled. Defaulting to use detected system language: {name}."
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -137,17 +174,35 @@ class _UiEnvironmentDetectedCallable:
     
     Original template: "Environment Detected: {env}"
     """
-    def __call__(self, *, env: str | int) -> tuple[str, dict]:
+    def __call__(self, *, env: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            env (str | int): Dynamic value for {env}.
+            env (Any): Dynamic value for {env}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
         """
         return ("ui.environment_detected", {"env": env})
+
+class _UiWslDetectedCallable:
+    """
+    [Callable Props Type] WslDetected
+    
+    Original template: "{wsl_warning} We recommend saving files to Windows folders"
+    """
+    def __call__(self, *, wsl_warning: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            wsl_warning (Any): Dynamic value for {wsl_warning}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("ui.wsl_detected", {"wsl_warning": wsl_warning})
 
 class _UiMusicPathSetToCallable:
     """
@@ -155,12 +210,12 @@ class _UiMusicPathSetToCallable:
     
     Original template: "Music Path set to: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -173,12 +228,12 @@ class _UiVideoPathSetToCallable:
     
     Original template: "Video Path set to: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -191,12 +246,12 @@ class _UiAccessDeniedToCallable:
     
     Original template: "Access denied to: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -209,12 +264,12 @@ class _UiErrorReadingFolderCallable:
     
     Original template: "Error reading folder: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -227,12 +282,12 @@ class _UiUnexpectedErrorCallable:
     
     Original template: "Unexpected error: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -245,12 +300,12 @@ class _UiFailedLoadContentCallable:
     
     Original template: "Failed to Load Content. Visit: {url}"
     """
-    def __call__(self, *, url: str | int) -> tuple[str, dict]:
+    def __call__(self, *, url: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            url (str | int): Dynamic value for {url}.
+            url (Any): Dynamic value for {url}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -263,12 +318,12 @@ class _UiHeaderNotFoundCallable:
     
     Original template: "Header '{file}' not found. Falling back."
     """
-    def __call__(self, *, file: str | int) -> tuple[str, dict]:
+    def __call__(self, *, file: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            file (str | int): Dynamic value for {file}.
+            file (Any): Dynamic value for {file}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -313,6 +368,24 @@ class _UiK:
     
     Original template: "Core Engine installed: {version} (Network check skipped)"
     """
+    failed_fetch_ytdlp_release: str = "ui.failed_fetch_ytdlp_release"
+    """[Props Type] FailedFetchYtdlpRelease"""
+    pypi_version_mismatch: _UiPypiVersionMismatchCallable = _UiPypiVersionMismatchCallable()
+    """
+    [Callable Props Type] PypiVersionMismatch
+    
+    Original template: "Version mismatch from PyPI: expected {expected}, got {actual}"
+    """
+    no_compatible_wheel: str = "ui.no_compatible_wheel"
+    """[Props Type] NoCompatibleWheel"""
+    failed_download_wheel: str = "ui.failed_download_wheel"
+    """[Props Type] FailedDownloadWheel"""
+    ytdlp_override_installed: _UiYtdlpOverrideInstalledCallable = _UiYtdlpOverrideInstalledCallable()
+    """
+    [Callable Props Type] YtdlpOverrideInstalled
+    
+    Original template: "yt-dlp override installed (version: {version}, expected: {expected})"
+    """
     failed_check_engine_version: _UiFailedCheckEngineVersionCallable = _UiFailedCheckEngineVersionCallable()
     """
     [Callable Props Type] FailedCheckEngineVersion
@@ -345,8 +418,12 @@ class _UiK:
     
     Original template: "Environment Detected: {env}"
     """
-    wsl_detected: str = "ui.wsl_detected"
-    """[Props Type] WslDetected"""
+    wsl_detected: _UiWslDetectedCallable = _UiWslDetectedCallable()
+    """
+    [Callable Props Type] WslDetected
+    
+    Original template: "{wsl_warning} We recommend saving files to Windows folders"
+    """
     wsl_file_explorer_access: str = "ui.wsl_file_explorer_access"
     """[Props Type] WslFileExplorerAccess"""
     default_download_locations: str = "ui.default_download_locations"
@@ -406,18 +483,295 @@ class _UiK:
     Original template: "Header '{file}' not found. Falling back."
     """
 
+class _ServiceStatusRegisteredCallable:
+    """
+    [Callable Props Type] StatusRegistered
+    
+    Original template: "Registered: {value}"
+    """
+    def __call__(self, *, value: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            value (Any): Dynamic value for {value}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_registered", {"value": value})
+
+class _ServiceStatusActiveCallable:
+    """
+    [Callable Props Type] StatusActive
+    
+    Original template: "Active: {value}"
+    """
+    def __call__(self, *, value: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            value (Any): Dynamic value for {value}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_active", {"value": value})
+
+class _ServiceStatusEnabledCallable:
+    """
+    [Callable Props Type] StatusEnabled
+    
+    Original template: "Enabled: {value}"
+    """
+    def __call__(self, *, value: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            value (Any): Dynamic value for {value}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_enabled", {"value": value})
+
+class _ServiceStatusLingerCallable:
+    """
+    [Callable Props Type] StatusLinger
+    
+    Original template: "Linger: {value}"
+    """
+    def __call__(self, *, value: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            value (Any): Dynamic value for {value}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_linger", {"value": value})
+
+class _ServiceStatusPortCallable:
+    """
+    [Callable Props Type] StatusPort
+    
+    Original template: "Port: {port}"
+    """
+    def __call__(self, *, port: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            port (Any): Dynamic value for {port}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_port", {"port": port})
+
+class _ServiceStatusUrlCallable:
+    """
+    [Callable Props Type] StatusUrl
+    
+    Original template: "URL: {url}"
+    """
+    def __call__(self, *, url: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            url (Any): Dynamic value for {url}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.status_url", {"url": url})
+
+class _ServiceWindowsSpawnedCallable:
+    """
+    [Callable Props Type] WindowsSpawned
+    
+    Original template: "Daemon process started (PID {pid})."
+    """
+    def __call__(self, *, pid: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            pid (Any): Dynamic value for {pid}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.windows_spawned", {"pid": pid})
+
+class _ServiceWindowsKilledOldCallable:
+    """
+    [Callable Props Type] WindowsKilledOld
+    
+    Original template: "Stopped previous daemon process (PID {pid})."
+    """
+    def __call__(self, *, pid: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            pid (Any): Dynamic value for {pid}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.windows_killed_old", {"pid": pid})
+
+class _ServiceFailedSystemdStartCallable:
+    """
+    [Callable Props Type] FailedSystemdStart
+    
+    Original template: "Failed to start daemon service: {error}"
+    """
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            error (Any): Dynamic value for {error}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.failed_systemd_start", {"error": error})
+
+class _ServiceFailedSystemdRestartCallable:
+    """
+    [Callable Props Type] FailedSystemdRestart
+    
+    Original template: "Failed to restart daemon service: {error}"
+    """
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            error (Any): Dynamic value for {error}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.failed_systemd_restart", {"error": error})
+
+class _ServiceK:
+    """
+    [Key Type] Service
+    """
+    setup_already_installed: str = "service.setup_already_installed"
+    """[Props Type] SetupAlreadyInstalled"""
+    setup_started: str = "service.setup_started"
+    """[Props Type] SetupStarted"""
+    setup_restarted: str = "service.setup_restarted"
+    """[Props Type] SetupRestarted"""
+    setup_complete: str = "service.setup_complete"
+    """[Props Type] SetupComplete"""
+    setup_not_supported: str = "service.setup_not_supported"
+    """[Props Type] SetupNotSupported"""
+    remove_not_supported: str = "service.remove_not_supported"
+    """[Props Type] RemoveNotSupported"""
+    not_supported: str = "service.not_supported"
+    """[Props Type] NotSupported"""
+    status_title: str = "service.status_title"
+    """[Props Type] StatusTitle"""
+    status_registered: _ServiceStatusRegisteredCallable = _ServiceStatusRegisteredCallable()
+    """
+    [Callable Props Type] StatusRegistered
+    
+    Original template: "Registered: {value}"
+    """
+    status_active: _ServiceStatusActiveCallable = _ServiceStatusActiveCallable()
+    """
+    [Callable Props Type] StatusActive
+    
+    Original template: "Active: {value}"
+    """
+    status_enabled: _ServiceStatusEnabledCallable = _ServiceStatusEnabledCallable()
+    """
+    [Callable Props Type] StatusEnabled
+    
+    Original template: "Enabled: {value}"
+    """
+    status_linger: _ServiceStatusLingerCallable = _ServiceStatusLingerCallable()
+    """
+    [Callable Props Type] StatusLinger
+    
+    Original template: "Linger: {value}"
+    """
+    status_port: _ServiceStatusPortCallable = _ServiceStatusPortCallable()
+    """
+    [Callable Props Type] StatusPort
+    
+    Original template: "Port: {port}"
+    """
+    status_url: _ServiceStatusUrlCallable = _ServiceStatusUrlCallable()
+    """
+    [Callable Props Type] StatusUrl
+    
+    Original template: "URL: {url}"
+    """
+    logs_not_available: str = "service.logs_not_available"
+    """[Props Type] LogsNotAvailable"""
+    logs_follow_hint: str = "service.logs_follow_hint"
+    """[Props Type] LogsFollowHint"""
+    windows_shortcut_created: str = "service.windows_shortcut_created"
+    """[Props Type] WindowsShortcutCreated"""
+    windows_shortcut_failed: str = "service.windows_shortcut_failed"
+    """[Props Type] WindowsShortcutFailed"""
+    windows_spawned: _ServiceWindowsSpawnedCallable = _ServiceWindowsSpawnedCallable()
+    """
+    [Callable Props Type] WindowsSpawned
+    
+    Original template: "Daemon process started (PID {pid})."
+    """
+    windows_killed_old: _ServiceWindowsKilledOldCallable = _ServiceWindowsKilledOldCallable()
+    """
+    [Callable Props Type] WindowsKilledOld
+    
+    Original template: "Stopped previous daemon process (PID {pid})."
+    """
+    windows_pid_not_found: str = "service.windows_pid_not_found"
+    """[Props Type] WindowsPidNotFound"""
+    windows_removed_shortcut: str = "service.windows_removed_shortcut"
+    """[Props Type] WindowsRemovedShortcut"""
+    windows_removed_log: str = "service.windows_removed_log"
+    """[Props Type] WindowsRemovedLog"""
+    windows_removed_pid: str = "service.windows_removed_pid"
+    """[Props Type] WindowsRemovedPid"""
+    failed_systemd_start: _ServiceFailedSystemdStartCallable = _ServiceFailedSystemdStartCallable()
+    """
+    [Callable Props Type] FailedSystemdStart
+    
+    Original template: "Failed to start daemon service: {error}"
+    """
+    failed_systemd_restart: _ServiceFailedSystemdRestartCallable = _ServiceFailedSystemdRestartCallable()
+    """
+    [Callable Props Type] FailedSystemdRestart
+    
+    Original template: "Failed to restart daemon service: {error}"
+    """
+
 class _DaemonDaemonUrlCallable:
     """
     [Callable Props Type] DaemonUrl
     
     Original template: "TetoDL Daemon URL: {url}"
     """
-    def __call__(self, *, url: str | int) -> tuple[str, dict]:
+    def __call__(self, *, url: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            url (str | int): Dynamic value for {url}.
+            url (Any): Dynamic value for {url}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -430,17 +784,35 @@ class _DaemonDaemonPortCallable:
     
     Original template: "Port: {port}"
     """
-    def __call__(self, *, port: str | int) -> tuple[str, dict]:
+    def __call__(self, *, port: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            port (str | int): Dynamic value for {port}.
+            port (Any): Dynamic value for {port}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
         """
         return ("daemon.daemon_port", {"port": port})
+
+class _DaemonOpenUrlInBrowserCallable:
+    """
+    [Callable Props Type] OpenUrlInBrowser
+    
+    Original template: "Open {url} in your browser."
+    """
+    def __call__(self, *, url: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            url (Any): Dynamic value for {url}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("daemon.open_url_in_browser", {"url": url})
 
 class _DaemonOpenBrowserCallable:
     """
@@ -448,12 +820,12 @@ class _DaemonOpenBrowserCallable:
     
     Original template: "Open {url} in your browser."
     """
-    def __call__(self, *, url: str | int) -> tuple[str, dict]:
+    def __call__(self, *, url: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            url (str | int): Dynamic value for {url}.
+            url (Any): Dynamic value for {url}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -466,12 +838,12 @@ class _DaemonServiceFileCreatedCallable:
     
     Original template: "Systemd service file created at: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -484,12 +856,12 @@ class _DaemonFailedSetupSystemdCallable:
     
     Original template: "Failed to setup systemd service: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -502,17 +874,36 @@ class _DaemonFailedRemoveSystemdCallable:
     
     Original template: "Failed to remove systemd service: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
         """
         return ("daemon.failed_remove_systemd", {"error": error})
+
+class _DaemonRunDaemonManuallyCallable:
+    """
+    [Callable Props Type] RunDaemonManually
+    
+    Original template: "You can still run the daemon manually: tetodl service serve --host {host} --port {port}"
+    """
+    def __call__(self, *, host: Any, port: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            host (Any): Dynamic value for {host}.
+            port (Any): Dynamic value for {port}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("daemon.run_daemon_manually", {"host": host, "port": port})
 
 class _DaemonK:
     """
@@ -532,6 +923,10 @@ class _DaemonK:
     """[Props Type] ServiceUnavailable"""
     could_not_detect_lan_ip: str = "daemon.could_not_detect_lan_ip"
     """[Props Type] CouldNotDetectLanIp"""
+    press_ctrl_c_stop: str = "daemon.press_ctrl_c_stop"
+    """[Props Type] PressCtrlCStop"""
+    shutting_down: str = "daemon.shutting_down"
+    """[Props Type] ShuttingDown"""
     daemon_url: _DaemonDaemonUrlCallable = _DaemonDaemonUrlCallable()
     """
     [Callable Props Type] DaemonUrl
@@ -546,6 +941,14 @@ class _DaemonK:
     """
     scan_qr: str = "daemon.scan_qr"
     """[Props Type] ScanQr"""
+    scan_qr_or_open_url: str = "daemon.scan_qr_or_open_url"
+    """[Props Type] ScanQrOrOpenUrl"""
+    open_url_in_browser: _DaemonOpenUrlInBrowserCallable = _DaemonOpenUrlInBrowserCallable()
+    """
+    [Callable Props Type] OpenUrlInBrowser
+    
+    Original template: "Open {url} in your browser."
+    """
     open_browser: _DaemonOpenBrowserCallable = _DaemonOpenBrowserCallable()
     """
     [Callable Props Type] OpenBrowser
@@ -578,6 +981,16 @@ class _DaemonK:
     
     Original template: "Failed to remove systemd service: {error}"
     """
+    no_windows_service_setup: str = "daemon.no_windows_service_setup"
+    """[Props Type] NoWindowsServiceSetup"""
+    no_windows_service_remove: str = "daemon.no_windows_service_remove"
+    """[Props Type] NoWindowsServiceRemove"""
+    run_daemon_manually: _DaemonRunDaemonManuallyCallable = _DaemonRunDaemonManuallyCallable()
+    """
+    [Callable Props Type] RunDaemonManually
+    
+    Original template: "You can still run the daemon manually: tetodl service serve --host {host} --port {port}"
+    """
 
 class _FilesFailedToMoveCallable:
     """
@@ -585,13 +998,13 @@ class _FilesFailedToMoveCallable:
     
     Original template: "Failed to move {item}: {error}"
     """
-    def __call__(self, *, item: str | int, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, item: Any, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            item (str | int): Dynamic value for {item}.
-            error (Exception | str | int): Dynamic value for {error}.
+            item (Any): Dynamic value for {item}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -604,12 +1017,12 @@ class _FilesFailedCreateZipCallable:
     
     Original template: "Failed to create zip: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -622,12 +1035,12 @@ class _FilesZipSourceNotFoundCallable:
     
     Original template: "Zip source not found: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -640,12 +1053,12 @@ class _FilesArchivingToCallable:
     
     Original template: "Archiving to {name}.zip ..."
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -658,12 +1071,12 @@ class _FilesArchiveCreatedAtCallable:
     
     Original template: "Archive created at: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -676,12 +1089,12 @@ class _FilesArchiveCreatedCallable:
     
     Original template: "Archive created: {name}"
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -694,12 +1107,12 @@ class _FilesZipSuccessButFileMissingCallable:
     
     Original template: "Zip reported success but file missing at: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -712,12 +1125,12 @@ class _FilesPlaylistGeneratedCallable:
     
     Original template: "Playlist generated: {name}"
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -730,12 +1143,12 @@ class _FilesFailedCreatePlaylistCallable:
     
     Original template: "Failed to create playlist: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -748,12 +1161,12 @@ class _FilesFailedDeleteNomediaCallable:
     
     Original template: "Failed to delete .nomedia: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -766,12 +1179,12 @@ class _FilesCleanedTempFilesCallable:
     
     Original template: "Cleaned {count} temporary files"
     """
-    def __call__(self, *, count: str | int) -> tuple[str, dict]:
+    def __call__(self, *, count: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            count (str | int): Dynamic value for {count}.
+            count (Any): Dynamic value for {count}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -855,12 +1268,12 @@ class _SpotSimpleModeDownloadCallable:
     
     Original template: "Simple Mode: Downloading directly to {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -873,12 +1286,12 @@ class _SpotTypeDetectedCallable:
     
     Original template: "Spotify {type} detected"
     """
-    def __call__(self, *, type: str | int) -> tuple[str, dict]:
+    def __call__(self, *, type: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            type (str | int): Dynamic value for {type}.
+            type (Any): Dynamic value for {type}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -891,12 +1304,12 @@ class _SpotCommandDebugCallable:
     
     Original template: "Running command: {command}"
     """
-    def __call__(self, *, command: str | int) -> tuple[str, dict]:
+    def __call__(self, *, command: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            command (str | int): Dynamic value for {command}.
+            command (Any): Dynamic value for {command}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -909,12 +1322,12 @@ class _SpotSpotdlBinaryPathCallable:
     
     Original template: "Path Binary: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -927,12 +1340,12 @@ class _SpotPythonInterpreterCallable:
     
     Original template: "Python Interpreter: {interpreter}"
     """
-    def __call__(self, *, interpreter: str | int) -> tuple[str, dict]:
+    def __call__(self, *, interpreter: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            interpreter (str | int): Dynamic value for {interpreter}.
+            interpreter (Any): Dynamic value for {interpreter}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -998,12 +1411,12 @@ class _NetFileDirNotFoundCallable:
     
     Original template: "File/Directory not found: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1016,13 +1429,13 @@ class _NetPortsBusyCallable:
     
     Original template: "All ports from {start} to {end} are busy."
     """
-    def __call__(self, *, start: str | int, end: str | int) -> tuple[str, dict]:
+    def __call__(self, *, start: Any, end: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            start (str | int): Dynamic value for {start}.
-            end (str | int): Dynamic value for {end}.
+            start (Any): Dynamic value for {start}.
+            end (Any): Dynamic value for {end}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1072,12 +1485,12 @@ class _TaggerFileNotFoundCallable:
     
     Original template: "File does not exist: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1090,12 +1503,12 @@ class _TaggerFailedEmbedLyricsCallable:
     
     Original template: "Failed to embed lyrics: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1108,12 +1521,12 @@ class _TaggerMetadataEmbeddingErrorCallable:
     
     Original template: "Metadata embedding error: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1153,12 +1566,12 @@ class _DispatchMovedFilesAndUpdatedCallable:
     
     Original template: "Moved {count} files and updated registry."
     """
-    def __call__(self, *, count: str | int) -> tuple[str, dict]:
+    def __call__(self, *, count: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            count (str | int): Dynamic value for {count}.
+            count (Any): Dynamic value for {count}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1200,12 +1613,12 @@ class _CoreFailedDeleteCacheCallable:
     
     Original template: "Failed to delete cache: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1218,12 +1631,12 @@ class _CoreFailedSaveHistoryCallable:
     
     Original template: "Failed to save history: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1236,12 +1649,12 @@ class _CoreFailedDeleteHistoryCallable:
     
     Original template: "Failed to delete history: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1274,6 +1687,8 @@ class _CoreK:
     
     Original template: "Failed to delete history: {error}"
     """
+    failed_reset_cache: str = "core.failed_reset_cache"
+    """[Props Type] FailedResetCache"""
 
 class _SearchSearchResultsCallable:
     """
@@ -1281,12 +1696,12 @@ class _SearchSearchResultsCallable:
     
     Original template: "Search Results for '{query}':"
     """
-    def __call__(self, *, query: str | int) -> tuple[str, dict]:
+    def __call__(self, *, query: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            query (str | int): Dynamic value for {query}.
+            query (Any): Dynamic value for {query}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1299,12 +1714,12 @@ class _SearchSearchErrorCallable:
     
     Original template: "Search error: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1334,18 +1749,54 @@ class _SearchK:
     Original template: "Search error: {error}"
     """
 
+class _MaintNoBinaryFoundCallable:
+    """
+    [Callable Props Type] NoBinaryFound
+    
+    Original template: "No binary found for {asset_name}"
+    """
+    def __call__(self, *, asset_name: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            asset_name (Any): Dynamic value for {asset_name}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("maint.no_binary_found", {"asset_name": asset_name})
+
+class _MaintDownloadingBinaryCallable:
+    """
+    [Callable Props Type] DownloadingBinary
+    
+    Original template: "Downloading {tag} ..."
+    """
+    def __call__(self, *, tag: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            tag (Any): Dynamic value for {tag}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("maint.downloading_binary", {"tag": tag})
+
 class _MaintFoundNewCommitsCallable:
     """
     [Callable Props Type] FoundNewCommits
     
     Original template: "Found {count} new commit(s)! Updating..."
     """
-    def __call__(self, *, count: str | int) -> tuple[str, dict]:
+    def __call__(self, *, count: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            count (str | int): Dynamic value for {count}.
+            count (Any): Dynamic value for {count}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1358,12 +1809,12 @@ class _MaintUpdateFailedCallable:
     
     Original template: "Update failed: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1376,12 +1827,12 @@ class _MaintUninstallerScriptNotFoundCallable:
     
     Original template: "Uninstaller script not found at: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1394,12 +1845,12 @@ class _MaintFailedCleanDataCallable:
     
     Original template: "Failed to clean some data: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1412,12 +1863,12 @@ class _MaintErrorExecutingUninstallerCallable:
     
     Original template: "Error executing uninstaller: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1430,12 +1881,12 @@ class _MaintNothingToCleanCallable:
     
     Original template: "{target}: Nothing to clean"
     """
-    def __call__(self, *, target: str | int) -> tuple[str, dict]:
+    def __call__(self, *, target: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            target (str | int): Dynamic value for {target}.
+            target (Any): Dynamic value for {target}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1448,12 +1899,12 @@ class _MaintWipeRegistryWarningCallable:
     
     Original template: "{warning} You are about to wipe the DOWNLOAD REGISTRY."
     """
-    def __call__(self, *, warning: str | int) -> tuple[str, dict]:
+    def __call__(self, *, warning: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            warning (str | int): Dynamic value for {warning}.
+            warning (Any): Dynamic value for {warning}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1466,12 +1917,12 @@ class _MaintWillAlsoResetCallable:
     
     Original template: "This will also reset: {items}"
     """
-    def __call__(self, *, items: str | int) -> tuple[str, dict]:
+    def __call__(self, *, items: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            items (str | int): Dynamic value for {items}.
+            items (Any): Dynamic value for {items}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1484,12 +1935,12 @@ class _MaintAboutToResetCallable:
     
     Original template: "You are about to reset: {items}"
     """
-    def __call__(self, *, items: str | int) -> tuple[str, dict]:
+    def __call__(self, *, items: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            items (str | int): Dynamic value for {items}.
+            items (Any): Dynamic value for {items}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1499,6 +1950,20 @@ class _MaintAboutToResetCallable:
 class _MaintK:
     """
     [Key Type] Maint
+    """
+    updating_dependencies: str = "maint.updating_dependencies"
+    """[Props Type] UpdatingDependencies"""
+    no_binary_found: _MaintNoBinaryFoundCallable = _MaintNoBinaryFoundCallable()
+    """
+    [Callable Props Type] NoBinaryFound
+    
+    Original template: "No binary found for {asset_name}"
+    """
+    downloading_binary: _MaintDownloadingBinaryCallable = _MaintDownloadingBinaryCallable()
+    """
+    [Callable Props Type] DownloadingBinary
+    
+    Original template: "Downloading {tag} ..."
     """
     not_git_repo: str = "maint.not_git_repo"
     """[Props Type] NotGitRepo"""
@@ -1613,13 +2078,13 @@ class _CliStartingApiServerCallable:
     
     Original template: "Starting TetoDL API Server on {host}:{port}..."
     """
-    def __call__(self, *, host: str | int, port: str | int) -> tuple[str, dict]:
+    def __call__(self, *, host: Any, port: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            host (str | int): Dynamic value for {host}.
-            port (str | int): Dynamic value for {port}.
+            host (Any): Dynamic value for {host}.
+            port (Any): Dynamic value for {port}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1632,12 +2097,12 @@ class _CliHeaderStyleCallable:
     
     Original template: "Header style: {style}"
     """
-    def __call__(self, *, style: str | int) -> tuple[str, dict]:
+    def __call__(self, *, style: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            style (str | int): Dynamic value for {style}.
+            style (Any): Dynamic value for {style}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1650,12 +2115,12 @@ class _CliProgressStyleCallable:
     
     Original template: "Progress style: {style}"
     """
-    def __call__(self, *, style: str | int) -> tuple[str, dict]:
+    def __call__(self, *, style: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            style (str | int): Dynamic value for {style}.
+            style (Any): Dynamic value for {style}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1668,12 +2133,12 @@ class _CliLanguageSetCallable:
     
     Original template: "Language: {name}"
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1686,13 +2151,13 @@ class _CliJitterSetCallable:
     
     Original template: "Jitter: {jitter_min}-{jitter_max}s"
     """
-    def __call__(self, *, jitter_min: str | int, jitter_max: str | int) -> tuple[str, dict]:
+    def __call__(self, *, jitter_min: Any, jitter_max: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            jitter_min (str | int): Dynamic value for {jitter_min}.
-            jitter_max (str | int): Dynamic value for {jitter_max}.
+            jitter_min (Any): Dynamic value for {jitter_min}.
+            jitter_max (Any): Dynamic value for {jitter_max}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1705,12 +2170,12 @@ class _CliRetriesSetCallable:
     
     Original template: "Retries: {retries}"
     """
-    def __call__(self, *, retries: str | int) -> tuple[str, dict]:
+    def __call__(self, *, retries: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            retries (str | int): Dynamic value for {retries}.
+            retries (Any): Dynamic value for {retries}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1723,12 +2188,12 @@ class _CliMediaScannerStatusCallable:
     
     Original template: "Media Scanner {status}."
     """
-    def __call__(self, *, status: str | int) -> tuple[str, dict]:
+    def __call__(self, *, status: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            status (str | int): Dynamic value for {status}.
+            status (Any): Dynamic value for {status}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1741,12 +2206,12 @@ class _CliGroupFolderNotFoundCallable:
     
     Original template: "Group folder not found: '{name}'"
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1759,12 +2224,12 @@ class _CliSearchedInCallable:
     
     Original template: "Searched in: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1777,12 +2242,12 @@ class _CliArchivingFolderCallable:
     
     Original template: "Archiving folder for temporary share: {name}..."
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1795,12 +2260,12 @@ class _CliServingTempArchiveCallable:
     
     Original template: "Serving Temporary Archive: {name}"
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1813,12 +2278,12 @@ class _CliFailedRemoveTempZipCallable:
     
     Original template: "Failed to remove temp zip: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1831,12 +2296,12 @@ class _CliSharingGroupCallable:
     
     Original template: "Sharing Group: {name}"
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -1849,17 +2314,35 @@ class _CliSharePathCallable:
     
     Original template: "Path: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
         """
         return ("cli.share_path", {"path": path})
+
+class _CliInvalidJitterFormatCallable:
+    """
+    [Callable Props Type] InvalidJitterFormat
+    
+    Original template: "Invalid jitter format: {value}. Use MIN-MAX (e.g. 3-5)"
+    """
+    def __call__(self, *, value: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            value (Any): Dynamic value for {value}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("cli.invalid_jitter_format", {"value": value})
 
 class _CliK:
     """
@@ -1979,6 +2462,12 @@ class _CliK:
     """[Props Type] AudioModeNote"""
     share_group_folder_error: str = "cli.share_group_folder_error"
     """[Props Type] ShareGroupFolderError"""
+    invalid_jitter_format: _CliInvalidJitterFormatCallable = _CliInvalidJitterFormatCallable()
+    """
+    [Callable Props Type] InvalidJitterFormat
+    
+    Original template: "Invalid jitter format: {value}. Use MIN-MAX (e.g. 3-5)"
+    """
 
 class _ErrorFileCheckFailedCallable:
     """
@@ -1986,12 +2475,12 @@ class _ErrorFileCheckFailedCallable:
     
     Original template: "Error checking existing files: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2019,12 +2508,12 @@ class _MediaScanFailedCallable:
     
     Original template: "Failed to scan media: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2037,12 +2526,12 @@ class _MediaCropFailedCallable:
     
     Original template: "FFmpeg crop failed: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2055,12 +2544,12 @@ class _MediaCropErrorCallable:
     
     Original template: "Error cropping thumbnail: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2073,12 +2562,12 @@ class _MediaThumbnailErrorCallable:
     
     Original template: "Error processing thumbnail: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2091,12 +2580,12 @@ class _MediaEmbedErrorCallable:
     
     Original template: "Error embedding thumbnail: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2109,12 +2598,12 @@ class _MediaTempCleanErrorCallable:
     
     Original template: "Error cleaning temp files: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2127,12 +2616,12 @@ class _MediaEncodingCallable:
     
     Original template: "Re-encoding video to {codec} (this might take a while)..."
     """
-    def __call__(self, *, codec: str | int) -> tuple[str, dict]:
+    def __call__(self, *, codec: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            codec (str | int): Dynamic value for {codec}.
+            codec (Any): Dynamic value for {codec}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2145,13 +2634,13 @@ class _MediaTrimmingAudioCallable:
     
     Original template: "Trimming audio: {start}s to {end}s"
     """
-    def __call__(self, *, start: str | int, end: str | int) -> tuple[str, dict]:
+    def __call__(self, *, start: Any, end: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            start (str | int): Dynamic value for {start}.
-            end (str | int): Dynamic value for {end}.
+            start (Any): Dynamic value for {start}.
+            end (Any): Dynamic value for {end}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2164,13 +2653,13 @@ class _MediaTrimmingVideoCallable:
     
     Original template: "Trimming video: {start}s to {end}s (This may take longer)"
     """
-    def __call__(self, *, start: str | int, end: str | int) -> tuple[str, dict]:
+    def __call__(self, *, start: Any, end: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            start (str | int): Dynamic value for {start}.
-            end (str | int): Dynamic value for {end}.
+            start (Any): Dynamic value for {start}.
+            end (Any): Dynamic value for {end}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2183,13 +2672,13 @@ class _MediaSearchingLyricsForCallable:
     
     Original template: "Searching lyrics for: {artist} - {title}"
     """
-    def __call__(self, *, artist: str | int, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, artist: Any, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            artist (str | int): Dynamic value for {artist}.
-            title (str | int): Dynamic value for {title}.
+            artist (Any): Dynamic value for {artist}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2202,12 +2691,12 @@ class _MediaCoverArtFoundViaCallable:
     
     Original template: "Cover art found via {source}!"
     """
-    def __call__(self, *, source: str | int) -> tuple[str, dict]:
+    def __call__(self, *, source: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            source (str | int): Dynamic value for {source}.
+            source (Any): Dynamic value for {source}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2220,12 +2709,12 @@ class _MediaFoundRomanizedLyricsCallable:
     
     Original template: "Found Romanized lyrics: {title}"
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2238,12 +2727,12 @@ class _MediaFetchingLyricsFromCallable:
     
     Original template: "Fetching lyrics from: {title}"
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2256,12 +2745,12 @@ class _MediaHighConcurrencyWarningCallable:
     
     Original template: "Warning: High concurrency {n} increases risk of IP Ban."
     """
-    def __call__(self, *, n: str | int) -> tuple[str, dict]:
+    def __call__(self, *, n: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            n (str | int): Dynamic value for {n}.
+            n (Any): Dynamic value for {n}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2274,12 +2763,12 @@ class _MediaAsyncModeCallable:
     
     Original template: "Async Mode: {count} threads active. Press Ctrl+C to stop."
     """
-    def __call__(self, *, count: str | int) -> tuple[str, dict]:
+    def __call__(self, *, count: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            count (str | int): Dynamic value for {count}.
+            count (Any): Dynamic value for {count}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2292,12 +2781,12 @@ class _MediaScanErrorCallable:
     
     Original template: "Scan error: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2310,12 +2799,12 @@ class _MediaCannotCreateThumbDirCallable:
     
     Original template: "Cannot create thumbnail directory: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2328,12 +2817,12 @@ class _MediaExtractionFailedCallable:
     
     Original template: "Extraction failed: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2346,12 +2835,12 @@ class _MediaPlaylistDetectedCallable:
     
     Original template: "Playlist detected: {title}"
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2364,12 +2853,12 @@ class _MediaFoundItemsProcessingCallable:
     
     Original template: "Found {count} items. Processing thumbnails..."
     """
-    def __call__(self, *, count: str | int) -> tuple[str, dict]:
+    def __call__(self, *, count: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            count (str | int): Dynamic value for {count}.
+            count (Any): Dynamic value for {count}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2382,14 +2871,14 @@ class _MediaProcessingEntryCallable:
     
     Original template: "[{current}/{total}] Processing: {title}"
     """
-    def __call__(self, *, current: str | int, total: str | int, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, current: Any, total: Any, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            current (str | int): Dynamic value for {current}.
-            total (str | int): Dynamic value for {total}.
-            title (str | int): Dynamic value for {title}.
+            current (Any): Dynamic value for {current}.
+            total (Any): Dynamic value for {total}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2402,13 +2891,13 @@ class _MediaProcessedThumbnailsCallable:
     
     Original template: "Processed {success}/{total} thumbnails."
     """
-    def __call__(self, *, success: str | int, total: str | int) -> tuple[str, dict]:
+    def __call__(self, *, success: Any, total: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            success (str | int): Dynamic value for {success}.
-            total (str | int): Dynamic value for {total}.
+            success (Any): Dynamic value for {success}.
+            total (Any): Dynamic value for {total}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2421,12 +2910,12 @@ class _MediaProcessingCoverForCallable:
     
     Original template: "Processing cover for: {title}"
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2439,12 +2928,12 @@ class _MediaThumbnailSavedCallable:
     
     Original template: "Saved: {name}"
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2457,12 +2946,12 @@ class _MediaThumbnailSavedAsCallable:
     
     Original template: "Saved as: {name}"
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2475,12 +2964,12 @@ class _MediaSkippingItemCallable:
     
     Original template: "Skipping item {index} (Not selected)"
     """
-    def __call__(self, *, index: str | int) -> tuple[str, dict]:
+    def __call__(self, *, index: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            index (str | int): Dynamic value for {index}.
+            index (Any): Dynamic value for {index}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2495,6 +2984,8 @@ class _MediaK:
     """[Props Type] Scanning"""
     scan_complete: str = "media.scan_complete"
     """[Props Type] ScanComplete"""
+    extracting_information: str = "media.extracting_information"
+    """[Props Type] ExtractingInformation"""
     scan_failed: _MediaScanFailedCallable = _MediaScanFailedCallable()
     """
     [Callable Props Type] ScanFailed
@@ -2682,12 +3173,12 @@ class _ConfigResolutionChangedCallable:
     
     Original template: "Max Video Resolution changed to: {resolution}"
     """
-    def __call__(self, *, resolution: str | int) -> tuple[str, dict]:
+    def __call__(self, *, resolution: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            resolution (str | int): Dynamic value for {resolution}.
+            resolution (Any): Dynamic value for {resolution}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2700,12 +3191,12 @@ class _ConfigContainerChangedCallable:
     
     Original template: "Default video container changed to {container}"
     """
-    def __call__(self, *, container: str | int) -> tuple[str, dict]:
+    def __call__(self, *, container: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            container (str | int): Dynamic value for {container}.
+            container (Any): Dynamic value for {container}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2718,12 +3209,12 @@ class _ConfigCodecChangedCallable:
     
     Original template: "Video codec changed to: {codec}"
     """
-    def __call__(self, *, codec: str | int) -> tuple[str, dict]:
+    def __call__(self, *, codec: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            codec (str | int): Dynamic value for {codec}.
+            codec (Any): Dynamic value for {codec}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2736,12 +3227,12 @@ class _ConfigMusicRootSetCallable:
     
     Original template: "Music root set to: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2754,12 +3245,12 @@ class _ConfigVideoRootSetCallable:
     
     Original template: "Video root set to: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2772,13 +3263,13 @@ class _ConfigGhostFolderRemovedCallable:
     
     Original template: "Removing ghost subfolder '{type}/{name}' from config"
     """
-    def __call__(self, *, type: str | int, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, type: Any, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            type (str | int): Dynamic value for {type}.
-            name (str | int): Dynamic value for {name}.
+            type (Any): Dynamic value for {type}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2791,12 +3282,12 @@ class _ConfigLanguageChangedCallable:
     
     Original template: "Language changed to: {lang}."
     """
-    def __call__(self, *, lang: str | int) -> tuple[str, dict]:
+    def __call__(self, *, lang: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            lang (str | int): Dynamic value for {lang}.
+            lang (Any): Dynamic value for {lang}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2811,10 +3302,6 @@ class _ConfigK:
     """[Props Type] SimpleModeEnabled"""
     simple_mode_disabled: str = "config.simple_mode_disabled"
     """[Props Type] SimpleModeDisabled"""
-    smart_cover_enabled: str = "config.smart_cover_enabled"
-    """[Props Type] SmartCoverEnabled"""
-    smart_cover_disabled: str = "config.smart_cover_disabled"
-    """[Props Type] SmartCoverDisabled"""
     skip_existing_enabled: str = "config.skip_existing_enabled"
     """[Props Type] SkipExistingEnabled"""
     skip_existing_disabled: str = "config.skip_existing_disabled"
@@ -2888,12 +3375,12 @@ class _DependencyPythonVersionCallable:
     
     Original template: "Python {version}"
     """
-    def __call__(self, *, version: str | int) -> tuple[str, dict]:
+    def __call__(self, *, version: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            version (str | int): Dynamic value for {version}.
+            version (Any): Dynamic value for {version}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2906,12 +3393,12 @@ class _DependencyPythonOldCallable:
     
     Original template: "Python {version} - Required: 3.8+"
     """
-    def __call__(self, *, version: str | int) -> tuple[str, dict]:
+    def __call__(self, *, version: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            version (str | int): Dynamic value for {version}.
+            version (Any): Dynamic value for {version}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2924,12 +3411,12 @@ class _DependencyFfmpegVersionCallable:
     
     Original template: "FFmpeg {version}"
     """
-    def __call__(self, *, version: str | int) -> tuple[str, dict]:
+    def __call__(self, *, version: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            version (str | int): Dynamic value for {version}.
+            version (Any): Dynamic value for {version}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2942,13 +3429,13 @@ class _DependencyPackageInstalledCallable:
     
     Original template: "{package} {version}"
     """
-    def __call__(self, *, package: str | int, version: str | int) -> tuple[str, dict]:
+    def __call__(self, *, package: Any, version: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            package (str | int): Dynamic value for {package}.
-            version (str | int): Dynamic value for {version}.
+            package (Any): Dynamic value for {package}.
+            version (Any): Dynamic value for {version}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2961,12 +3448,12 @@ class _DependencyPackageSimpleCallable:
     
     Original template: "{package} (installed)"
     """
-    def __call__(self, *, package: str | int) -> tuple[str, dict]:
+    def __call__(self, *, package: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            package (str | int): Dynamic value for {package}.
+            package (Any): Dynamic value for {package}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -2979,12 +3466,12 @@ class _DependencyPackageNotFoundCallable:
     
     Original template: "{package} not found"
     """
-    def __call__(self, *, package: str | int) -> tuple[str, dict]:
+    def __call__(self, *, package: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            package (str | int): Dynamic value for {package}.
+            package (Any): Dynamic value for {package}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3082,17 +3569,35 @@ class _HistoryTotalDurationCallable:
     
     Original template: "Total Duration: {duration}"
     """
-    def __call__(self, *, duration: str | int) -> tuple[str, dict]:
+    def __call__(self, *, duration: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            duration (str | int): Dynamic value for {duration}.
+            duration (Any): Dynamic value for {duration}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
         """
         return ("history.total_duration", {"duration": duration})
+
+class _HistoryNoResultsForQueryCallable:
+    """
+    [Callable Props Type] NoResultsForQuery
+    
+    Original template: "No history found matching query: '{query}'"
+    """
+    def __call__(self, *, query: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            query (Any): Dynamic value for {query}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("history.no_results_for_query", {"query": query})
 
 class _HistoryK:
     """
@@ -3110,6 +3615,12 @@ class _HistoryK:
     """
     entries: str = "history.entries"
     """[Props Type] Entries"""
+    no_results_for_query: _HistoryNoResultsForQueryCallable = _HistoryNoResultsForQueryCallable()
+    """
+    [Callable Props Type] NoResultsForQuery
+    
+    Original template: "No history found matching query: '{query}'"
+    """
 
 class _DownloadNavigationCannotReadCallable:
     """
@@ -3117,12 +3628,12 @@ class _DownloadNavigationCannotReadCallable:
     
     Original template: "Cannot read folder: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3135,12 +3646,12 @@ class _DownloadNavigationSettedMusicCallable:
     
     Original template: "Music root setted to: {music_root}"
     """
-    def __call__(self, *, music_root: str | int) -> tuple[str, dict]:
+    def __call__(self, *, music_root: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            music_root (str | int): Dynamic value for {music_root}.
+            music_root (Any): Dynamic value for {music_root}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3153,12 +3664,12 @@ class _DownloadNavigationSettedVideoCallable:
     
     Original template: "Video root setted to: {video_root}"
     """
-    def __call__(self, *, video_root: str | int) -> tuple[str, dict]:
+    def __call__(self, *, video_root: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            video_root (str | int): Dynamic value for {video_root}.
+            video_root (Any): Dynamic value for {video_root}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3206,12 +3717,12 @@ class _DownloadFolderSelectLocationCallable:
     
     Original template: "Select Save Location ({type})"
     """
-    def __call__(self, *, type: str | int) -> tuple[str, dict]:
+    def __call__(self, *, type: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            type (str | int): Dynamic value for {type}.
+            type (Any): Dynamic value for {type}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3224,12 +3735,12 @@ class _DownloadFolderRootCallable:
     
     Original template: "Target: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3242,12 +3753,12 @@ class _DownloadFolderCreateFailedCallable:
     
     Original template: "Failed to create folder: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3260,12 +3771,12 @@ class _DownloadFolderNotFoundCallable:
     
     Original template: "Subfolder '{name}' not found, removing from config..."
     """
-    def __call__(self, *, name: str | int) -> tuple[str, dict]:
+    def __call__(self, *, name: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            name (str | int): Dynamic value for {name}.
+            name (Any): Dynamic value for {name}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3321,12 +3832,12 @@ class _DownloadSpotifyDetectedCallable:
     
     Original template: "Spotify {type} detected"
     """
-    def __call__(self, *, type: str | int) -> tuple[str, dict]:
+    def __call__(self, *, type: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            type (str | int): Dynamic value for {type}.
+            type (Any): Dynamic value for {type}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3339,12 +3850,12 @@ class _DownloadSpotifySpotdlErrorCallable:
     
     Original template: "Failed to run spotdl: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3396,12 +3907,12 @@ class _DownloadYoutubeDetectedCallable:
     
     Original template: "{type} detected"
     """
-    def __call__(self, *, type: str | int) -> tuple[str, dict]:
+    def __call__(self, *, type: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            type (str | int): Dynamic value for {type}.
+            type (Any): Dynamic value for {type}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3414,13 +3925,13 @@ class _DownloadYoutubeExtractedCallable:
     
     Original template: "Successfully extracted {count} {type}"
     """
-    def __call__(self, *, count: str | int, type: str | int) -> tuple[str, dict]:
+    def __call__(self, *, count: Any, type: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            count (str | int): Dynamic value for {count}.
-            type (str | int): Dynamic value for {type}.
+            count (Any): Dynamic value for {count}.
+            type (Any): Dynamic value for {type}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3433,14 +3944,14 @@ class _DownloadYoutubeFoundPlaylistCallable:
     
     Original template: "Found {count} {type} in playlist/album: {title}"
     """
-    def __call__(self, *, count: str | int, type: str | int, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, count: Any, type: Any, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            count (str | int): Dynamic value for {count}.
-            type (str | int): Dynamic value for {type}.
-            title (str | int): Dynamic value for {title}.
+            count (Any): Dynamic value for {count}.
+            type (Any): Dynamic value for {type}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3453,13 +3964,13 @@ class _DownloadYoutubeSimpleModeStartCallable:
     
     Original template: "Simple Mode: Starting {type} download → {path}"
     """
-    def __call__(self, *, type: str | int, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, type: Any, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            type (str | int): Dynamic value for {type}.
-            path (str | int | Path): Dynamic value for {path}.
+            type (Any): Dynamic value for {type}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3472,13 +3983,13 @@ class _DownloadYoutubeStartDownloadCallable:
     
     Original template: "Starting {type} download → {path}"
     """
-    def __call__(self, *, type: str | int, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, type: Any, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            type (str | int): Dynamic value for {type}.
-            path (str | int | Path): Dynamic value for {path}.
+            type (Any): Dynamic value for {type}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3491,12 +4002,12 @@ class _DownloadYoutubeFileExistsPlaylistCallable:
     
     Original template: "{title} already exists, skipping..."
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3509,12 +4020,12 @@ class _DownloadYoutubeExistsTitleCallable:
     
     Original template: "Title: {title}"
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3527,12 +4038,12 @@ class _DownloadYoutubeExistsPathCallable:
     
     Original template: "Path: {path}"
     """
-    def __call__(self, *, path: str | int | Path) -> tuple[str, dict]:
+    def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            path (str | int | Path): Dynamic value for {path}.
+            path (Any): Dynamic value for {path}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3545,12 +4056,12 @@ class _DownloadYoutubeUsingCacheCallable:
     
     Original template: "Using cache for: {title}"
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3563,12 +4074,12 @@ class _DownloadYoutubeDownloadingItemCallable:
     
     Original template: "Downloading: {title}"
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3581,12 +4092,12 @@ class _DownloadYoutubeFileNotFoundCallable:
     
     Original template: "Audio file not found: {filename}"
     """
-    def __call__(self, *, filename: str | int) -> tuple[str, dict]:
+    def __call__(self, *, filename: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            filename (str | int): Dynamic value for {filename}.
+            filename (Any): Dynamic value for {filename}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3599,12 +4110,12 @@ class _DownloadYoutubeMaxResolutionCallable:
     
     Original template: "Max video resolution: {resolution}"
     """
-    def __call__(self, *, resolution: str | int) -> tuple[str, dict]:
+    def __call__(self, *, resolution: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            resolution (str | int): Dynamic value for {resolution}.
+            resolution (Any): Dynamic value for {resolution}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3617,13 +4128,13 @@ class _DownloadYoutubeProgressCallable:
     
     Original template: "Progress: {current}/{total}"
     """
-    def __call__(self, *, current: str | int, total: str | int) -> tuple[str, dict]:
+    def __call__(self, *, current: Any, total: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            current (str | int): Dynamic value for {current}.
-            total (str | int): Dynamic value for {total}.
+            current (Any): Dynamic value for {current}.
+            total (Any): Dynamic value for {total}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3636,13 +4147,13 @@ class _DownloadYoutubeDownloadingUrlCallable:
     
     Original template: "Downloading URL: {url} as {type}."
     """
-    def __call__(self, *, url: str | int, type: str | int) -> tuple[str, dict]:
+    def __call__(self, *, url: Any, type: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            url (str | int): Dynamic value for {url}.
-            type (str | int): Dynamic value for {type}.
+            url (Any): Dynamic value for {url}.
+            type (Any): Dynamic value for {type}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3655,12 +4166,12 @@ class _DownloadYoutubeSuccessCallable:
     
     Original template: "Success: {title}"
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3673,12 +4184,12 @@ class _DownloadYoutubeFailedCallable:
     
     Original template: "Failed: {title}"
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3691,13 +4202,13 @@ class _DownloadYoutubeWaitJitterCallable:
     
     Original template: "Waiting {jitter_min}-{jitter_max}s before next download..."
     """
-    def __call__(self, *, jitter_min: str | int, jitter_max: str | int) -> tuple[str, dict]:
+    def __call__(self, *, jitter_min: Any, jitter_max: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            jitter_min (str | int): Dynamic value for {jitter_min}.
-            jitter_max (str | int): Dynamic value for {jitter_max}.
+            jitter_min (Any): Dynamic value for {jitter_min}.
+            jitter_max (Any): Dynamic value for {jitter_max}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3710,16 +4221,16 @@ class _DownloadYoutubeSummaryCallable:
     
     Original template: "Summary: {success} successful, {skipped} skipped, {failed} failed out of {total} {type}"
     """
-    def __call__(self, *, success: str | int, skipped: str | int, failed: str | int, total: str | int, type: str | int) -> tuple[str, dict]:
+    def __call__(self, *, success: Any, skipped: Any, failed: Any, total: Any, type: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            success (str | int): Dynamic value for {success}.
-            skipped (str | int): Dynamic value for {skipped}.
-            failed (str | int): Dynamic value for {failed}.
-            total (str | int): Dynamic value for {total}.
-            type (str | int): Dynamic value for {type}.
+            success (Any): Dynamic value for {success}.
+            skipped (Any): Dynamic value for {skipped}.
+            failed (Any): Dynamic value for {failed}.
+            total (Any): Dynamic value for {total}.
+            type (Any): Dynamic value for {type}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3732,13 +4243,13 @@ class _DownloadYoutubeFailedItemsCallable:
     
     Original template: "{count} {type} failed to download"
     """
-    def __call__(self, *, count: str | int, type: str | int) -> tuple[str, dict]:
+    def __call__(self, *, count: Any, type: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            count (str | int): Dynamic value for {count}.
-            type (str | int): Dynamic value for {type}.
+            count (Any): Dynamic value for {count}.
+            type (Any): Dynamic value for {type}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3751,17 +4262,107 @@ class _DownloadYoutubeExtractFailedCallable:
     
     Original template: "Failed to extract content: {error}"
     """
-    def __call__(self, *, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            error (Exception | str | int): Dynamic value for {error}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
         """
         return ("download.youtube.extract_failed", {"error": error})
+
+class _DownloadYoutubeSkippingExistingTrackCallable:
+    """
+    [Callable Props Type] SkippingExistingTrack
+    
+    Original template: "Skipping existing track: {title}"
+    """
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            title (Any): Dynamic value for {title}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("download.youtube.skipping_existing_track", {"title": title})
+
+class _DownloadYoutubeSkippedExistingTracksCallable:
+    """
+    [Callable Props Type] SkippedExistingTracks
+    
+    Original template: "Skipped {count} already-downloaded track(s)"
+    """
+    def __call__(self, *, count: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            count (Any): Dynamic value for {count}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("download.youtube.skipped_existing_tracks", {"count": count})
+
+class _DownloadYoutubeFailedCreateThumbDirCallable:
+    """
+    [Callable Props Type] FailedCreateThumbDir
+    
+    Original template: "Failed to create thumbnail directory: {error}"
+    """
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            error (Any): Dynamic value for {error}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("download.youtube.failed_create_thumb_dir", {"error": error})
+
+class _DownloadYoutubeFailedResolveSpotifyUrlCallable:
+    """
+    [Callable Props Type] FailedResolveSpotifyUrl
+    
+    Original template: "Failed to resolve Spotify URL: {error}"
+    """
+    def __call__(self, *, error: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            error (Any): Dynamic value for {error}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("download.youtube.failed_resolve_spotify_url", {"error": error})
+
+class _DownloadYoutubeCouldNotFindYoutubeResultCallable:
+    """
+    [Callable Props Type] CouldNotFindYoutubeResult
+    
+    Original template: "Could not find YouTube result for: {query}"
+    """
+    def __call__(self, *, query: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            query (Any): Dynamic value for {query}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("download.youtube.could_not_find_youtube_result", {"query": query})
 
 class _DownloadYoutubeErrorDownloadingCallable:
     """
@@ -3769,13 +4370,13 @@ class _DownloadYoutubeErrorDownloadingCallable:
     
     Original template: "Error downloading {type}: {error}"
     """
-    def __call__(self, *, type: str | int, error: Exception | str | int) -> tuple[str, dict]:
+    def __call__(self, *, type: Any, error: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            type (str | int): Dynamic value for {type}.
-            error (Exception | str | int): Dynamic value for {error}.
+            type (Any): Dynamic value for {type}.
+            error (Any): Dynamic value for {error}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3788,12 +4389,12 @@ class _DownloadYoutubeCompleteCallable:
     
     Original template: "Download successful: {title}"
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3806,12 +4407,12 @@ class _DownloadYoutubeCompleteMetadataCallable:
     
     Original template: "Download successful with metadata: {title}"
     """
-    def __call__(self, *, title: str | int) -> tuple[str, dict]:
+    def __call__(self, *, title: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            title (str | int): Dynamic value for {title}.
+            title (Any): Dynamic value for {title}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -3842,8 +4443,6 @@ class _DownloadYoutubeK:
     """[Props Type] YtMusicDetected"""
     yt_audio_plain: str = "download.youtube.yt_audio_plain"
     """[Props Type] YtAudioPlain"""
-    smart_cover_info: str = "download.youtube.smart_cover_info"
-    """[Props Type] SmartCoverInfo"""
     extracting: str = "download.youtube.extracting"
     """[Props Type] Extracting"""
     extracted: _DownloadYoutubeExtractedCallable = _DownloadYoutubeExtractedCallable()
@@ -3982,6 +4581,44 @@ class _DownloadYoutubeK:
     
     Original template: "Failed to extract content: {error}"
     """
+    no_tracks_match_range: str = "download.youtube.no_tracks_match_range"
+    """[Props Type] NoTracksMatchRange"""
+    skipping_existing_track: _DownloadYoutubeSkippingExistingTrackCallable = _DownloadYoutubeSkippingExistingTrackCallable()
+    """
+    [Callable Props Type] SkippingExistingTrack
+    
+    Original template: "Skipping existing track: {title}"
+    """
+    skipped_existing_tracks: _DownloadYoutubeSkippedExistingTracksCallable = _DownloadYoutubeSkippedExistingTracksCallable()
+    """
+    [Callable Props Type] SkippedExistingTracks
+    
+    Original template: "Skipped {count} already-downloaded track(s)"
+    """
+    all_tracks_already_downloaded: str = "download.youtube.all_tracks_already_downloaded"
+    """[Props Type] AllTracksAlreadyDownloaded"""
+    no_tracks_resolved: str = "download.youtube.no_tracks_resolved"
+    """[Props Type] NoTracksResolved"""
+    failed_create_thumb_dir: _DownloadYoutubeFailedCreateThumbDirCallable = _DownloadYoutubeFailedCreateThumbDirCallable()
+    """
+    [Callable Props Type] FailedCreateThumbDir
+    
+    Original template: "Failed to create thumbnail directory: {error}"
+    """
+    failed_resolve_spotify_url: _DownloadYoutubeFailedResolveSpotifyUrlCallable = _DownloadYoutubeFailedResolveSpotifyUrlCallable()
+    """
+    [Callable Props Type] FailedResolveSpotifyUrl
+    
+    Original template: "Failed to resolve Spotify URL: {error}"
+    """
+    no_cover_url_found: str = "download.youtube.no_cover_url_found"
+    """[Props Type] NoCoverUrlFound"""
+    could_not_find_youtube_result: _DownloadYoutubeCouldNotFindYoutubeResultCallable = _DownloadYoutubeCouldNotFindYoutubeResultCallable()
+    """
+    [Callable Props Type] CouldNotFindYoutubeResult
+    
+    Original template: "Could not find YouTube result for: {query}"
+    """
     error_downloading: _DownloadYoutubeErrorDownloadingCallable = _DownloadYoutubeErrorDownloadingCallable()
     """
     [Callable Props Type] ErrorDownloading
@@ -4022,12 +4659,12 @@ class _MenuAboutTitleCallable:
     
     Original template: "TetoDL v{version}, by rannd1nt"
     """
-    def __call__(self, *, version: str | int) -> tuple[str, dict]:
+    def __call__(self, *, version: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            version (str | int): Dynamic value for {version}.
+            version (Any): Dynamic value for {version}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4076,12 +4713,12 @@ class _MenuLanguageCurrentCallable:
     
     Original template: "Current language: {lang}"
     """
-    def __call__(self, *, lang: str | int) -> tuple[str, dict]:
+    def __call__(self, *, lang: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            lang (str | int): Dynamic value for {lang}.
+            lang (Any): Dynamic value for {lang}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4130,12 +4767,12 @@ class _MenuVideoResolutionCurrentCallable:
     
     Original template: "Current Resolution: {resolution}"
     """
-    def __call__(self, *, resolution: str | int) -> tuple[str, dict]:
+    def __call__(self, *, resolution: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            resolution (str | int): Dynamic value for {resolution}.
+            resolution (Any): Dynamic value for {resolution}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4185,13 +4822,13 @@ class _MenuAudioQualityCurrentCallable:
     
     Original template: "Current: {format} {bitrate}"
     """
-    def __call__(self, *, format: str | int, bitrate: str | int) -> tuple[str, dict]:
+    def __call__(self, *, format: Any, bitrate: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            format (str | int): Dynamic value for {format}.
-            bitrate (str | int): Dynamic value for {bitrate}.
+            format (Any): Dynamic value for {format}.
+            bitrate (Any): Dynamic value for {bitrate}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4204,12 +4841,12 @@ class _MenuAudioQualityChangedCallable:
     
     Original template: "Audio quality changed to: {format}"
     """
-    def __call__(self, *, format: str | int) -> tuple[str, dict]:
+    def __call__(self, *, format: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            format (str | int): Dynamic value for {format}.
+            format (Any): Dynamic value for {format}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4267,35 +4904,17 @@ class _MenuSettingsSimpleModeCallable:
     
     Original template: "Simple Mode: {status}"
     """
-    def __call__(self, *, status: str | int) -> tuple[str, dict]:
+    def __call__(self, *, status: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            status (str | int): Dynamic value for {status}.
+            status (Any): Dynamic value for {status}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
         """
         return ("menu.settings.simple_mode", {"status": status})
-
-class _MenuSettingsSmartCoverCallable:
-    """
-    [Callable Props Type] SmartCover
-    
-    Original template: "Smart Cover Mode: {status}"
-    """
-    def __call__(self, *, status: str | int) -> tuple[str, dict]:
-        """
-        Formats the translation string.
-        
-        Args:
-            status (str | int): Dynamic value for {status}.
-        
-        Returns:
-            tuple[str, dict]: Key path and formatting dictionary.
-        """
-        return ("menu.settings.smart_cover", {"status": status})
 
 class _MenuSettingsSkipExistingCallable:
     """
@@ -4303,12 +4922,12 @@ class _MenuSettingsSkipExistingCallable:
     
     Original template: "Skip Existing Files: {status}"
     """
-    def __call__(self, *, status: str | int) -> tuple[str, dict]:
+    def __call__(self, *, status: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            status (str | int): Dynamic value for {status}.
+            status (Any): Dynamic value for {status}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4321,12 +4940,12 @@ class _MenuSettingsMaxResolutionCallable:
     
     Original template: "Video Resolution Limit: {resolution}"
     """
-    def __call__(self, *, resolution: str | int) -> tuple[str, dict]:
+    def __call__(self, *, resolution: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            resolution (str | int): Dynamic value for {resolution}.
+            resolution (Any): Dynamic value for {resolution}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4339,12 +4958,12 @@ class _MenuSettingsVideoContainerCallable:
     
     Original template: "Video Container Output: {container}"
     """
-    def __call__(self, *, container: str | int) -> tuple[str, dict]:
+    def __call__(self, *, container: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            container (str | int): Dynamic value for {container}.
+            container (Any): Dynamic value for {container}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4357,12 +4976,12 @@ class _MenuSettingsVideoCodecCallable:
     
     Original template: "Video Codec Settings: {codec}"
     """
-    def __call__(self, *, codec: str | int) -> tuple[str, dict]:
+    def __call__(self, *, codec: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            codec (str | int): Dynamic value for {codec}.
+            codec (Any): Dynamic value for {codec}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4375,12 +4994,12 @@ class _MenuSettingsAudioQualityCallable:
     
     Original template: "Audio Quality Settings: {format}"
     """
-    def __call__(self, *, format: str | int) -> tuple[str, dict]:
+    def __call__(self, *, format: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            format (str | int): Dynamic value for {format}.
+            format (Any): Dynamic value for {format}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4393,12 +5012,12 @@ class _MenuSettingsMediaScannerCallable:
     
     Original template: "Automatic Media Scanner (Android 9 >): {status}"
     """
-    def __call__(self, *, status: str | int) -> tuple[str, dict]:
+    def __call__(self, *, status: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            status (str | int): Dynamic value for {status}.
+            status (Any): Dynamic value for {status}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4411,12 +5030,12 @@ class _MenuSettingsLanguageCallable:
     
     Original template: "Current language: {lang}"
     """
-    def __call__(self, *, lang: str | int) -> tuple[str, dict]:
+    def __call__(self, *, lang: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            lang (str | int): Dynamic value for {lang}.
+            lang (Any): Dynamic value for {lang}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4437,18 +5056,6 @@ class _MenuSettingsK:
     """
     simple_mode_desc: str = "menu.settings.simple_mode_desc"
     """[Props Type] SimpleModeDesc"""
-    smart_cover: _MenuSettingsSmartCoverCallable = _MenuSettingsSmartCoverCallable()
-    """
-    [Callable Props Type] SmartCover
-    
-    Original template: "Smart Cover Mode: {status}"
-    """
-    smart_cover_desc_1: str = "menu.settings.smart_cover_desc_1"
-    """[Props Type] SmartCoverDesc1"""
-    smart_cover_desc_2: str = "menu.settings.smart_cover_desc_2"
-    """[Props Type] SmartCoverDesc2"""
-    smart_cover_desc_3: str = "menu.settings.smart_cover_desc_3"
-    """[Props Type] SmartCoverDesc3"""
     skip_existing: _MenuSettingsSkipExistingCallable = _MenuSettingsSkipExistingCallable()
     """
     [Callable Props Type] SkipExisting
@@ -4530,13 +5137,13 @@ class _MenuMainYoutubeAudioCallable:
     
     Original template: "YouTube Audio/YouTube Music → {format} {bitrate}"
     """
-    def __call__(self, *, format: str | int, bitrate: str | int) -> tuple[str, dict]:
+    def __call__(self, *, format: Any, bitrate: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            format (str | int): Dynamic value for {format}.
-            bitrate (str | int): Dynamic value for {bitrate}.
+            format (Any): Dynamic value for {format}.
+            bitrate (Any): Dynamic value for {bitrate}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4549,13 +5156,13 @@ class _MenuMainYoutubeVideoCallable:
     
     Original template: "YouTube Video → {container} (Max: {resolution})"
     """
-    def __call__(self, *, container: str | int, resolution: str | int) -> tuple[str, dict]:
+    def __call__(self, *, container: Any, resolution: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            container (str | int): Dynamic value for {container}.
-            resolution (str | int): Dynamic value for {resolution}.
+            container (Any): Dynamic value for {container}.
+            resolution (Any): Dynamic value for {resolution}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4624,12 +5231,12 @@ class _CommonChooseInfoCallable:
     
     Original template: "Choose ({info}) > "
     """
-    def __call__(self, *, info: str | int) -> tuple[str, dict]:
+    def __call__(self, *, info: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            info (str | int): Dynamic value for {info}.
+            info (Any): Dynamic value for {info}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4642,12 +5249,12 @@ class _CommonConfirmCallable:
     
     Original template: "Are you sure you want to {action}?"
     """
-    def __call__(self, *, action: str | int) -> tuple[str, dict]:
+    def __call__(self, *, action: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            action (str | int): Dynamic value for {action}.
+            action (Any): Dynamic value for {action}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4660,13 +5267,13 @@ class _CommonSuccessCallable:
     
     Original template: "{item} successfully {action}"
     """
-    def __call__(self, *, item: str | int, action: str | int) -> tuple[str, dict]:
+    def __call__(self, *, item: Any, action: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            item (str | int): Dynamic value for {item}.
-            action (str | int): Dynamic value for {action}.
+            item (Any): Dynamic value for {item}.
+            action (Any): Dynamic value for {action}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4679,13 +5286,13 @@ class _CommonFailedCallable:
     
     Original template: "{item} failed to {action}"
     """
-    def __call__(self, *, item: str | int, action: str | int) -> tuple[str, dict]:
+    def __call__(self, *, item: Any, action: Any) -> tuple[str, dict]:
         """
         Formats the translation string.
         
         Args:
-            item (str | int): Dynamic value for {item}.
-            action (str | int): Dynamic value for {action}.
+            item (Any): Dynamic value for {item}.
+            action (Any): Dynamic value for {action}.
         
         Returns:
             tuple[str, dict]: Key path and formatting dictionary.
@@ -4801,6 +5408,8 @@ class I18nKeysMap:
     """[Key Type] Files"""
     daemon: _DaemonK = _DaemonK()
     """[Key Type] Daemon"""
+    service: _ServiceK = _ServiceK()
+    """[Key Type] Service"""
     ui: _UiK = _UiK()
     """[Key Type] Ui"""
 
