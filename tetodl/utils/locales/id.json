@@ -403,7 +403,8 @@
     "download_history_cleared": "History download dibersihkan.",
     "config_reset_to_defaults": "Konfigurasi direset ke default.",
     "registry_nuked": "Database registry telah dihapus.",
-    "about_to_reset": "Kamu akan mereset: {items}"
+    "about_to_reset": "Kamu akan mereset: {items}",
+    "stopping_daemon": "Menghapus daemon latar belakang..."
   },
   "search": {
     "ytdlp_not_found": "yt-dlp tidak ditemukan.",
@@ -531,6 +532,7 @@
     "windows_spawned": "Proses daemon dijalankan (PID {pid}).",
     "windows_spawn_exited": "Daemon langsung berhenti saat start. Lihat log: {log}",
     "windows_killed_old": "Proses daemon lama dihentikan (PID {pid}).",
+    "windows_port_reclaimed": "Port daemon {port} dibebaskan kembali (PID {pid} dihentikan).",
     "windows_pid_not_found": "Proses daemon tidak berjalan.",
     "windows_removed_shortcut": "Shortcut startup dihapus.",
     "windows_removed_log": "File log dihapus.",

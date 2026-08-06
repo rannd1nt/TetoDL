@@ -403,7 +403,8 @@
     "download_history_cleared": "Download history cleared.",
     "config_reset_to_defaults": "Configuration reset to defaults.",
     "registry_nuked": "Registry database has been nuked.",
-    "about_to_reset": "You are about to reset: {items}"
+    "about_to_reset": "You are about to reset: {items}",
+    "stopping_daemon": "Removing background daemon..."
   },
   "search": {
     "ytdlp_not_found": "yt-dlp not found.",
@@ -531,6 +532,7 @@
     "windows_spawned": "Daemon process started (PID {pid}).",
     "windows_spawn_exited": "Daemon exited immediately. See log: {log}",
     "windows_killed_old": "Stopped previous daemon process (PID {pid}).",
+    "windows_port_reclaimed": "Reclaimed daemon port {port} (stopped PID {pid}).",
     "windows_pid_not_found": "Daemon process is not running.",
     "windows_removed_shortcut": "Startup shortcut removed.",
     "windows_removed_log": "Log file removed.",

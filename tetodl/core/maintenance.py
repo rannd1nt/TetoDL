@@ -183,6 +183,16 @@ def perform_uninstall():
         console.neutral(Keys.maint.uninstall_cancelled)
         return
 
+    # --- STOP BACKGROUND DAEMON FIRST ---
+    # An orphaned daemon keeps the port bound; stop it so a fresh install
+    # (and any new setup) can bind again cleanly.
+    try:
+        from ..ui.daemon.service import get_service_manager
+        console.warn(Keys.maint.stopping_daemon)
+        get_service_manager().remove()
+    except Exception:
+        pass
+
     # --- EXECUTE CLEANUP DATA ---
     if wipe_mode != "none":
         _cache_dir = Path(env.get("cache_dir"))

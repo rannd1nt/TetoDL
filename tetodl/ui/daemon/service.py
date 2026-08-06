@@ -278,16 +278,49 @@ class WindowsServiceManager(ServiceManager):
             return 7370
 
     def _stop_old(self):
+        killed = set()
         pid = self._read_pid()
         if pid and _pid_is_alive(pid):
             console.warn(Keys.service.windows_killed_old(pid=pid))
+            self._kill_pid(pid)
+            killed.add(pid)
+        # Also kill any orphan still listening on the daemon port so a
+        # stale pid file can't leave a process bound to the socket.
+        for p in self._port_pids(self._read_port()):
+            if p not in killed and _pid_is_alive(p):
+                console.warn(Keys.service.windows_port_reclaimed(pid=p, port=self._read_port()))
+                self._kill_pid(p)
+
+    def _kill_pid(self, pid: int) -> None:
+        try:
+            subprocess.run(
+                ["taskkill", "/PID", str(pid), "/F"],
+                stderr=subprocess.DEVNULL,
+            )
+        except Exception:
+            pass
+
+    def _port_pids(self, port: int) -> list[int]:
+        """Return PIDs of processes listening on ``port`` (Windows netstat)."""
+        try:
+            out = subprocess.run(
+                ["netstat", "-ano"], capture_output=True, text=True, timeout=15
+            ).stdout
+        except Exception:
+            return []
+        pids: list[int] = []
+        needle = f":{port}"
+        for line in out.splitlines():
+            if needle not in line or "LISTENING" not in line.upper():
+                continue
+            parts = line.split()
+            if not parts or not parts[0].upper().startswith("TCP"):
+                continue
             try:
-                subprocess.run(
-                    ["taskkill", "/PID", str(pid), "/F"],
-                    stderr=subprocess.DEVNULL,
-                )
-            except Exception:
-                pass
+                pids.append(int(parts[-1]))
+            except ValueError:
+                continue
+        return list(dict.fromkeys(pids))
 
     def _create_shortcut(self, target: str, args: list):
         shortcut = self._shortcut()

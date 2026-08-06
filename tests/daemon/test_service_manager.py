@@ -277,3 +277,41 @@ class TestGetServiceManager:
         )
 
         assert isinstance(get_service_manager(), SystemdServiceManager)
+
+    def test_stop_old_reclaims_orphan_on_port(self, mocker, tmp_path):
+        """Windows _stop_old kills a process listening on the daemon port
+        even when the pid file is stale/missing."""
+        from tetodl.ui.daemon.service import WindowsServiceManager
+
+        mgr = WindowsServiceManager()
+        mocker.patch.object(mgr, "_read_pid", return_value=None)
+        mocker.patch.object(mgr, "_read_port", return_value=7370)
+        mock_run = mocker.patch("subprocess.run")
+        netstat = (
+            "protopid TCP? ignored\n"
+            "  TCP    0.0.0.0:7370    0.0.0.0:0    LISTENING    5555\n"
+            "  TCP    127.0.0.1:1234  0.0.0.0:0    LISTENING    1234\n"
+        )
+        mock_run.return_value.stdout = netstat
+
+        mocker.patch("tetodl.ui.daemon.service._pid_is_alive", return_value=True)
+
+        mgr._stop_old()
+
+        calls = [c.args[0] if c.args else None for c in mock_run.call_args_list]
+        assert ["taskkill", "/PID", "5555", "/F"] in calls
+
+    def test_port_pids_parses_netstat(self, mocker):
+        from tetodl.ui.daemon.service import WindowsServiceManager
+
+        netstat = (
+            "  TCP    0.0.0.0:7370    0.0.0.0:0    LISTENING    5555\n"
+            "  TCP    [::]:7370      [::]:0       LISTENING    5555\n"
+            "  UDP    0.0.0.0:7370    0.0.0.0:0    LISTENING    7777\n"
+            "  TCP    0.0.0.0:9090    0.0.0.0:0    LISTENING    8888\n"
+        )
+        mock_run = mocker.patch("tetodl.ui.daemon.service.subprocess.run")
+        mock_run.return_value.stdout = netstat
+
+        mgr = WindowsServiceManager()
+        assert mgr._port_pids(7370) == [5555]

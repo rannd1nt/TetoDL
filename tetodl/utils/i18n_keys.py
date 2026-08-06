@@ -627,6 +627,25 @@ class _ServiceWindowsKilledOldCallable:
         """
         return ("service.windows_killed_old", {"pid": pid})
 
+class _ServiceWindowsPortReclaimedCallable:
+    """
+    [Callable Props Type] WindowsPortReclaimed
+    
+    Original template: "Reclaimed daemon port {port} (stopped PID {pid})."
+    """
+    def __call__(self, *, port: Any, pid: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            port (Any): Dynamic value for {port}.
+            pid (Any): Dynamic value for {pid}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.windows_port_reclaimed", {"port": port, "pid": pid})
+
 class _ServiceWindowsSpawnExitedCallable:
     """
     [Callable Props Type] WindowsSpawnExited
@@ -762,6 +781,12 @@ class _ServiceK:
     [Callable Props Type] WindowsKilledOld
     
     Original template: "Stopped previous daemon process (PID {pid})."
+    """
+    windows_port_reclaimed: _ServiceWindowsPortReclaimedCallable = _ServiceWindowsPortReclaimedCallable()
+    """
+    [Callable Props Type] WindowsPortReclaimed
+    
+    Original template: "Reclaimed daemon port {port} (stopped PID {pid})."
     """
     windows_pid_not_found: str = "service.windows_pid_not_found"
     """[Props Type] WindowsPidNotFound"""
@@ -2025,6 +2050,8 @@ class _MaintK:
     """[Props Type] UninstallWarning"""
     uninstall_details: str = "maint.uninstall_details"
     """[Props Type] UninstallDetails"""
+    stopping_daemon: str = "maint.stopping_daemon"
+    """[Props Type] StoppingDaemon"""
     invalid_choice_aborting: str = "maint.invalid_choice_aborting"
     """[Props Type] InvalidChoiceAborting"""
     alert_permanent_delete: str = "maint.alert_permanent_delete"
