@@ -20,7 +20,7 @@ EnvKey = Literal[
 ]
 
 APP_NAME = "TetoDL"
-APP_VERSION = "2.3.0"
+APP_VERSION = "2.3.1"
 
 
 @dataclass
