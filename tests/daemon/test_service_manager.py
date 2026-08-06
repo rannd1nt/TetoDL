@@ -160,6 +160,7 @@ class TestWindowsServiceManager:
 
         proc = mocker.MagicMock()
         proc.pid = 4242
+        proc.poll.return_value = None
         mock_popen = mocker.patch("subprocess.Popen", return_value=proc)
         mocker.patch("subprocess.run")
 
@@ -210,6 +211,27 @@ class TestWindowsServiceManager:
                             return_value=tmp_path / "missing.log")
 
         assert mgr.logs(tail=10, follow=False) == 1
+
+    def test_setup_reports_early_exit(self, mocker, tmp_path):
+        """Windows setup returns 1 when the daemon exits immediately."""
+        from tetodl.ui.daemon.service import WindowsServiceManager
+
+        mgr = WindowsServiceManager()
+        data_dir = tmp_path / "data"
+        data_dir.mkdir()
+        mocker.patch.object(mgr, "_data_dir", return_value=data_dir)
+        mocker.patch.object(mgr, "_log_file",
+                            return_value=data_dir / "daemon.log")
+        mocker.patch.object(mgr, "_stop_old")
+        mocker.patch.object(mgr, "_create_shortcut")
+
+        proc = mocker.MagicMock()
+        proc.pid = 999
+        proc.poll.return_value = 1
+        mocker.patch("subprocess.Popen", return_value=proc)
+
+        assert mgr.setup("0.0.0.0", 9000) == 1
+        assert not (data_dir / "daemon.pid").exists()
 
 
 class TestNullServiceManager:

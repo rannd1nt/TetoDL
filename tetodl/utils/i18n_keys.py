@@ -627,6 +627,24 @@ class _ServiceWindowsKilledOldCallable:
         """
         return ("service.windows_killed_old", {"pid": pid})
 
+class _ServiceWindowsSpawnExitedCallable:
+    """
+    [Callable Props Type] WindowsSpawnExited
+    
+    Original template: "Daemon exited immediately. See log: {log}"
+    """
+    def __call__(self, *, log: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            log (Any): Dynamic value for {log}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.windows_spawn_exited", {"log": log})
+
 class _ServiceFailedSystemdStartCallable:
     """
     [Callable Props Type] FailedSystemdStart
@@ -727,6 +745,12 @@ class _ServiceK:
     """[Props Type] WindowsShortcutCreated"""
     windows_shortcut_failed: str = "service.windows_shortcut_failed"
     """[Props Type] WindowsShortcutFailed"""
+    windows_spawn_exited: _ServiceWindowsSpawnExitedCallable = _ServiceWindowsSpawnExitedCallable()
+    """
+    [Callable Props Type] WindowsSpawnExited
+    
+    Original template: "Daemon exited immediately. See log: {log}"
+    """
     windows_spawned: _ServiceWindowsSpawnedCallable = _ServiceWindowsSpawnedCallable()
     """
     [Callable Props Type] WindowsSpawned

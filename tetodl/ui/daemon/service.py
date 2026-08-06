@@ -248,6 +248,15 @@ class WindowsServiceManager(ServiceManager):
     def _log_file(self) -> Path:
         return self._data_dir() / "daemon.log"
 
+    def _read_log_tail(self, n: int) -> str:
+        try:
+            lines = self._log_file().read_text(
+                encoding="utf-8", errors="replace"
+            ).splitlines()
+            return "\n".join(lines[-n:])
+        except Exception:
+            return ""
+
     def _shortcut(self) -> Path:
         startup = os.environ.get("APPDATA", "")
         return (
@@ -318,6 +327,13 @@ class WindowsServiceManager(ServiceManager):
             )
         except Exception as e:
             console.err(Keys.daemon.failed_setup_systemd(error=str(e)))
+            return 1
+        # Give the spawned daemon a moment to bind; report early exit.
+        time.sleep(1.5)
+        if proc.poll() is not None:
+            tail = self._read_log_tail(20)
+            detail = tail or "no log output captured."
+            console.err(Keys.service.windows_spawn_exited(log=detail))
             return 1
         self._pid_file().write_text(str(proc.pid))
         self._conf_file().write_text(json.dumps({
