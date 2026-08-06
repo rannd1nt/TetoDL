@@ -59,6 +59,13 @@ $apiUrl = "https://api.github.com/repos/$repo/releases/latest"
 try {
     $release = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "TetoDL-Installer" }
     $tag = $release.tag_name
+    $expectedSize = 0
+    foreach ($a in $release.assets) {
+        if ($a.name -eq "tetodl.exe") {
+            $expectedSize = [long]$a.size
+            break
+        }
+    }
     Write-Host "  Latest version: $tag" -ForegroundColor Green
 }
 catch {
@@ -71,7 +78,19 @@ catch {
 $downloadUrl = "https://github.com/$repo/releases/download/$tag/tetodl.exe"
 $outputPath = "$installDir\tetodl.exe"
 
+function Test-TetoDLBinary([string]$path, [long]$size) {
+    if (-not (Test-Path $path)) { return $false }
+    try {
+        $len = (Get-Item $path).Length
+        return ($len -eq $size) -or ($len -gt 5MB)
+    } catch {
+        return $false
+    }
+}
+
 $downloaded = $false
+$curl = Get-Command curl.exe -ErrorAction SilentlyContinue
+
 foreach ($attempt in 1..3) {
     Write-Host ""
     if ($attempt -gt 1) {
@@ -80,34 +99,40 @@ foreach ($attempt in 1..3) {
         Write-Host "  Downloading tetodl.exe" -NoNewline -ForegroundColor Yellow
     }
 
-    $wc = [System.Net.WebClient]::new()
     try {
-        $task = $wc.DownloadFileTaskAsync($downloadUrl, $outputPath)
-        $dots = 0
-        $deadline = [datetime]::Now.AddMinutes(20)
-        while (-not $task.IsCompleted) {
-            if ([datetime]::Now -gt $deadline) {
-                $wc.CancelAsync()
-                break
+        if ($curl) {
+            # curl.exe is bundled with Windows 10 1803+; it handles redirects,
+            # TLS and timeouts far better than System.Net.WebClient.
+            & $curl.Source --location --fail --retry 3 --retry-delay 2 `
+                --connect-timeout 20 --max-time 900 `
+                --output $outputPath $downloadUrl
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "`r  Downloading tetodl.exe ... curl failed (exit $LASTEXITCODE)." -ForegroundColor Red
+                $err = $true
+            } else {
+                $err = $false
             }
-            Write-Host "`r  Downloading tetodl.exe$('.' * $dots)$(' ' * (3 - $dots))" -NoNewline
-            $dots = ($dots + 1) % 4
-            Start-Sleep -Milliseconds 500
+        } else {
+            $wc = [System.Net.WebClient]::new()
+            try {
+                $wc.DownloadFile($downloadUrl, $outputPath)
+                $err = $false
+            } finally {
+                $wc.Dispose()
+            }
         }
-        $task.GetAwaiter().GetResult()
 
-        if ((Test-Path $outputPath) -and (Get-Item $outputPath).Length -gt 5MB) {
+        if (-not $err -and (Test-TetoDLBinary $outputPath $expectedSize)) {
             $downloaded = $true
             Write-Host "`r  Downloading tetodl.exe ... Done!" -ForegroundColor Green
             break
         }
-        Write-Host "`r  Downloading tetodl.exe ... invalid file (too small)." -ForegroundColor Red
+        Write-Host "`r  Downloading tetodl.exe ... invalid file." -ForegroundColor Red
     }
     catch {
         Write-Host "`r  Downloading tetodl.exe ... failed: $_" -ForegroundColor Red
     }
     finally {
-        $wc.Dispose()
         if (-not $downloaded -and (Test-Path $outputPath)) {
             Remove-Item $outputPath -Force -ErrorAction SilentlyContinue
         }
