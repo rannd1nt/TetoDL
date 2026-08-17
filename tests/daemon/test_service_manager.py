@@ -111,8 +111,8 @@ class TestSystemdServiceManager:
         mocker.patch.object(mgr, "_is_active", return_value=True)
         mocker.patch.object(mgr, "_is_enabled", return_value=True)
         mocker.patch.object(mgr, "_is_linger_enabled", return_value=False)
-        mocker.patch.object(service_mod, "detect_lan_ip",
-                            return_value="192.168.1.5")
+        mocker.patch.object(service_mod, "daemon_urls",
+                            return_value=["http://192.168.1.5:7370"])
         mocker.patch.object(service_mod, "get_daemon_port", return_value=7370)
 
         assert mgr.status() == 0

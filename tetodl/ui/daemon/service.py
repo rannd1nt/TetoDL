@@ -10,7 +10,7 @@ from pathlib import Path
 from ...core.domain.env import env
 from ...utils.console import console
 from ...utils.i18n_keys import Keys
-from .display import _pid_is_alive, detect_lan_ip, get_daemon_port
+from .display import _pid_is_alive, daemon_urls, get_daemon_port
 
 
 class ServiceManager(abc.ABC):
@@ -207,9 +207,9 @@ WantedBy=default.target
         console.warn(Keys.service.status_linger(value=linger))
         port = get_daemon_port()
         console.warn(Keys.service.status_port(port=port))
-        ip = detect_lan_ip()
-        url = f"http://{ip}:{port}" if ip else "N/A"
-        console.warn(Keys.service.status_url(url=url))
+        urls = daemon_urls(port)
+        for url in urls:
+            console.warn(Keys.service.status_url(url=url))
         return 0
 
     def logs(self, tail: int, follow: bool) -> int:
@@ -445,9 +445,9 @@ class WindowsServiceManager(ServiceManager):
         console.warn(Keys.service.status_linger(value="N/A"))
         port = self._read_port()
         console.warn(Keys.service.status_port(port=port))
-        ip = detect_lan_ip()
-        url = f"http://{ip}:{port}" if ip else "N/A"
-        console.warn(Keys.service.status_url(url=url))
+        urls = daemon_urls(port)
+        for url in urls:
+            console.warn(Keys.service.status_url(url=url))
         return 0
 
     def logs(self, tail: int, follow: bool) -> int:

@@ -35,7 +35,7 @@ from ...utils.processing import parse_playlist_items
 from ..share import SVG as _SHARE_SVG
 from ..share import create_share_router, list_entries, stream_file
 from ...utils.time_parser import get_cut_seconds
-from .display import detect_lan_ip
+from .display import daemon_urls
 from .models import DownloadRequest, PreviewRequest
 
 share_launchers: dict[str, Any] = {}
@@ -892,21 +892,23 @@ def _print_qr(url):
         console.warn(Keys.daemon.open_url_in_browser(url=url))
 
 
-def _announce(interactive, quiet, url, port):
-    """Print the startup banner (interactive) or one plain URL line."""
+def _announce(interactive, quiet, urls, port):
+    """Print the startup banner (interactive) or one plain URL per line."""
     if interactive:
         if quiet:
             return
         print()
-        console.ok(Keys.daemon.daemon_url(url=color(url, 'c')))
+        for url in urls:
+            console.ok(Keys.daemon.daemon_url(url=color(url, 'c')))
         console.warn(Keys.daemon.daemon_port(port=port))
         from ..cli.network import check_firewall_status
         check_firewall_status(port)
         print()
-        _print_qr(url)
+        _print_qr(urls[0])
         console.warn(Keys.daemon.press_ctrl_c_stop)
     else:
-        print(f"TetoDL daemon listening at {url}")
+        for url in urls:
+            print(f"TetoDL daemon listening at {url}")
         sys.stdout.flush()
 
 
@@ -940,11 +942,10 @@ def run_server(host: str, port: int, verbose: bool = False,
         from ..cli.network import ensure_windows_firewall_allow
         ensure_windows_firewall_allow(port)
 
-    ip = detect_lan_ip()
-    url = f"http://{ip}:{port}"
+    urls = daemon_urls(port)
 
     if dev:
-        _announce(interactive, quiet, url, port)
+        _announce(interactive, quiet, urls, port)
         uvicorn.run(app, host=host, port=port, reload=True,
                     log_level="warning" if not verbose else "info",
                     access_log=verbose)
@@ -969,7 +970,7 @@ def run_server(host: str, port: int, verbose: bool = False,
         while not server.started:
             time.sleep(0.05)
 
-    _announce(interactive, quiet, url, port)
+    _announce(interactive, quiet, urls, port)
 
     try:
         while thread.is_alive():

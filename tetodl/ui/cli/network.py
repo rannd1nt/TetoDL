@@ -5,6 +5,7 @@ Extracted from utils/network.py to separate CLI-specific concerns.
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from urllib.parse import quote
 
@@ -48,6 +49,13 @@ def check_firewall_status(port):
         console.rich.print(f"[dim cyan]  sudo firewall-cmd --add-port={port}/tcp --temporary[/dim cyan]")
 
 
+def _is_tty():
+    try:
+        return sys.stdout.isatty()
+    except Exception:
+        return False
+
+
 def ensure_windows_firewall_allow(port):
     """Open an inbound TCP port in Windows Defender Firewall.
 
@@ -59,7 +67,8 @@ def ensure_windows_firewall_allow(port):
 
     ``netsh advfirewall`` requires elevation, so when we're not running
     as admin we detect the failure and print an actionable tip instead
-    of silently pretending the port is open.
+    of silently pretending the port is open. The tip is only printed in
+    an interactive terminal so it never pollutes the daemon log file.
     """
     if not env.get("is_windows"):
         return
@@ -70,7 +79,9 @@ def ensure_windows_firewall_allow(port):
              f"name={rule}"],
             capture_output=True, text=True, timeout=20,
         )
-        if check.returncode == 0 and f"name={rule}" in check.stdout:
+        # netsh prints ``Rule Name: <name>`` (not ``name=<name>``), so
+        # match on the rule name appearing in the output at all.
+        if check.returncode == 0 and rule in check.stdout:
             return
     except Exception:
         pass
@@ -82,7 +93,7 @@ def ensure_windows_firewall_allow(port):
              "profile=any"],
             capture_output=True, text=True, timeout=20,
         )
-        if add.returncode != 0:
+        if add.returncode != 0 and _is_tty():
             console.rich.print(
                 "\n[dim][Tip] Phone can't reach the server if Windows Firewall blocks the port."
             )

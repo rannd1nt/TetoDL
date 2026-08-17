@@ -22,15 +22,19 @@ from ...utils.network import get_best_ip
 
 def _get_ip_from_ip_a():
     """Parse `ip -4 -o addr show` for non-loopback inet addresses,
-    filtering out Docker/bridge/veth interfaces."""
+    filtering out Docker/bridge/veth interfaces.
+
+    Returns a list of IPv4 addresses (empty if detection fails).
+    """
     try:
         out = subprocess.check_output(
             ["ip", "-4", "-o", "addr", "show"],
             stderr=subprocess.DEVNULL, text=True
         )
     except (FileNotFoundError, subprocess.CalledProcessError):
-        return None
+        return []
 
+    ips: list[str] = []
     for line in out.splitlines():
         parts = line.split()
         if len(parts) < 4:
@@ -41,41 +45,94 @@ def _get_ip_from_ip_a():
         m = re.search(r'inet\s+(\d+\.\d+\.\d+\.\d+)', line)
         if m:
             ip = m.group(1)
-            if not ip.startswith("127."):
-                return ip
-    return None
+            if not ip.startswith("127.") and not ip.startswith("169.254."):
+                ips.append(ip)
+    return ips
 
 
 def _get_ip_from_ipconfig():
-    """Parse `ipconfig` for a non-loopback IPv4 address (Windows)."""
+    """Parse `ipconfig` (Windows) for all active adapter IPv4 addresses.
+
+    Adapters carrying a default gateway are listed first -- they are the
+    ones phones on the same LAN usually reach -- followed by gateway-less
+    adapters (e.g. the PC's own Mobile Hotspot). Loopback and APIPA
+    link-local addresses are skipped, and disconnected adapters ignored.
+    """
     try:
         out = subprocess.check_output(
             ["ipconfig"],
             stderr=subprocess.DEVNULL, text=True
         )
     except (FileNotFoundError, subprocess.CalledProcessError):
-        return None
+        return []
 
+    # Split ipconfig output into per-adapter blocks. A block header is a
+    # non-indented line ending with ':' (e.g. "Wireless LAN adapter Wi-Fi:").
+    blocks: list[list[str]] = []
     for line in out.splitlines():
-        m = re.search(r'IPv4[^\n]*[:\s]+(\d+\.\d+\.\d+\.\d+)', line)
-        if m:
-            ip = m.group(1)
-            if not ip.startswith("127."):
-                return ip
-    return None
+        if re.match(r'^\S.*:$', line):
+            blocks.append([line])
+        elif blocks:
+            blocks[-1].append(line)
+
+    gateway_ips: list[str] = []
+    other_ips: list[str] = []
+    for block in blocks:
+        text = "\n".join(block)
+        if "Media disconnected" in text or "Media State" in text:
+            continue
+        m = re.search(r'IPv4[^\n]*[:\s]+(\d+\.\d+\.\d+\.\d+)', text)
+        if not m:
+            continue
+        ip = m.group(1)
+        if ip.startswith("127.") or ip.startswith("169.254."):
+            continue
+        has_gateway = re.search(r'Default Gateway[^\n]*:\s*\S', text) is not None
+        (gateway_ips if has_gateway else other_ips).append(ip)
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for ip in gateway_ips + other_ips:
+        if ip not in seen:
+            seen.add(ip)
+            ordered.append(ip)
+    return ordered
+
+
+def detect_lan_ips():
+    """Return all candidate LAN IPv4 addresses for this machine.
+
+    Falls back to :func:`get_best_ip` (the default-route address) when
+    no native adapter has an IPv4 address.
+    """
+    if env.get('is_windows'):
+        ips = _get_ip_from_ipconfig()
+    else:
+        ips = _get_ip_from_ip_a()
+    if not ips:
+        best = get_best_ip()
+        if best and not best.startswith("127."):
+            ips = [best]
+    return ips
 
 
 def detect_lan_ip():
-    """Best-effort LAN IP detection, cross-platform.
+    """Best-effort single LAN IP, cross-platform.
 
-    Tries the native route first (``ip`` on Linux, ``ipconfig`` on
-    Windows), then falls back to :func:`get_best_ip`.
+    Prefers the default-route address from :func:`get_best_ip` (this is
+    the pre-2.3.0 behaviour and matches the IP phones on the same LAN
+    actually reach), falling back to the first adapter-detected IP.
     """
-    if env.get('is_windows'):
-        ip = _get_ip_from_ipconfig()
-    else:
-        ip = _get_ip_from_ip_a()
-    return ip or get_best_ip()
+    best = get_best_ip()
+    if best and not best.startswith("127."):
+        return best
+    ips = detect_lan_ips()
+    return ips[0] if ips else None
+
+
+def daemon_urls(port: int):
+    """Return ``http://<ip>:<port>`` for every detected LAN IP."""
+    return [f"http://{ip}:{port}" for ip in detect_lan_ips()]
 
 
 def _pid_is_alive(pid: int) -> bool:
@@ -205,27 +262,27 @@ def display_daemon_url():
 
     # State: running
     port = get_daemon_port()
-    ip = detect_lan_ip()
+    urls = daemon_urls(port)
 
-    if not ip or ip.startswith("127."):
+    if not urls:
         console.err(Keys.daemon.could_not_detect_lan_ip)
         return 1
 
-    url = f"http://{ip}:{port}"
     print()
-    console.ok(Keys.daemon.daemon_url(url=color(url, 'c')))
+    for url in urls:
+        console.ok(Keys.daemon.daemon_url(url=color(url, 'c')))
     console.warn(Keys.daemon.daemon_port(port=port))
     print()
 
     try:
         import qrcode
         qr = qrcode.QRCode(version=1, box_size=1, border=1)
-        qr.add_data(url)
+        qr.add_data(urls[0])
         qr.make(fit=True)
         qr.print_ascii(invert=True)
         print()
         console.warn(Keys.daemon.scan_qr)
     except ImportError:
-        console.warn(Keys.daemon.open_browser(url=url))
+        console.warn(Keys.daemon.open_browser(url=urls[0]))
 
     return 0
