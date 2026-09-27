@@ -17,7 +17,12 @@ from ...core.domain.env import env
 from ...utils.console import console
 from ...utils.formatters import color
 from ...utils.i18n_keys import Keys
-from ...utils.network import get_best_ip
+
+
+def get_best_ip():
+    from ...utils.network import get_best_ip as _gbip
+    return _gbip()
+
 
 
 def _get_ip_from_ip_a():

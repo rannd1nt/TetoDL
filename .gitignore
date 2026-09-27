@@ -58,6 +58,13 @@ venv/
 ENV/
 env/
 .venv
+.venv-win/
+.python-version
+
+# Bundled binaries
+ffmpeg.exe
+ffmpeg.zip
+
 
 # Runner
 run.sh

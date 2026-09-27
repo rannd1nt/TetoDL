@@ -100,10 +100,49 @@ class TestSpotifyURLParsing:
             tracks = resolver.resolve(url)
         assert len(tracks) == 2
 
+    def test_parse_locale_url(self):
+        url = "https://open.spotify.com/intl-pt-br/track/abc123"
+        resolver = SpotifyResolver()
+        with patch.object(
+            resolver._client, "get_track",
+            return_value=_fake_track_entity(),
+        ):
+            tracks = resolver.resolve(url)
+        assert len(tracks) == 1
+        assert tracks[0].title == "Never Gonna Give You Up"
+
+    def test_parse_uri_format(self):
+        url = "spotify:track:abc123"
+        resolver = SpotifyResolver()
+        with patch.object(
+            resolver._client, "get_track",
+            return_value=_fake_track_entity(),
+        ):
+            tracks = resolver.resolve(url)
+        assert len(tracks) == 1
+        assert tracks[0].title == "Never Gonna Give You Up"
+
+    def test_parse_shortlink_with_urlscheme_config(self):
+        import base64
+        import json
+        payload = json.dumps({"redirectUrl": "https://open.spotify.com/track/abc123"}).encode("utf-8")
+        html = f'<html><body><script id="urlSchemeConfig" type="text/plain">{base64.b64encode(payload).decode("utf-8")}</script></body></html>'
+
+        resolver = SpotifyResolver()
+        mock_resp = type("MockResp", (), {"text": html, "url": "https://open.spotify.com/s/short123"})()
+        with patch("requests.get", return_value=mock_resp), patch.object(
+            resolver._client, "get_track",
+            return_value=_fake_track_entity(),
+        ):
+            tracks = resolver.resolve("https://open.spotify.com/s/short123")
+        assert len(tracks) == 1
+        assert tracks[0].title == "Never Gonna Give You Up"
+
     def test_parse_invalid_url_raises(self):
         resolver = SpotifyResolver()
         with pytest.raises(SpotifyParseError):
             resolver.resolve("https://youtube.com/watch?v=abc")
+
 
 
 class TestTrackModelConversion:

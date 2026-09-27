@@ -18,12 +18,13 @@ if hasattr(sys, '_MEIPASS'):
     if _mei not in os.environ.get('PATH', ''):
         os.environ['PATH'] = _mei + os.pathsep + os.environ.get('PATH', '')
 
-# yt-dlp override injection (binary mode — lazy, cached env)
-try:
-    from pathlib import Path
-    from tetodl.core.domain.env import env
-    _override = Path(env.get("ytdlp_override_dir"))
-    if _override.exists() and (_override / "yt_dlp").is_dir():
-        sys.path.insert(0, str(_override))
-except Exception:
-    pass
+# yt-dlp override injection (binary mode only — lazy, cached env)
+if getattr(sys, 'frozen', False) or hasattr(sys, '_MEIPASS'):
+    try:
+        from pathlib import Path
+        from tetodl.core.domain.env import env
+        _override = Path(env.get("ytdlp_override_dir"))
+        if _override.exists() and (_override / "yt_dlp").is_dir():
+            sys.path.insert(0, str(_override))
+    except Exception:
+        pass

@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, asdict
+from ...constants import APP_NAME
 from pathlib import Path
 from typing import Literal
 
@@ -18,10 +19,6 @@ EnvKey = Literal[
     "service_path",
     "default_music_root", "default_video_root", "default_thumbnail_root",
 ]
-
-APP_NAME = "TetoDL"
-APP_VERSION = "2.3.3"
-
 
 @dataclass
 class _EnvData:
@@ -56,6 +53,8 @@ class Env:
         self._detected = False
 
     def get(self, key: EnvKey):
+        if key == "is_binary":
+            return getattr(sys, "frozen", False)
         if not self._detected:
             self._load_or_detect()
         return getattr(self._data, key)
@@ -116,6 +115,8 @@ class Env:
                 with open(self._cache_path) as f:
                     raw = json.load(f)
                 self._data = _EnvData(**raw)
+                self._data.is_binary = getattr(sys, "frozen", False)
+                self._data.is_windows = os.name == "nt"
                 self._detected = True
                 self.initdir()
                 return

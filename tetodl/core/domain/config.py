@@ -11,8 +11,11 @@ See Also
     current module-level state.
 :mod:`tetodl.constants` : Default values and path constants.
 """
+from __future__ import annotations
+
 import json
 import os
+from typing import TYPE_CHECKING
 
 from tetodl.utils.tracer import trace, traced
 
@@ -23,7 +26,10 @@ from ...constants import (
     VALID_RESOLUTIONS,
 )
 from ...core.domain.env import env
-from .models import AppConfig
+
+if TYPE_CHECKING:
+    from .models import AppConfig
+
 from ...utils.console import console
 from ...utils.i18n import detect_system_language, set_language
 from ...utils.i18n_keys import Keys
@@ -189,6 +195,7 @@ def load_app_config() -> AppConfig:
     :class:`tetodl.core.resolver.ConfigResolver` : Merges ``AppConfig``
         with per-request overrides.
     """
+    from .models import AppConfig
     result = AppConfig(
         music_root=music_root,
         video_root=video_root,

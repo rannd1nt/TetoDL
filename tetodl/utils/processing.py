@@ -14,10 +14,12 @@ from ..utils.network import is_youtube_music_url
 def _default_ytdlp_cache_dir() -> str:
     return os.path.join(tempfile.gettempdir(), "TetoDL", "ytdlp_cache")
 
-try:
-    import yt_dlp as yt
-except ImportError:
-    yt = None  # type: ignore[assignment]
+def _get_ytdlp():
+    try:
+        import yt_dlp as yt
+        return yt
+    except ImportError:
+        return None
 
 # --- ID EXTRACTION  ---
 def extract_video_id(url):
@@ -73,6 +75,10 @@ def extract_all_urls_from_content(url, ytdlp_cache_dir=None):
         ytdlp_cache_dir = _default_ytdlp_cache_dir()
     is_yt_music = is_youtube_music_url(url)
     ydl_opts = {'extract_flat': True, 'quiet': True, 'no_warnings': True, 'cachedir': ytdlp_cache_dir}
+
+    yt = _get_ytdlp()
+    if yt is None:
+        return [url], "Unknown", 1
 
     try:
         with yt.YoutubeDL(ydl_opts) as ydl:  # type: ignore[arg-type]

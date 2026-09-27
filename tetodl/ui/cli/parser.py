@@ -1,35 +1,29 @@
+from __future__ import annotations
+
 import argparse
 import os
 import re
 import sys
-from typing import Literal, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from ...constants import (
     APP_VERSION,
     AUDIO_QUALITY_OPTIONS,
     VALID_CODECS,
     VALID_CONTAINERS,
-    VALID_THUMBNAIL_FORMATS
+    VALID_THUMBNAIL_FORMATS,
 )
-from ...core.domain import config as cfg
-from ...core.domain import config as config_mgr
-from ...core.domain.env import env
-from ...core.domain import cache as cache_mod
-from ...core import maintenance
-from ...core.domain.models import (
-    CliDownload,
-    CliExit,
-    CliMenu,
-    CliResult,
-    CliSearch,
-    DownloadSession,
-)
-from ...utils.console import console
-from ...utils.display import show_app_info
-from ...utils.files import TempManager
 from ...utils.formatters import color
-from ...utils.i18n_keys import Keys
-from .network import start_share_server
+
+if TYPE_CHECKING:
+    from ...core.domain.models import (
+        CliDownload,
+        CliExit,
+        CliMenu,
+        CliResult,
+        CliSearch,
+        DownloadSession,
+    )
 
 _DEBUG_MODES = frozenset({'all', 'errors', 'concise'})
 _SHARE_COMBINABLE = frozenset('tzga')
@@ -226,6 +220,10 @@ class CLIHandler:
 
         # Info
         if args.info:
+            from ...core.domain import config as config_mgr
+            from ...core.domain.env import env
+            from ...core.domain import cache as cache_mod
+            from ...utils.display import show_app_info
             config_mgr.load_config()
             show_app_info(
                 version=APP_VERSION,
@@ -240,6 +238,7 @@ class CLIHandler:
         if args.history is not None:
             if (args.reverse or args.find) and args.history is None:
                 self.parser.error("Flags '--reverse' and '--find' can only be used with '--history'")
+            from ...core.domain import config as config_mgr
             config_mgr.load_config()
             from ...core.domain.history import load_history
             load_history()
@@ -248,6 +247,7 @@ class CLIHandler:
             return True
 
         if args.wrap:
+            from ...core.domain import config as config_mgr
             config_mgr.load_config()
             from ...ui.tui import analytics as _a
             _a.render_analytics_view()
@@ -255,11 +255,15 @@ class CLIHandler:
 
         # Update / Uninstall
         if args.update:
+            from ...core import maintenance
+            from ...utils.console import console
+            from ...utils.i18n_keys import Keys
             console.warn(Keys.cli.checking_for_updates)
             maintenance.perform_update()
             return True
         
         if args.uninstall:
+            from ...core import maintenance
             maintenance.perform_uninstall()
             return True
 
@@ -281,6 +285,7 @@ class CLIHandler:
 
     def _handle_reset(self, args):
         """Handle data reset operations."""
+        from ...core import maintenance
         targets = args.reset
         maintenance.reset_data(targets)
 
@@ -289,6 +294,10 @@ class CLIHandler:
         if not (args.header or args.progress_style or args.lang or
                 args.jitter or args.retries):
             return False
+
+        from ...core.domain import config as config_mgr
+        from ...utils.console import console
+        from ...utils.i18n_keys import Keys
 
         config_mgr.load_config()
         changed = False
@@ -328,6 +337,11 @@ class CLIHandler:
 
     def _handle_standalone_share(self, args):
         """Handle share command without download context."""
+        from ...core.domain import config as cfg
+        from ...core.domain import config as config_mgr
+        from ...utils.console import console
+        from ...utils.i18n_keys import Keys
+        from .network import start_share_server
         
         # 1. Root Path Determination
         root_path = None
@@ -455,7 +469,8 @@ class CLIHandler:
             self.parser.error("Conflicting modes: Choose ONLY ONE of -A/--audio, -V/--video, or -T/--thumbnail.")
 
         # RULE 2b: Spotify conflict
-        if args.url and "spotify.com" in args.url.lower() and args.video:
+        is_spot = bool(args.url and ("spotify.com" in args.url.lower() or "spotify.link" in args.url.lower() or "link.tospotify.com" in args.url.lower() or args.url.lower().startswith("spotify:")))
+        if is_spot and args.video:
             self.parser.error("Spotify mode is audio-only. Remove the -V/--video flag.")
 
         # RULE 3: Enrichment Flags
@@ -472,6 +487,8 @@ class CLIHandler:
                 self.parser.error("Invalid flag: Video settings cannot be used with -T/--thumbnail.")
 
         if args.audio and (args.resolution or args.codec):
+            from ...utils.console import console
+            from ...utils.i18n_keys import Keys
             console.warn(Keys.cli.audio_mode_note)
 
         # RULE 5: Search Constraints
@@ -541,7 +558,8 @@ class CLIHandler:
     @staticmethod
     def _looks_like_media_url(s: str) -> bool:
         _PATTERNS = ("youtube.com", "youtu.be", "music.youtube.com",
-                     "spotify.com", "open.spotify.com",
+                     "spotify.com", "open.spotify.com", "spotify.link",
+                     "link.tospotify.com", "spotify:",
                      "http://", "https://")
         return any(p in s.lower() for p in _PATTERNS)
 
@@ -565,7 +583,8 @@ class CLIHandler:
     def _prepare_context(self, args) -> CliResult:
         """Prepare the execution result from parsed args."""
 
-        is_spotify = bool(args.url and "spotify.com" in args.url.lower())
+        url_str = (args.url or "").lower()
+        is_spotify = bool(args.url and ("spotify.com" in url_str or "spotify.link" in url_str or "link.tospotify.com" in url_str or url_str.startswith("spotify:")))
 
         detected_type, validated_format = self._detect_type_and_format(args)
         if is_spotify and detected_type not in ("audio", "thumbnail"):
@@ -580,6 +599,7 @@ class CLIHandler:
             self.parser.error("Flag -t/--temp requires -s/--share.")
 
         if is_temp:
+            from ...utils.files import TempManager
             output_path = str(TempManager.get_temp_dir())
         elif args.output:
             if not os.path.exists(args.output):
@@ -618,6 +638,12 @@ class CLIHandler:
             resolution = res_map.get(args.resolution, '720p')
 
         # --- Build DownloadSession ---
+        from ...core.domain.models import (
+            CliDownload,
+            CliMenu,
+            CliSearch,
+            DownloadSession,
+        )
         session = DownloadSession(
             url=args.url or '',
             media_type=detected_type,
@@ -682,7 +708,13 @@ class CLIHandler:
 
         if detected_type is None and args.url:
             url_lower = args.url.lower()
-            if "music.youtube.com" in url_lower or "spotify.com" in url_lower:
+            if (
+                "music.youtube.com" in url_lower
+                or "spotify.com" in url_lower
+                or "spotify.link" in url_lower
+                or "link.tospotify.com" in url_lower
+                or url_lower.startswith("spotify:")
+            ):
                 detected_type = 'audio'
             else:
                 detected_type = 'video'
@@ -710,6 +742,7 @@ class CLIHandler:
         """Returns: (handled, result)"""
         if len(sys.argv) > 1 and sys.argv[1].lower() == 'service':
             self._handle_service_subcommand()
+            from ...core.domain.models import CliExit
             return True, CliExit()
 
         # --- debug subcommand: tetodl debug {all|errors|concise} [options...] ---
@@ -739,6 +772,7 @@ class CLIHandler:
         self._early_decompose_and_route(args)
 
         if self._handle_early_dispatch(args):
+            from ...core.domain.models import CliExit
             return True, CliExit()
 
         self._validate_rules(args)
@@ -747,3 +781,4 @@ class CLIHandler:
         return False, result
 
 cli = CLIHandler()
+

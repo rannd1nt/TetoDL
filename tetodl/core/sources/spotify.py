@@ -7,7 +7,10 @@ from tetodl.core.domain.step import PipelineError
 class SpotifyExtractor(Extractor):
     @staticmethod
     def handles(url: str) -> bool:
-        return "spotify.com" in url
+        if not url:
+            return False
+        u = url.lower().strip()
+        return "spotify.com" in u or "spotify.link" in u or "link.tospotify.com" in u or u.startswith("spotify:")
 
     def extract(self, url: str) -> MediaInfo:
         try:

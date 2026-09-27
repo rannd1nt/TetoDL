@@ -139,10 +139,11 @@ exec "{old_exe}" --version
 
 def perform_uninstall():
     """Trigger the uninstaller — bash script (source) or self-destruct (binary)."""
+    is_binary = getattr(sys, "frozen", False) or env.get("is_binary")
     root_dir = get_project_root()
     script_path = root_dir / "uninstall.sh"
 
-    if not env.get("is_binary") and not script_path.exists():
+    if not is_binary and not script_path.exists():
         console.err(Keys.maint.uninstaller_script_not_found(path=script_path))
         return
 
@@ -221,7 +222,7 @@ def perform_uninstall():
             console.err(Keys.maint.failed_clean_data(error=e))
 
     # --- FINAL STEP: binary self-destruct or bash uninstaller ---
-    if env.get("is_binary"):
+    if is_binary:
         _spawn_self_destruct()
     else:
         console.warn(Keys.maint.launching_uninstaller)
@@ -241,11 +242,25 @@ def _spawn_self_destruct():
     import tempfile
 
     if platform.system() == "Windows":
+        parent_dir = Path(current_exe).parent
+        # Clean up User PATH from Windows Registry if installed there
+        try:
+            import winreg  # type: ignore[import-not-found]
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment", 0, winreg.KEY_ALL_ACCESS) as key:  # type: ignore[attr-defined]
+                current_path, ptype = winreg.QueryValueEx(key, "PATH")  # type: ignore[attr-defined]
+                parent_str = str(parent_dir)
+                paths = [p for p in current_path.split(";") if p and os.path.normpath(p).lower() != os.path.normpath(parent_str).lower()]
+                new_path = ";".join(paths)
+                winreg.SetValueEx(key, "PATH", 0, ptype, new_path)  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
         bat = Path(tempfile.mktemp(suffix=".uninstall.bat"))
         bat.write_text(
             f"""@echo off
 timeout /t 1 /nobreak >nul
-del /f /q "{current_exe}" >nul
+del /f /q "{current_exe}" >nul 2>nul
+rmdir "{parent_dir}" >nul 2>nul
 del "%~f0"
 """
         )

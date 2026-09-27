@@ -8,19 +8,23 @@ from ..utils.formatters import (
 from ..utils.i18n_keys import Keys
 from .domain.env import env
 
-try:
-    import yt_dlp as yt
-except ImportError:
-    yt = None  # type: ignore[assignment]
+def _get_ytdlp():
+    try:
+        import yt_dlp as yt
+        return yt
+    except ImportError:
+        return None
 
 
 def perform_youtube_search(query, limit=5):
     import questionary
     from questionary import Choice
 
+    yt = _get_ytdlp()
     if yt is None:
         console.err(Keys.search.ytdlp_not_found)
         return None
+
 
     try:
         _cachedir = env.get("ytdlp_cache_dir")

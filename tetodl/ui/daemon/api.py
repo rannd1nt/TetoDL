@@ -267,7 +267,8 @@ async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
         except ValueError:
             pass
 
-    is_spotify = bool(req.spotify or (req.url and "spotify.com" in req.url.lower()))
+    from ...utils.network import is_spotify_url
+    is_spotify = bool(req.spotify or (req.url and is_spotify_url(req.url)))
 
     session = DownloadSession(
         url=req.url or '',
@@ -316,17 +317,31 @@ async def get_task_logs(task_id: str):
 # --- 3. PREVIEW (via yt-dlp extract_info) ---
 @app.post("/api/v1/preview")
 async def preview_media(req: PreviewRequest):
+    import asyncio as _asyncio
+
+    console.proc(f"Previewing metadata for: {req.url}")
+
     # --- Spotify preview path ---
-    if req.url and "spotify.com" in req.url.lower():
+    from ...utils.network import is_spotify_url
+    if req.url and is_spotify_url(req.url):
         from ...core.clients.spotify import SpotifyResolver
         resolver = SpotifyResolver()
         try:
-            container_name, tracks = resolver.resolve_meta(req.url)
+            container_name, tracks = await _asyncio.wait_for(
+                _asyncio.to_thread(resolver.resolve_meta, req.url),
+                timeout=15.0,
+            )
+        except _asyncio.TimeoutError:
+            console.err("Spotify metadata request timed out (15s)")
+            raise HTTPException(status_code=504, detail="Spotify metadata request timed out (15s). Please check network connection.")
         except Exception as e:
+            console.err(f"Spotify extraction failed: {e}")
             raise HTTPException(status_code=400, detail=f"Spotify extraction failed: {e}")
 
         if not tracks:
             raise HTTPException(status_code=400, detail="No tracks found")
+
+        console.ok(f"Spotify metadata resolved: {container_name or tracks[0].title}")
 
         entries = [
             {
@@ -357,31 +372,35 @@ async def preview_media(req: PreviewRequest):
         }
 
     # --- YouTube / general preview path ---
-    import asyncio as _asyncio
-
     try:
         import yt_dlp as yt
-        loop = _asyncio.get_event_loop()
-        with yt.YoutubeDL({
-            'quiet': True,
-            'no_warnings': True,
-            'extract_flat': 'in_playlist',
-            'cachedir': env.get('ytdlp_cache_dir'),
-        }) as ydl:
-            try:
-                info = await _asyncio.wait_for(
-                    loop.run_in_executor(None, lambda: ydl.extract_info(req.url, download=False)),
-                    timeout=45.0,
-                )
-            except TimeoutError:
-                raise HTTPException(
-                    status_code=504,
-                    detail="Preview timed out. The URL may point to a very large playlist. Try a single video URL."
-                )
+
+        def _extract():
+            with yt.YoutubeDL({
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': 'in_playlist',
+                'cachedir': env.get('ytdlp_cache_dir'),
+            }) as ydl:
+                return ydl.extract_info(req.url, download=False)
+
+        info = await _asyncio.wait_for(
+            _asyncio.to_thread(_extract),
+            timeout=25.0,
+        )
+    except _asyncio.TimeoutError:
+        console.err(f"Preview timed out for URL: {req.url}")
+        raise HTTPException(
+            status_code=504,
+            detail="Preview timed out (25s). The URL may point to a very large playlist or YouTube is slow."
+        )
     except HTTPException:
         raise
     except Exception as e:
+        console.err(f"Extraction failed: {e}")
         raise HTTPException(status_code=400, detail=f"Extraction failed: {e}")
+
+    console.ok(f"Media metadata resolved: {info.get('title')}")
 
     formats = []
     resolutions = set()

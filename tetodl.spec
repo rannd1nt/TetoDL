@@ -58,6 +58,12 @@ HIDDEN = [
     "uvicorn.middleware.message_logger",
 ]
 
+try:
+    from PyInstaller.utils.hooks import collect_submodules
+    HIDDEN += collect_submodules("tetodl")
+except Exception:
+    pass
+
 # ── Excludes ───────────────────────────────────────────────────
 EXCLUDES = [
     "tkinter", "unittest", "http.server", "pydoc", "test",

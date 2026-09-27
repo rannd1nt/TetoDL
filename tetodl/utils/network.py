@@ -177,6 +177,20 @@ def is_youtube_music_url(url: str) -> bool:
     return result
 
 
+def is_spotify_url(url: str) -> bool:
+    """Check if URL or URI is from Spotify (including shortlinks and URIs)."""
+    if not url:
+        return False
+    u = url.lower().strip()
+    return (
+        "spotify.com" in u
+        or "spotify.link" in u
+        or "link.tospotify.com" in u
+        or u.startswith("spotify:")
+    )
+
+
+
 def classify_youtube_url(url: str) -> dict:
     """
     Classify YouTube/YouTube Music URL in detail

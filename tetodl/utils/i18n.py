@@ -1,12 +1,12 @@
-"""
-Internationalization (i18n) utilities
-"""
+from __future__ import annotations
+
 import json
 import locale
 import os
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
-from ..utils.i18n_keys import I18nKey
+if TYPE_CHECKING:
+    from ..utils.i18n_keys import I18nKey
 
 _current_lang = 'id'
 _translations: dict[str, Any] = {}
