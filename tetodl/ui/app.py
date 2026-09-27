@@ -1,13 +1,9 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING
 
 from tetodl.ui.cli.parser import cli
 from . import bootstrap
-
-if TYPE_CHECKING:
-    from tetodl.core.domain.models import CliDownload, CliMenu, CliSearch
 
 
 class App:

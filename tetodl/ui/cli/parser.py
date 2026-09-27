@@ -16,14 +16,7 @@ from ...constants import (
 from ...utils.formatters import color
 
 if TYPE_CHECKING:
-    from ...core.domain.models import (
-        CliDownload,
-        CliExit,
-        CliMenu,
-        CliResult,
-        CliSearch,
-        DownloadSession,
-    )
+    from ...core.domain.models import CliResult
 
 _DEBUG_MODES = frozenset({'all', 'errors', 'concise'})
 _SHARE_COMBINABLE = frozenset('tzga')
