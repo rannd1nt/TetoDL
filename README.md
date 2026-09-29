@@ -8,7 +8,7 @@
     <img src="https://img.shields.io/badge/Language-Python_3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
     <img src="https://img.shields.io/badge/Platform-Linux_%7C_Windows-0078D4?style=for-the-badge&logo=linux&logoColor=white" alt="Platform">
     <img src="https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge&logo=apache" alt="License">
-    <img src="https://img.shields.io/badge/Version-2.3.4-orange?style=for-the-badge" alt="Version">
+    <img src="https://img.shields.io/badge/Version-2.4.0--rc--1-orange?style=for-the-badge" alt="Version">
   </p>
 </div>
 
@@ -19,19 +19,21 @@
 - [Overview](#overview)
 - [Platform Support](#platform-support)
 - [Installation](#installation)
-  - [Pre-compiled Binary](#1-pre-compiled-binary-recommended)
+  - [Pre-compiled Binary (Stable & Staging)](#1-pre-compiled-binary-recommended)
   - [From Source / pip](#2-from-source--pip)
 - [Synopsis](#synopsis)
 - [CLI Reference](#cli-reference)
-  - [1. Download Modes](#1-download-modes)
+  - [1. Download Modes & Personas](#1-download-modes--personas)
   - [2. Input Sources](#2-input-sources)
   - [3. Metadata & Tagging Modifiers](#3-metadata--tagging-modifiers)
   - [4. Output & Quality Controls](#4-output--quality-controls)
   - [5. Batch, Slicing & Archiving](#5-batch-slicing--archiving)
-  - [6. Local Network Sharing & Web Server](#6-local-network-sharing--web-server)
-  - [7. Service Management](#7-service-management-tetodl-service)
-  - [8. Diagnostics & Maintenance](#8-diagnostics--maintenance)
-  - [9. Persistent Configuration](#9-persistent-configuration)
+  - [6. Standalone Share & Network Streaming](#6-standalone-share--network-streaming)
+  - [7. Service Management (`tetodl service`)](#7-service-management-tetodl-service)
+  - [8. Server & Daemon Configuration (`tetodl config`)](#8-server--daemon-configuration-tetodl-config)
+  - [9. System Maintenance & Engine Update (`tetodl system`)](#9-system-maintenance--engine-update-tetodl-system)
+  - [10. History & Analytics](#10-history--analytics)
+  - [11. Persistent CLI Configuration](#11-persistent-cli-configuration)
 - [Short Flag Bundling](#short-flag-bundling)
 - [CLI Usage Examples](#cli-usage-examples)
 - [Network Sharing Workflows](#network-sharing-workflows)
@@ -65,17 +67,41 @@ Under the hood, TetoDL coordinates `yt-dlp` and `ffmpeg` to download and convert
 
 Standalone binaries bundle Python and FFmpeg. No system prerequisites required.
 
-#### Linux
-```bash
-curl -fsSL "https://rannd1nt.github.io/TetoDL/install.sh" | bash
-```
-Installs the executable to `~/.local/bin/tetodl` and configures `$PATH`.
+#### Stable Channel (Default)
+Fetches the latest official production release:
 
-#### Windows (PowerShell)
-```powershell
-iwr "https://rannd1nt.github.io/TetoDL/install.ps1" | iex
-```
-Installs `tetodl.exe` and `ffmpeg.exe` to `%LOCALAPPDATA%\TetoDL` and updates User `PATH`.
+- **Linux:**
+  ```bash
+  curl -fsSL "https://rannd1nt.github.io/TetoDL/install.sh" | bash
+  ```
+  Installs the executable to `~/.local/bin/tetodl` and configures `$PATH`.
+
+- **Windows (PowerShell):**
+  ```powershell
+  iwr "https://rannd1nt.github.io/TetoDL/install.ps1" | iex
+  ```
+  Installs `tetodl.exe` and `ffmpeg.exe` to `%LOCALAPPDATA%\TetoDL` and updates User `PATH`.
+
+#### Staging Channel (Pre-release / Testing)
+Installs the latest testing pre-release (e.g. `v2.4.0-rc-1`) directly from GitHub Pre-releases:
+
+- **Linux:**
+  ```bash
+  curl -fsSL "https://rannd1nt.github.io/TetoDL/install.sh" | bash -s -- --staging
+  ```
+  *Alternatively with environment variable:*
+  ```bash
+  STAGING=1 curl -fsSL "https://rannd1nt.github.io/TetoDL/install.sh" | bash
+  ```
+
+- **Windows (PowerShell):**
+  ```powershell
+  $env:STAGING="1"; iwr "https://rannd1nt.github.io/TetoDL/install.ps1" | iex
+  ```
+  *Alternatively with explicit parameter:*
+  ```powershell
+  & { iwr "https://rannd1nt.github.io/TetoDL/install.ps1" -OutFile install.ps1; .\install.ps1 -Staging }
+  ```
 
 ---
 
@@ -84,7 +110,7 @@ Installs `tetodl.exe` and `ffmpeg.exe` to `%LOCALAPPDATA%\TetoDL` and updates Us
 Requirements: Python 3.10+ and system `ffmpeg`.
 
 ```bash
-git clone https://github.com/rannd1nt/TetoDL.git
+git clone -b staging https://github.com/rannd1nt/TetoDL.git
 cd TetoDL
 pip install .
 ```
@@ -94,21 +120,39 @@ pip install .
 ## Synopsis
 
 ```text
+# Media Ingestion & Search
 tetodl [OPTIONS] [URL]
-tetodl [OPTIONS] -S QUERY
-tetodl [OPTIONS] -s [PATH]
+tetodl search <QUERY> [OPTIONS]
+
+# Standalone Directory Sharing
+tetodl share [PATH] [--flat] [--no-parent] [--zip] [-p PORT]
+
+# Daemon & API Orchestrator
 tetodl service serve [OPTIONS]
-tetodl service daemon {setup,remove,status,logs,display} [OPTIONS]
+tetodl service daemon {setup,remove,status,restart,logs,display} [OPTIONS]
+
+# Server Configuration Engine
+tetodl config {edit,path,show}
+
+# System Maintenance & Engine Update
+tetodl system {update-ytdlp,info,recheck,reset,update,uninstall}
+
+# History & Analytics
+tetodl history [LIMIT] [--reverse] [--find QUERY]
+tetodl analytics
+
+# Tracing & Diagnostics
 tetodl debug {all,errors,concise} [OPTIONS...]
 ```
 
 Running `tetodl` without arguments starts the interactive TUI.
+Running `tetodl -i` or `tetodl --interactive` enters interactive TUI mode explicitly.
 
 ---
 
 ## CLI Reference
 
-### 1. Download Modes
+### 1. Download Modes & Personas
 
 Modes are mutually exclusive. Choosing more than one raises a validation error.
 
@@ -117,16 +161,18 @@ Modes are mutually exclusive. Choosing more than one raises a validation error.
 | `-A` | `--audio` | Force audio mode. Converts stream to `m4a`, `mp3`, or `opus`. Automatically inferred for YouTube Music and Spotify sources. |
 | `-V` | `--video` | Force video mode (default for standard YouTube URLs). Incompatible with Spotify sources. |
 | `-T` | `--thumbnail` | Download album art or video thumbnail only. Does not download audio or video. Incompatible with `--cut`, `--resolution`, and `--codec`. |
+| `-i` | `--interactive` | Launch interactive terminal UI (TUI) mode explicitly. (Running `tetodl` without arguments also launches TUI by default). |
 
 ---
 
 ### 2. Input Sources
 
-| Flag | Long Option | Argument | Description |
-|:---|:---|:---|:---|
-| | `URL` | `[string]` | Media URL (YouTube video/playlist, YouTube Music track/album, Spotify track/album/playlist/shortlink). |
-| `-S` | `--search` | `QUERY` | Search YouTube interactively. Prompts for selection before downloading. Replaces the `URL` argument. |
-| | `--limit` | `NUM` | Number of search results returned (default: `5`). Requires `-S`/`--search`. |
+| Invocation / Flag | Argument | Description |
+|:---|:---|:---|
+| `tetodl [OPTIONS] URL` | `[string]` | Media URL (YouTube video/playlist, YouTube Music track/album, Spotify track/album/playlist/shortlink). |
+| `tetodl search QUERY` | `QUERY` | Search YouTube interactively via dedicated subcommand. |
+| `-S`, `--search` | `QUERY` | Search YouTube interactively (traditional flag). Prompts for selection before downloading. |
+| `--limit` | `NUM` | Number of search results returned (default: `5`). |
 
 ---
 
@@ -162,19 +208,34 @@ Modes are mutually exclusive. Choosing more than one raises a validation error.
 | | `--items` | `LIST` | Download specific indices from a playlist (e.g. `--items 1,3,5-10`, `--items 10-`, `--items -5`). |
 | | `--cut` | `TIME` | Slice media with FFmpeg without full redownload. Syntax:<br>• `START-END`: e.g. `01:30-02:00` or `90-120`<br>• `START-`: from offset to end (e.g. `01:30-`)<br>• `-END`: from beginning to offset (e.g. `-02:00`) |
 | `-g` | `--group` | `[NAME]` | Store downloads in a dedicated subfolder. If `NAME` is omitted, names the folder after the playlist/album title. |
-| | `--m3u` | - | Generate standard `.m3u8` playlist index in the target folder. Requires `-g`/`--group`. |
-| `-z` | `--zip` | - | Package the completed output folder into a `.zip` archive. |
+| | `--m3u` | - | Generate standard `.m3u8` playlist index in the target folder. Automatically enables `-g`/`--group`. |
+| `-z` | `--zip` | - | Package the completed output into a `.zip` archive. Playlists with `--zip` are isolated into their own folder before archiving. |
 
 ---
 
-### 6. Local Network Sharing & Web Server
+### 6. Standalone Share & Network Streaming
 
-Hosts downloaded media or existing local directories over HTTP with an integrated web UI and terminal QR code.
+TetoDL provides dedicated local network sharing capabilities with built-in path jailing and directory security.
 
+#### Dedicated Share Subcommand
+Host local directories or archives over HTTP:
+```bash
+tetodl share [PATH] [OPTIONS]
+```
+| Flag / Option | Argument | Description |
+|:---|:---|:---|
+| `[PATH]` | `PATH` | Target file or directory to host. Defaults to last completed download or current directory. |
+| `--flat` | - | Lock directory depth to 0 (only list direct files in target folder, hiding all child subdirectories). |
+| `--no-parent` | - | Block ascending outside the shared directory root (default: enabled for security). |
+| `--parent` | - | Allow ascending into parent directories. |
+| `-z`, `--zip` | - | Compress the folder into a temporary `.zip` archive and host the deliverable. |
+| `-p`, `--port` | `PORT` | Bind port for sharing (default: `8989`). |
+
+#### In-Pipeline Download Sharing Flags
 | Flag | Long Option | Argument | Description |
 |:---|:---|:---|:---|
-| `-s` | `--share` | `[PATH]` | Launch local HTTP server. When `PATH` is provided, hosts local directory. When omitted with `URL`, downloads and serves media. When omitted without `URL`, serves the last completed download. |
-| `-t` | `--temp` | - | Volatile session. Downloads to temporary directory, serves over HTTP, and purges all files upon server termination. Requires `-s`/`--share`. |
+| `-s` | `--share` | `[PATH]` | Launch local HTTP server immediately after download completes. |
+| `-t` | `--temp` | - | Volatile session. Downloads to temporary directory, serves over HTTP, and purges all files upon termination. Requires `-s`/`--share`. |
 
 ---
 
@@ -188,8 +249,8 @@ tetodl service serve [OPTIONS]
 ```
 | Option | Argument | Description |
 |:---|:---|:---|
-| `--host` | `IP` | Bind address (default: `0.0.0.0`). |
-| `-p`, `--port` | `PORT` | Bind port (default: `7370`). |
+| `--host` | `IP` | Bind address (default: `0.0.0.0` or as configured in `tetodl.conf`). |
+| `-p`, `--port` | `PORT` | Bind port (default: `7370` or as configured in `tetodl.conf`). |
 | `-v`, `--verbose`| - | Enable request logging. |
 | `-q`, `--quiet` | - | Suppress startup banner and QR code output. |
 | `--dev` | - | Run with auto-reload enabled (development mode). |
@@ -197,37 +258,87 @@ tetodl service serve [OPTIONS]
 
 #### Background Daemon Control
 ```bash
-tetodl service daemon {setup,remove,status,logs,display} [OPTIONS]
+tetodl service daemon {setup,remove,status,restart,logs,display} [OPTIONS]
 ```
 | Subcommand | Options | Description |
 |:---|:---|:---|
 | `setup` | `[--host H] [-p P]` | Install and start background daemon (`systemd --user` on Linux, Task Scheduler on Windows). |
 | `remove` | - | Stop and uninstall background daemon service. |
 | `status` | - | Print current daemon status, process PID, and bind address. |
+| `restart` | - | Restart running daemon service process. |
 | `logs` | `[-n LINES] [-f]` | Display daemon logs. `-n` sets tail limit (default: 50), `-f` follows output. |
 | `display` | - | Display current LAN access URL and terminal QR code for the running daemon. |
 
 ---
 
-### 8. Diagnostics & Maintenance
+### 8. Server & Daemon Configuration (`tetodl config`)
 
-| Flag | Argument | Description |
-|:---|:---|:---|
-| `--info` | - | Print system diagnostics, storage usage, cache statistics, and tool paths. |
-| `--wrap` | - | Display TetoDL Analytics report (top artists, top albums, total playback time, file counts). |
-| `--history` | `[LIMIT]` | Print download history (default: last 20 entries). |
-| `--reverse` | - | Invert history order (oldest first). Requires `--history`. |
-| `--find` | `QUERY` | Filter history records by search term. Requires `--history`. |
-| `--recheck` | - | Force dependency verification (`ffmpeg`, `yt-dlp`). |
-| `--reset` | `TARGET...` | Reset application state. Valid targets: `history`, `cache`, `config`, `registry`, `all`. |
-| `--update` | - | Pull and apply the latest release from GitHub. |
-| `--uninstall` | - | Remove binary installation, unregister PATH entries, and purge local config. |
+Manage `tetodl.conf`, the unified configuration for the background daemon, authentication, and root storage folders.
+
+| Subcommand | Description |
+|:---|:---|
+| `tetodl config edit` | Open `tetodl.conf` in your default text editor (`$EDITOR`, `$VISUAL`, `notepad`, or `nano`). |
+| `tetodl config path` | Print the absolute path to `tetodl.conf` on your operating system. |
+| `tetodl config show` | Display the current contents of `tetodl.conf`. |
+
+#### Configuration File Locations:
+- **Linux / macOS:** `~/.config/tetodl/tetodl.conf` (or `$XDG_CONFIG_HOME/tetodl/tetodl.conf`)
+- **Windows:** `%APPDATA%\TetoDL\tetodl.conf`
+
+#### Configuration Structure (`tetodl.conf`):
+```toml
+[server]
+host = "0.0.0.0"
+port = 7370
+teto_password = ""               # Admin password for permanent library writes (leave blank for guest sandbox)
+teto_secret = ""                 # HMAC-SHA256 signing secret for session cookies (auto-generated if empty)
+access_token_ttl_minutes = 60    # Short-lived HttpOnly session cookie
+refresh_token_ttl_days = 30      # Long-lived HttpOnly refresh cookie (silent refresh)
+url_prefix = ""                  # Optional reverse-proxy subpath (e.g. "/tetodl")
+
+[storage]
+music_root = ""                  # Custom permanent music library directory override
+video_root = ""                  # Custom permanent video library directory override
+
+[defaults]
+audio_quality = "m4a"
+max_video_resolution = "720p"
+```
 
 ---
 
-### 9. Persistent Configuration
+### 9. System Maintenance & Engine Update (`tetodl system`)
 
-Configuration flags write changes permanently to `config.json`:
+Subcommands for runtime dependency health, engine upgrades, and data management.
+
+| Subcommand | Description |
+|:---|:---|
+| `tetodl system update-ytdlp` | Upgrade the underlying `yt-dlp` core extractor to the latest upstream PyPI release. (Supports both source pip and standalone binary modes). |
+| `tetodl system info` | Print detailed system diagnostics, environment variables, storage paths, and cache status. |
+| `tetodl system recheck` | Force re-verification of core dependencies (`ffmpeg`, `yt-dlp`). |
+| `tetodl system reset [TARGET...]` | Reset application state (`cache`, `history`, `config`, `registry`, or `all`). |
+| `tetodl system update` | Update TetoDL itself to the latest release from GitHub. |
+| `tetodl system uninstall` | Completely uninstall TetoDL, remove binaries, unregister PATH, and clean user data. |
+
+> [!NOTE]
+> Legacy flags (`--info`, `--wrap`, `--history`, `--recheck`, `--reset`, `--update`, `--uninstall`) remain fully supported for backward compatibility.
+
+---
+
+### 10. History & Analytics
+
+| Command | Description |
+|:---|:---|
+| `tetodl history [LIMIT]` | Show interactive history table (default: 20 records). |
+| `tetodl history --reverse` | Show oldest downloads first. |
+| `tetodl history --find <QUERY>` | Filter history records matching search query. |
+| `tetodl analytics` (or `wrap`) | View comprehensive multimedia statistics, total hours downloaded, top artists, and file breakdown. |
+
+---
+
+### 11. Persistent CLI Configuration
+
+Flags that write settings permanently to user TUI configuration (`config.json`):
 
 | Flag | Argument | Description |
 |:---|:---|:---|
@@ -236,6 +347,7 @@ Configuration flags write changes permanently to `config.json`:
 | `--lang` | `CODE` | Set application language: `en` (English) or `id` (Indonesian). |
 | `--jitter` | `MIN-MAX` | Set delay range in seconds between playlist downloads (e.g. `--jitter 3-5`). |
 | `--retries` | `NUM` | Set maximum retry attempts on transient download errors. |
+
 
 ---
 
@@ -311,7 +423,10 @@ tetodl "https://youtu.be/track" -T -f png
 
 ### Interactive YouTube Search
 ```bash
-# Search for query, select track interactively, and download as M4A
+# Search using dedicated subcommand
+tetodl search "Reol No title" -A -f m4a -c -m
+
+# Search using traditional flag
 tetodl -S "Reol No title" -A -f m4a -c -m
 ```
 
@@ -319,9 +434,24 @@ tetodl -S "Reol No title" -A -f m4a -c -m
 
 ## Network Sharing Workflows
 
-The `-s/--share` flag turns your workstation into a local HTTP media streaming and download endpoint.
+TetoDL turns your workstation into a local HTTP media streaming and distribution endpoint with QR codes.
 
-### 1. Download & Host (Remote Staging)
+### 1. Dedicated Directory Sharing (`tetodl share`)
+
+Host local directories securely with directory jailing (preventing traversal above root) and optional depth lock:
+
+```bash
+# Host current directory (jailed to prevent ascending outside root)
+tetodl share
+
+# Host folder locked to flat depth 0 (lists only direct files, hides child folders)
+tetodl share ~/Music/Albums --flat
+
+# Compress directory into temporary ZIP on-the-fly and host for LAN clients
+tetodl share ~/Music/Albums --zip -p 9000
+```
+
+### 2. In-Pipeline Download & Host (Remote Staging)
 
 #### Volatile Share (`-s -t` / `-stz`)
 Downloads media into a temporary sandbox, launches the server, and purges all files when terminated (`Ctrl+C`):
@@ -344,43 +474,20 @@ tetodl "https://youtu.be/playlist" -A -a -g "Favorites" -s
 
 ---
 
-### 2. Standalone File Hosting (No Download)
+## Configuration Precedence (`tetodl.conf` vs `config.json`)
 
-Host existing directories from your filesystem without invoking download engines:
-
-```bash
-# Host explicit path
-tetodl -s /home/user/Music/Albums
-
-# Host configured Music Root directory
-tetodl -s -A
-
-# Locate and host subfolder inside configured Music Root
-tetodl -s -A -g "Vocaloid"
-
-# Compress folder on-the-fly, serve ZIP archive, and clean up temporary zip on exit
-tetodl -s -A -g "Vocaloid" -z
-
-# Host the most recent download recorded in history
-tetodl -s
-```
-
----
-
-## CLI vs TUI Configuration Precedence
-
-1. **Global Defaults (`config.json` via TUI):**  
-   Settings chosen in the TUI (Base paths, preferred video resolution, default container, audio codec) persist across all sessions in `config.json`.
-2. **Runtime Overrides (CLI Arguments):**  
-   Flags supplied on the command line (e.g. `-r 1080p`, `-f m4a`, `-o /path`) temporarily override configuration values for that specific process without mutating `config.json`.
-3. **Explicit Config Modification (CLI System Flags):**  
-   Flags like `--header`, `--progress-style`, `--lang`, `--jitter`, and `--retries` directly modify and persist settings to `config.json`.
+1. **Server Configuration (`tetodl.conf`):**  
+   Governs daemon server parameters (host, port, auth passwords, HMAC secret, session cookie TTLs, and base library storage roots). Editable directly via `tetodl config edit`.
+2. **Global TUI Defaults (`config.json`):**  
+   Settings configured via interactive TUI or persistent CLI flags (header style, progress bar look, language, download jitter).
+3. **Runtime CLI Arguments:**  
+   Flags supplied on the command line (e.g. `-r 1080p`, `-f m4a`, `-o /path`) temporarily override configuration values for that specific run without mutating files on disk.
 
 ---
 
 ## Interactive TUI Tour
 
-Launch `tetodl` with no arguments to enter the terminal interface.
+Launch `tetodl` with no arguments (or `tetodl -i`) to enter the terminal interface.
 
 ### Main Menu
 ![Main Menu](docs/main-menu.png)
@@ -404,7 +511,14 @@ Launch `tetodl` with no arguments to enter the terminal interface.
 ### Diagnostic Overview
 Inspect configuration paths, environment integrity, and storage consumption:
 ```bash
-tetodl --info
+tetodl system info
+# Legacy alias: tetodl --info
+```
+
+### Upstream Engine Upgrade (`yt-dlp`)
+Upgrade the core download extractor directly to the latest PyPI release without waiting for a full package release:
+```bash
+tetodl system update-ytdlp
 ```
 
 ### Trace Execution
@@ -424,8 +538,9 @@ Trace logs are stored in the current working directory with the prefix `tetodl_t
 ### Application State Reset
 Purge cached responses, download history, or configuration files:
 ```bash
-tetodl --reset cache history
-tetodl --reset all
+tetodl system reset cache history
+tetodl system reset all
+# Legacy alias: tetodl --reset all
 ```
 
 ---
