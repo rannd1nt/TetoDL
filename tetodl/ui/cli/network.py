@@ -121,7 +121,7 @@ def ensure_windows_firewall_allow(port):
         pass
 
 
-def start_share_server(file_path_str: str, start_port=8989):
+def start_share_server(file_path_str: str, start_port=8989, flat: bool = False, no_parent: bool = True):
     import asyncio as _asyncio
     import threading as _threading
     import time as _time
@@ -166,7 +166,7 @@ def start_share_server(file_path_str: str, start_port=8989):
         target_url = f"http://{ip_address}:{port}/"
 
     app = FastAPI()
-    router = create_share_router(str(serve_dir))
+    router = create_share_router(str(serve_dir), flat=flat, no_parent=no_parent)
     app.include_router(router)
 
     config = uvicorn.Config(app, host="0.0.0.0", port=port, log_level="error")

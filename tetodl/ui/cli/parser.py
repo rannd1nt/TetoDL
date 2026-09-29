@@ -17,6 +17,8 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shutil
+import subprocess
 import sys
 from typing import TYPE_CHECKING, Literal, cast
 
@@ -46,8 +48,14 @@ class CLIHandler:
             description=color("TetoDL - Hybrid CLI/TUI Media Suite\n\n", 'c') +
                         "Commands:\n" +
                         "  [URL]              Download media\n" +
-                        "  debug              Run with tracing\n" +
-                        "  service            Run & manage Background API Server (Run 'tetodl service --help')",
+                        "  search <QUERY>     Search & download from YouTube\n" +
+                        "  share [PATH]       Host standalone HTTP directory share\n" +
+                        "  service            Manage background daemon & API server\n" +
+                        "  config             Inspect or edit tetodl.conf\n" +
+                        "  system             System maintenance & dependency engine\n" +
+                        "  history            View download history\n" +
+                        "  analytics          Show media analytics (alias: wrap)\n" +
+                        "  debug              Run with execution tracing",
             formatter_class=argparse.RawTextHelpFormatter
         )
         self._setup_args()
@@ -76,6 +84,8 @@ class CLIHandler:
         dl_group.add_argument('-g', '--group', nargs='?', const=True, default=False, metavar='NAME',
             help="Group downloads into a subfolder. Optional: Specify folder name.")
         dl_group.add_argument('-s', '--share', metavar='PATH', nargs='?', const='LATEST', help="Host file/folder via HTTP")
+        dl_group.add_argument('--flat', action='store_true', help="Lock share depth to 0 (only direct files)")
+        dl_group.add_argument('--no-parent', action='store_true', default=True, help="Block ascending outside share root (default: enabled)")
         dl_group.add_argument('-t', '--temp', action='store_true', help="Download to temp directory (requires -s)")
         dl_group.add_argument('-z', '--zip', action='store_true', help="Archive output into a ZIP file")
         dl_group.add_argument('-f', '--format', help='Force format (mp3/m4a/opus | mp4/mkv | jpg/png)')
@@ -96,6 +106,7 @@ class CLIHandler:
 
         # --- 2. UTILITY GROUP ---
         util_group = self.parser.add_argument_group('Utility & Maintenance')
+        util_group.add_argument('-i', '--interactive', action='store_true', help="Launch interactive mode")
         util_group.add_argument('--info', action='store_true', help="Show info")
         util_group.add_argument('--wrap', action='store_true', help="Show Analytics")
         util_group.add_argument('--history', nargs='?', const=20, type=int, metavar='LIMIT', help="Show history")
@@ -120,6 +131,9 @@ class CLIHandler:
             description=color("TetoDL Background API Daemon Service", 'c')
         )
 
+        from ...core.domain.server_config import get_server_config
+        srv_cfg = get_server_config()
+
         subparsers = service_parser.add_subparsers(
             dest='command', metavar='{serve,daemon}'
         )
@@ -131,10 +145,10 @@ class CLIHandler:
         )
         serve_parser.add_argument('-h', '--help', action='help',
                                   help="Show this help message and exit")
-        serve_parser.add_argument('--host', default="0.0.0.0",
-                                  help="Bind IP Address (default: 0.0.0.0)")
-        serve_parser.add_argument('-p', '--port', type=int, default=7370,
-                                  help="Bind Port (default: 7370)")
+        serve_parser.add_argument('--host', default=srv_cfg.host,
+                                  help=f"Bind IP Address (default: {srv_cfg.host})")
+        serve_parser.add_argument('-p', '--port', type=int, default=srv_cfg.port,
+                                  help=f"Bind Port (default: {srv_cfg.port})")
         serve_parser.add_argument('-v', '--verbose', action='store_true',
                                   help="Show request logs (default: quiet)")
         serve_parser.add_argument('-q', '--quiet', action='store_true',
@@ -149,19 +163,20 @@ class CLIHandler:
             description="Install, remove, inspect and follow the TetoDL daemon service."
         )
         daemon_actions = daemon_parser.add_subparsers(
-            dest='action', metavar='{setup,remove,status,logs,display}'
+            dest='action', metavar='{setup,remove,status,restart,logs,display}'
         )
 
         setup_parser = daemon_actions.add_parser(
             'setup', help='Install and start the daemon service'
         )
-        setup_parser.add_argument('--host', default="0.0.0.0",
-                                  help="Bind IP Address (default: 0.0.0.0)")
-        setup_parser.add_argument('-p', '--port', type=int, default=7370,
-                                  help="Bind Port (default: 7370)")
+        setup_parser.add_argument('--host', default=srv_cfg.host,
+                                  help=f"Bind IP Address (default: {srv_cfg.host})")
+        setup_parser.add_argument('-p', '--port', type=int, default=srv_cfg.port,
+                                  help=f"Bind Port (default: {srv_cfg.port})")
 
         daemon_actions.add_parser('remove', help='Remove the daemon service')
         daemon_actions.add_parser('status', help='Show daemon service status')
+        daemon_actions.add_parser('restart', help='Restart the daemon service')
 
         logs_parser = daemon_actions.add_parser(
             'logs', help='Show daemon service logs'
@@ -204,6 +219,9 @@ class CLIHandler:
             if args.action == 'status':
                 manager.status()
                 return
+            if args.action == 'restart':
+                manager.restart()
+                return
             if args.action == 'logs':
                 manager.logs(args.tail, args.follow)
                 return
@@ -211,7 +229,212 @@ class CLIHandler:
             return
 
         service_parser.print_help()
-            
+
+    def _handle_share_subcommand(self):
+        share_parser = argparse.ArgumentParser(
+            prog="tetodl share",
+            description=color("TetoDL Standalone File & Directory Sharing", 'c'),
+        )
+        share_parser.add_argument('path', nargs='?', default=None, help="Target file or directory to host")
+        share_parser.add_argument('--flat', action='store_true', help="Lock depth to 0 (only list direct files, no subdirectories)")
+        share_parser.add_argument('--no-parent', action='store_true', default=True, help="Block ascending outside shared directory (default: enabled)")
+        share_parser.add_argument('--parent', action='store_false', dest='no_parent', help="Allow ascending into parent directory")
+        share_parser.add_argument('-z', '--zip', action='store_true', help="Archive folder into ZIP file before serving")
+        share_parser.add_argument('-p', '--port', type=int, default=8989, help="Port to host on (default: 8989)")
+
+        args = share_parser.parse_args(sys.argv[2:])
+
+        from ...utils.console import console
+        from ...utils.i18n_keys import Keys
+        from .network import start_share_server
+
+        target_path = args.path
+        if not target_path:
+            from ...core.domain.history import get_last_downloaded_file
+            latest = get_last_downloaded_file()
+            if latest and os.path.exists(latest):
+                target_path = latest
+            else:
+                target_path = os.getcwd()
+
+        target_path = os.path.abspath(target_path)
+        if not os.path.exists(target_path):
+            console.err(Keys.cli.cannot_share_path_not_found)
+            console.warn(Keys.cli.share_path(path=target_path))
+            return
+
+        if args.zip and os.path.isdir(target_path):
+            from ...utils.files import create_zip_archive
+            name = os.path.basename(target_path.rstrip(os.sep))
+            console.proc(Keys.cli.archiving_folder(name=name))
+            zip_path = create_zip_archive(target_path)
+            if zip_path and os.path.exists(zip_path):
+                try:
+                    console.ok(Keys.cli.serving_temp_archive(name=os.path.basename(zip_path)))
+                    start_share_server(zip_path, start_port=args.port, flat=args.flat, no_parent=args.no_parent)
+                except KeyboardInterrupt:
+                    print()
+                finally:
+                    if os.path.exists(zip_path):
+                        try:
+                            os.remove(zip_path)
+                        except OSError:
+                            pass
+                return
+            else:
+                console.err(Keys.cli.failed_to_create_zip)
+                return
+
+        try:
+            start_share_server(target_path, start_port=args.port, flat=args.flat, no_parent=args.no_parent)
+        except KeyboardInterrupt:
+            print()
+
+    def _handle_config_subcommand(self):
+        config_parser = argparse.ArgumentParser(
+            prog="tetodl config",
+            description=color("TetoDL Configuration Management", 'c'),
+        )
+        subparsers = config_parser.add_subparsers(
+            dest='subaction', metavar='{edit,path,show}'
+        )
+        subparsers.add_parser('edit', help="Open tetodl.conf in default text editor")
+        subparsers.add_parser('path', help="Print path to tetodl.conf")
+        subparsers.add_parser('show', help="Print content of tetodl.conf")
+
+        args = config_parser.parse_args(sys.argv[2:])
+
+        from ...core.domain.server_config import (
+            ensure_default_server_config,
+            get_default_config_path,
+        )
+        from ...utils.console import console
+        from ...utils.i18n_keys import Keys
+
+        cfg_path = ensure_default_server_config()
+
+        if args.subaction == 'path':
+            print(str(cfg_path))
+            return
+
+        if args.subaction == 'show':
+            if cfg_path.exists():
+                print(cfg_path.read_text(encoding='utf-8'))
+            else:
+                console.warn(Keys.cli.file_not_found(path=str(cfg_path)))
+            return
+
+        if args.subaction == 'edit':
+            editor = os.environ.get('EDITOR') or os.environ.get('VISUAL')
+            if not editor:
+                from ...core.domain.env import env
+                if env.get('is_windows'):
+                    editor = 'notepad'
+                else:
+                    for candidate in ('nano', 'vim', 'vi', 'xdg-open'):
+                        if shutil.which(candidate):
+                            editor = candidate
+                            break
+            if not editor:
+                console.err("No text editor found. Set $EDITOR environment variable.")
+                return
+
+            try:
+                subprocess.run([editor, str(cfg_path)], check=True)
+            except Exception as e:
+                console.err(f"Failed to open editor '{editor}': {e}")
+            return
+
+        config_parser.print_help()
+
+    def _handle_system_subcommand(self):
+        system_parser = argparse.ArgumentParser(
+            prog="tetodl system",
+            description=color("TetoDL System Maintenance & Engine Management", 'c'),
+        )
+        subparsers = system_parser.add_subparsers(
+            dest='subaction', metavar='{update-ytdlp,info,recheck,reset,update,uninstall}'
+        )
+        subparsers.add_parser('update-ytdlp', help="Upgrade vendored or environment yt-dlp core engine")
+        subparsers.add_parser('info', help="Show system environment and diagnostic information")
+        subparsers.add_parser('recheck', help="Force dependency and registry integrity recheck")
+        reset_p = subparsers.add_parser('reset', help="Reset application cache, history, or config")
+        reset_p.add_argument('targets', nargs='*', choices=['history', 'cache', 'config', 'registry', 'all'], default=['all'], help="Data targets to reset")
+        subparsers.add_parser('update', help="Update TetoDL binary or repository")
+        subparsers.add_parser('uninstall', help="Uninstall TetoDL")
+
+        args = system_parser.parse_args(sys.argv[2:])
+
+        if args.subaction == 'update-ytdlp':
+            from ...core.maintenance import update_ytdlp
+            update_ytdlp()
+            return
+
+        if args.subaction == 'info':
+            from ...core.domain import config as config_mgr
+            from ...core.domain.env import env
+            from ...core.domain import cache as cache_mod
+            from ...utils.display import show_app_info
+            config_mgr.load_config()
+            show_app_info(
+                version=APP_VERSION,
+                config_path=env.get('config_path') or None,
+                data_dir=env.get('data_dir') or None,
+                cache_mod=cache_mod,
+                config_mod=config_mgr,
+            )
+            return
+
+        if args.subaction == 'recheck':
+            from ...core.dependency import verify_core_dependencies
+            verify_core_dependencies(check_updates=True)
+            return
+
+        if args.subaction == 'reset':
+            from ...core import maintenance
+            maintenance.reset_data(args.targets)
+            return
+
+        if args.subaction == 'update':
+            from ...core import maintenance
+            from ...utils.console import console
+            from ...utils.i18n_keys import Keys
+            console.warn(Keys.cli.checking_for_updates)
+            maintenance.perform_update()
+            return
+
+        if args.subaction == 'uninstall':
+            from ...core import maintenance
+            maintenance.perform_uninstall()
+            return
+
+        system_parser.print_help()
+
+    def _handle_history_subcommand(self):
+        hist_parser = argparse.ArgumentParser(
+            prog="tetodl history",
+            description=color("TetoDL Download History", 'c'),
+        )
+        hist_parser.add_argument('limit', nargs='?', const=20, default=20, type=int, help="Number of records to show (default: 20)")
+        hist_parser.add_argument('--reverse', action='store_true', help="Show oldest entries first")
+        hist_parser.add_argument('--find', metavar='QUERY', help="Filter history by query")
+
+        args = hist_parser.parse_args(sys.argv[2:])
+
+        from ...core.domain import config as config_mgr
+        config_mgr.load_config()
+        from ...core.domain.history import load_history
+        load_history()
+        from ...ui.tui import analytics as _a
+        _a.render_history_view(args.limit, args.reverse, args.find)
+
+    def _handle_analytics_subcommand(self):
+        from ...core.domain import config as config_mgr
+        config_mgr.load_config()
+        from ...ui.tui import analytics as _a
+        _a.render_analytics_view()
+
+
     def _handle_early_dispatch(self, args) -> bool:
         """Handle commands that exit immediately or don't require download context."""
         
@@ -414,7 +637,11 @@ class CLIHandler:
                 if zip_path and os.path.exists(zip_path):
                     try:
                         console.ok(Keys.cli.serving_temp_archive(name=os.path.basename(zip_path)))
-                        start_share_server(zip_path)
+                        start_share_server(
+                            zip_path,
+                            flat=getattr(args, 'flat', False),
+                            no_parent=getattr(args, 'no_parent', True),
+                        )
                     except KeyboardInterrupt:
                         print()
                     finally:
@@ -436,7 +663,11 @@ class CLIHandler:
                 console.ok(Keys.cli.sharing_group(name=os.path.basename(target_path)))
             
             try:
-                start_share_server(target_path)
+                start_share_server(
+                    target_path,
+                    flat=getattr(args, 'flat', False),
+                    no_parent=getattr(args, 'no_parent', True),
+                )
             except KeyboardInterrupt:
                 print()
         else:
@@ -675,6 +906,9 @@ class CLIHandler:
             is_temp_session=is_temp,
         )
 
+        if getattr(args, 'interactive', False):
+            return CliMenu(force_recheck=args.recheck)
+
         if args.search:
             return CliSearch(
                 query=args.search,
@@ -747,10 +981,45 @@ class CLIHandler:
 
     def parse(self) -> tuple[bool, CliResult]:
         """Returns: (handled, result)"""
-        if len(sys.argv) > 1 and sys.argv[1].lower() == 'service':
-            self._handle_service_subcommand()
-            from ...core.domain.models import CliExit
-            return True, CliExit()
+        if len(sys.argv) > 1:
+            cmd = sys.argv[1].lower()
+            if cmd == 'share':
+                self._handle_share_subcommand()
+                from ...core.domain.models import CliExit
+                return True, CliExit()
+
+            if cmd == 'service':
+                self._handle_service_subcommand()
+                from ...core.domain.models import CliExit
+                return True, CliExit()
+
+            if cmd == 'config':
+                self._handle_config_subcommand()
+                from ...core.domain.models import CliExit
+                return True, CliExit()
+
+            if cmd == 'system':
+                self._handle_system_subcommand()
+                from ...core.domain.models import CliExit
+                return True, CliExit()
+
+            if cmd == 'history':
+                self._handle_history_subcommand()
+                from ...core.domain.models import CliExit
+                return True, CliExit()
+
+            if cmd in ('analytics', 'wrap'):
+                self._handle_analytics_subcommand()
+                from ...core.domain.models import CliExit
+                return True, CliExit()
+
+            if cmd == 'search':
+                if len(sys.argv) == 2 or sys.argv[2] in ('-h', '--help'):
+                    print("Usage: tetodl search <QUERY> [options...]\n\nSearch YouTube interactively and download results.\nOptions: -A (audio), -V (video), -c (cover), -l (lyrics), --limit <N>, etc.")
+                    from ...core.domain.models import CliExit
+                    return True, CliExit()
+                sys.argv[1] = '-S'
+
 
         # --- debug subcommand: tetodl debug {all|errors|concise} [options...] ---
         if len(sys.argv) > 2 and sys.argv[1].lower() == 'debug':

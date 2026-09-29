@@ -264,16 +264,22 @@ select option { background: #1e293b; color: var(--text-main); }
     font-size: 0.7rem; opacity: 0.4; flex-shrink: 0;
 }
 
-/* --- Settings button in branding --- */
-.settings-btn {
-    background: none; border: none; color: var(--text-muted);
-    cursor: pointer; padding: 4px; border-radius: 6px;
-    display: inline-flex; align-items: center;
-    vertical-align: middle; margin-left: 6px;
-    transition: color 0.2s;
+/* --- Auth Modal --- */
+.modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; padding: 16px;
 }
-.settings-btn:hover { color: var(--text-main); }
-.settings-btn svg { width: 14px; height: 14px; display: block; }
+.modal-card {
+    width: 100%; max-width: 380px;
+    animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modalPop {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+}
 
 /* --- Audio options row --- */
 .audio-opt-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
@@ -296,45 +302,13 @@ select option { background: #1e293b; color: var(--text-main); }
   <p>
     <span id="status-dot" class="status-dot"></span>
     <span id="storage-info">Checking...</span>
-    <button class="settings-btn" onclick="toggleSettings()" aria-label="Settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-    </button>
   </p>
-</div>
-
-<div id="settings-dialog" class="glass-container" style="display:none;flex-shrink:0;max-height:50vh">
-  <div class="header-section">
-    <div class="path-header">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-      Daemon Settings
-    </div>
-  </div>
-  <div class="scroll-area">
-    <form id="settingsForm">
-      <label class="checkbox-group"><input type="checkbox" id="cfg_default_temp"> Save as Temporary Files (Default)</label>
-      <div class="form-label">Auto-Cleanup Interval</div>
-      <select id="cfg_cleanup">
-        <option value="1800">30 Minutes</option>
-        <option value="3600">1 Hour</option>
-        <option value="7200">2 Hours</option>
-        <option value="86400">24 Hours</option>
-      </select>
-      <button type="submit" class="btn btn-secondary" style="margin-top:12px">Save Settings</button>
-    </form>
-  </div>
 </div>
 
 <div class="glass-container">
   <div class="header-section">
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="download">Download</button>
-      <button class="tab-btn" data-tab="share">Share Browser</button>
       <button class="tab-btn" data-tab="tasks">Tasks (<span id="task-count">0</span>)</button>
     </div>
   </div>
@@ -433,18 +407,6 @@ select option { background: #1e293b; color: var(--text-main); }
     </div>
   </div>
 
-  <div id="tab-share" class="tab-content">
-    <div class="scroll-area">
-      <div class="form-label">Share Browser</div>
-      <p style="font-size:0.8rem;color:var(--text-muted);margin:0 0 12px">Open a library folder in the TetoDL Share interface on a separate port.</p>
-      <div style="display:flex;gap:10px">
-        <button class="btn btn-secondary btn-sm" onclick="launchShare('MUSIC')" style="flex:1">Music Library</button>
-        <button class="btn btn-secondary btn-sm" onclick="launchShare('VIDEO')" style="flex:1">Video Library</button>
-      </div>
-      <div id="share-error" style="color:#ef4444;font-size:0.8rem;margin-top:8px;display:none"></div>
-    </div>
-  </div>
-
   <div id="tab-tasks" class="tab-content">
     <div class="scroll-area">
       <div id="active-tasks"><span style="color:var(--text-muted);font-size:0.85rem">No active tasks.</span></div>
@@ -453,6 +415,36 @@ select option { background: #1e293b; color: var(--text-main); }
 </div>
 
 <div class="footer">TetoDL Orchestrator</div>
+
+<!-- Single-Gate Verification Modal -->
+<div id="auth-modal" class="modal-overlay" style="display:none">
+  <div class="modal-card glass-container">
+    <div class="header-section">
+      <div class="path-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span>Library Authorization</span>
+      </div>
+    </div>
+    <div class="scroll-area" style="padding:16px">
+      <p style="font-size:0.85rem;color:var(--text-muted);margin:0 0 14px">
+        Saving files directly to the server library requires the admin password (<code>teto_password</code>).
+      </p>
+      <form id="authForm">
+        <div class="form-label">Admin Password</div>
+        <input type="password" id="auth_password" placeholder="Enter teto_password" required autocomplete="current-password">
+        <div id="auth-error" style="color:#ef4444;font-size:0.8rem;margin-top:8px;display:none"></div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="cancelAuth()" style="flex:1">Cancel</button>
+          <button type="submit" class="btn btn-success btn-sm" id="auth_submit" style="flex:1">Authorize</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script>
@@ -477,19 +469,79 @@ document.getElementById('tab-'+tab).classList.add('active');
 pollTasks();
 }
 
-function toggleSettings(){
-const d=document.getElementById('settings-dialog');
-d.style.display=d.style.display==='none'?'flex':'none';
-}
-
-function downloadFile(encPath){
+function downloadFile(taskId){
 const a=document.createElement('a');
-a.href=`${API}/share/stream?path=${encPath}`;
-a.download=decodeURIComponent(encPath).split('/').pop();
+a.href=`${API}/download/file/${taskId}`;
 document.body.appendChild(a);
 a.click();
 document.body.removeChild(a);
 }
+
+let _isAuthenticated=false;
+
+async function checkAuthStatus(){
+try{
+const r=await fetch(`${API}/auth/status`);
+if(r.ok){
+const d=await r.json();
+_isAuthenticated=d.authenticated;
+return _isAuthenticated;
+}
+}catch(_){}
+_isAuthenticated=false;
+return false;
+}
+
+function openAuthModal(){
+document.getElementById('auth_password').value='';
+document.getElementById('auth-error').style.display='none';
+document.getElementById('auth-modal').style.display='flex';
+document.getElementById('auth_password').focus();
+}
+
+function cancelAuth(){
+document.getElementById('auth-modal').style.display='none';
+document.getElementById('d_permanent').checked=false;
+}
+
+document.getElementById('authForm').addEventListener('submit',async e=>{
+e.preventDefault();
+const pwd=document.getElementById('auth_password').value;
+const errEl=document.getElementById('auth-error');
+const btn=document.getElementById('auth_submit');
+btn.disabled=true;btn.textContent='Verifying...';
+try{
+const r=await fetch(`${API}/auth/verify`,{
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({password:pwd})
+});
+if(r.ok){
+_isAuthenticated=true;
+document.getElementById('auth-modal').style.display='none';
+document.getElementById('d_permanent').checked=true;
+toast('Authorized: Saving to library enabled');
+}else{
+const d=await r.json().catch(()=>({detail:'Invalid password'}));
+errEl.textContent=d.detail||'Authorization failed';
+errEl.style.display='block';
+}
+}catch(_){
+errEl.textContent='Connection error';
+errEl.style.display='block';
+}finally{
+btn.disabled=false;btn.textContent='Authorize';
+}
+});
+
+document.getElementById('d_permanent').addEventListener('change',async function(){
+if(this.checked){
+const authed=await checkAuthStatus();
+if(!authed){
+openAuthModal();
+}
+}
+});
 
 function formatTime(s){
 if(!s)return'0:00';
@@ -514,29 +566,14 @@ document.getElementById('storage-info').textContent='Storage: '+d.storage.music_
 }
 const rc=await fetch(`${API}/config`);
 const dc=await rc.json();
-document.getElementById('cfg_default_temp').checked=dc.daemon_default_temp;
-document.getElementById('cfg_cleanup').value=dc.daemon_cleanup_interval;
 _config.audio_quality=dc.audio_quality||'m4a';
 _config.video_container=dc.video_container||'mp4';
 populateFormats('audio');
+await checkAuthStatus();
 }catch(e){
 document.getElementById('storage-info').textContent='Connection failed.';
 }
 }
-
-document.getElementById('settingsForm').addEventListener('submit',async e=>{
-e.preventDefault();
-try{
-await fetch(`${API}/config`,{
-method:'PATCH',headers:{'Content-Type':'application/json'},
-body:JSON.stringify({
-daemon_default_temp:document.getElementById('cfg_default_temp').checked,
-daemon_cleanup_interval:parseInt(document.getElementById('cfg_cleanup').value)
-})
-});
-toast('Settings saved.');
-}catch(_){toast('Failed to save.');}
-});
 
 // --- TAB 1: PREVIEW + DOWNLOAD ---
 
@@ -698,36 +735,22 @@ payload.group=true;
 try{
 const r=await fetch(`${API}/download`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
 const d=await r.json();
+if(!r.ok){
+if(r.status===401){
+toast('Authorization required to save to library');
+openAuthModal();
+}else{
+toast('Error: '+(d.detail||'Download failed'));
+}
+return;
+}
 toast(d.message||'Task: '+d.task_id);
 switchTab('tasks');
 }catch(err){toast('Error: '+err.message);}
 finally{btn.textContent='Process Download';btn.disabled=false;}
 });
 
-// --- TAB 2: SHARE BROWSER ---
-
-async function launchShare(key){
-const el=document.getElementById('share-error');
-el.style.display='none';
-try{
-const r=await fetch(`${API}/share/browse?path=quick:${key}`);
-const data=await r.json();
-if(!r.ok){el.textContent=data.detail;el.style.display='block';return;}
-await _doLaunch(data.path);
-}catch(e){el.textContent='Failed: '+e.message;el.style.display='block';}
-}
-
-async function _doLaunch(path){
-const el=document.getElementById('share-error');
-try{
-const r=await fetch(`${API}/share/launch`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({path})});
-const data=await r.json();
-if(!r.ok){el.textContent=data.detail;el.style.display='block';return;}
-window.open(data.url,'_blank');
-}catch(e){el.textContent='Failed: '+e.message;el.style.display='block';}
-}
-
-// --- TAB 3: TASKS ---
+// --- TAB 2: TASKS ---
 
 let _logPollers={};
 
@@ -753,15 +776,12 @@ if(t.status==='processing')hasProcessing=true;
 
 let actions='';
 if(t.status==='completed'&&t.file_path){
-const enc=encodeURIComponent(t.file_path);
 if(t.file_path.match(/\.zip$/i)){
-actions+=`<button class="btn btn-success btn-sm" onclick="downloadFile('${enc}')">Download ZIP</button>`;
-}else if(/\.(jpg|jpeg|png|gif|webp)$/i.test(t.file_path)){
-actions+=`<a href="${API}/share/stream?path=${enc}" target="_blank" rel="noopener" class="btn btn-success btn-sm">View</a>`;
+actions+=`<button class="btn btn-success btn-sm" onclick="downloadFile('${id}')">Download ZIP</button>`;
 }else if(t.is_dir){
-actions+=`<a href="${API}/share/browse_html?path=${enc}&root=${enc}" target="_blank" rel="noopener" class="btn btn-success btn-sm">View</a>`;
+actions+=`<span class="badge completed">Saved to Library</span>`;
 }else{
-actions+=`<a href="${API}/share/player?path=${enc}" target="_blank" rel="noopener" class="btn btn-success btn-sm">View</a>`;
+actions+=`<button class="btn btn-success btn-sm" onclick="downloadFile('${id}')">Download</button>`;
 }
 }
 

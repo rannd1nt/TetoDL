@@ -110,3 +110,36 @@ class TestMaintenance:
         reset_data(targets=["cache"])
 
         mock_cleanup.assert_called_once()
+
+    def test_update_ytdlp_already_latest(self, mocker):
+        """update_ytdlp returns True when yt-dlp is already at latest version."""
+        mocker.patch(
+            "tetodl.core.dependency.get_ytdlp_version_info",
+            return_value=(False, "2026.01.01", "2026.01.01"),
+        )
+        mock_ok = mocker.patch("tetodl.core.maintenance.console.ok")
+
+        from tetodl.core.maintenance import update_ytdlp
+        result = update_ytdlp()
+
+        assert result is True
+        mock_ok.assert_called_once()
+
+    def test_update_ytdlp_outdated_source(self, mocker):
+        """update_ytdlp runs pip install when outdated in source mode."""
+        mocker.patch(
+            "tetodl.core.dependency.get_ytdlp_version_info",
+            return_value=(True, "2025.01.01", "2026.01.01"),
+        )
+        mocker.patch("tetodl.core.maintenance.env.get", return_value=False)
+        mock_run = mocker.patch("tetodl.core.maintenance.subprocess.run")
+        mock_run.return_value.returncode = 0
+        mock_ok = mocker.patch("tetodl.core.maintenance.console.ok")
+
+        from tetodl.core.maintenance import update_ytdlp
+        result = update_ytdlp()
+
+        assert result is True
+        mock_run.assert_called_once()
+        mock_ok.assert_called_once()
+

@@ -447,3 +447,54 @@ def reset_data(targets: list[str]):
         if 'config' in valid_targets:
             reset_config()
             console.ok(Keys.maint.config_reset_to_defaults)
+
+
+def update_ytdlp() -> bool:
+    """Check for yt-dlp updates and upgrade either via pip (source) or wheel override (binary)."""
+    from .dependency import get_ytdlp_version_info, _update_ytdlp_binary_mode
+
+    try:
+        console.proc(Keys.cli.checking_for_updates)
+        is_outdated, current, latest = get_ytdlp_version_info()
+        if latest == "unknown":
+            console.err("Failed to retrieve latest yt-dlp version from PyPI.")
+            return False
+
+        if not is_outdated:
+            console.ok(f"yt-dlp is already up to date ({current}).")
+            return True
+
+        console.proc(f"Updating yt-dlp: {current} -> {latest}...")
+        if env.get("is_binary"):
+            return _update_ytdlp_binary_mode(latest)
+
+        # Source mode: run pip install -U yt-dlp
+        root_dir = get_project_root()
+        pip_candidates = [
+            str(root_dir / ".venv" / "bin" / "pip"),
+            str(root_dir / ".venv" / "Scripts" / "pip.exe"),
+            sys.executable,
+        ]
+        pip_cmd = None
+        for cand in pip_candidates:
+            if os.path.exists(cand):
+                pip_cmd = cand
+                break
+
+        if pip_cmd == sys.executable:
+            cmd = [pip_cmd, "-m", "pip", "install", "-U", "yt-dlp"]
+        elif pip_cmd:
+            cmd = [pip_cmd, "install", "-U", "yt-dlp"]
+        else:
+            cmd = [sys.executable, "-m", "pip", "install", "-U", "yt-dlp"]
+
+        res = subprocess.run(cmd, capture_output=True, text=True)
+        if res.returncode == 0:
+            console.ok(f"yt-dlp successfully updated to {latest}.")
+            return True
+        else:
+            console.err(f"yt-dlp update failed: {res.stderr.strip()}")
+            return False
+    except Exception as e:
+        console.err(Keys.maint.update_failed(error=e))
+        return False

@@ -17,7 +17,7 @@ Constants and Path Configuration
 """
 
 APP_NAME = "TetoDL"
-APP_VERSION = "2.3.4"
+APP_VERSION = "2.4.0-rc-1"
 JITTER = (3.0, 5.0)
 
 # ==== DOWNLOAD SETTINGS ====

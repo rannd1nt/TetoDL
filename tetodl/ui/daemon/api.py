@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import uvicorn
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -40,19 +40,22 @@ from ...core.domain import config as cfg
 from ...core.domain import config as config_mgr
 from ...core.domain.env import env
 from ...core.domain.models import DownloadResult, DownloadSession
+from ...core.domain.server_config import get_server_config
 from ...utils.display import get_free_space
 from ...utils.files import TempManager
-from ...utils.formatters import color, human_size, icon_for_ext
+from ...utils.formatters import color
 from ...utils.console.themes import PlainTheme
-from ...utils.network import find_free_port, get_best_ip
 from ...utils.processing import parse_playlist_items
-from ..share import SVG as _SHARE_SVG
-from ..share import create_share_router, list_entries, stream_file
 from ...utils.time_parser import get_cut_seconds
+from .auth import (
+    clear_auth_cookies,
+    issue_token_pair,
+    set_auth_cookies,
+    verify_admin_password,
+    verify_request_auth,
+)
 from .display import daemon_urls
-from .models import DownloadRequest, PreviewRequest
-
-share_launchers: dict[str, Any] = {}
+from .models import AuthVerifyRequest, DownloadRequest, PreviewRequest
 
 active_tasks: dict[str, Any] = {}
 
@@ -217,43 +220,75 @@ async def get_current_config():
         "lyrics_mode": cfg.lyrics_mode,
     }
 
-@app.patch("/api/v1/config")
-async def update_config(request: Request):
-    """Menerima setting baru dari HP dan menyimpannya ke config.json secara permanen"""
-    data = await request.json()
-    config_mgr.load_config()
-    
-    # Petakan request JSON ke objek konfigurasi
-    if "daemon_default_temp" in data:
-        cfg.daemon_default_temp = data["daemon_default_temp"]
-    if "daemon_cleanup_interval" in data:
-        cfg.daemon_cleanup_interval = data["daemon_cleanup_interval"]
-    if "audio_quality" in data:
-        cfg.audio_quality = data["audio_quality"]
-    if "max_resolution" in data:
-        cfg.max_video_resolution = data["max_resolution"]
-    if "lyrics_mode" in data:
-        cfg.lyrics_mode = data["lyrics_mode"]
-    
-    config_mgr.save_config() # Simpan ke disk
-    return {"status": "success", "message": "Configuration updated persistently."}
+
+# --- AUTH ENDPOINTS ---
+@app.post("/api/v1/auth/verify")
+async def auth_verify(req: AuthVerifyRequest, response: Response):
+    """Verify admin password (teto_password) and issue HttpOnly Dual-Token cookies."""
+    server_cfg = get_server_config()
+    if not server_cfg.teto_password:
+        raise HTTPException(
+            status_code=400,
+            detail="Admin password (teto_password) is not configured in tetodl.conf",
+        )
+    if not verify_admin_password(req.password, server_cfg):
+        raise HTTPException(status_code=401, detail="Invalid admin password")
+
+    access_tok, refresh_tok = issue_token_pair(server_cfg)
+    set_auth_cookies(response, access_token=access_tok, refresh_token=refresh_tok, cfg=server_cfg)
+    return {"status": "ok", "authenticated": True}
+
+
+@app.get("/api/v1/auth/status")
+async def auth_status(request: Request, response: Response):
+    """Check current authentication status, performing silent refresh if needed."""
+    server_cfg = get_server_config()
+    is_auth, source = verify_request_auth(request, response, server_cfg)
+    return {
+        "authenticated": is_auth,
+        "password_configured": bool(server_cfg.teto_password),
+        "source": source,
+    }
+
+
+@app.post("/api/v1/auth/logout")
+async def auth_logout(response: Response):
+    """Clear authentication cookies."""
+    clear_auth_cookies(response)
+    return {"status": "ok", "authenticated": False}
 
 
 # --- 2. ORCHESTRATION (THE BIG BRAIN) ---
 @app.post("/api/v1/download")
-async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
+async def process_download(
+    req: DownloadRequest,
+    request: Request,
+    response: Response,
+    bg_tasks: BackgroundTasks,
+):
     if not req.url and not req.search_query:
         raise HTTPException(status_code=400, detail="Must provide 'url' or 'search_query'")
 
     task_id = str(uuid.uuid4())[:8]
 
     # --- TEMP VS PERMANENT STORAGE LOGIC ---
-    if req.share_temp:
-        is_temp = True
-    elif req.share:
+    if req.share:
+        is_auth, _ = verify_request_auth(request, response)
+        if not is_auth:
+            raise HTTPException(
+                status_code=401,
+                detail="Unauthorized: Saving to permanent library requires admin authorization (teto_password).",
+            )
         is_temp = False
+    elif req.share_temp:
+        is_temp = True
     else:
-        is_temp = getattr(cfg, 'daemon_default_temp', True)
+        default_temp = getattr(cfg, 'daemon_default_temp', True)
+        if not default_temp:
+            is_auth, _ = verify_request_auth(request, response)
+            is_temp = not is_auth
+        else:
+            is_temp = True
 
     output_path: str | None = None
     if is_temp:
@@ -459,64 +494,42 @@ async def preview_media(req: PreviewRequest):
     }
 
 
-# --- 4. SHARE BROWSE (JSON directory listing) ---
-@app.get("/api/v1/share/browse")
-async def share_browse(path: str = ""):
-    display_path = path or "/"
-    try:
-        root_map = {
-            "MUSIC": env.get('default_music_root'),
-            "VIDEO": env.get('default_video_root'),
-            "TEMP": str(TempManager.get_temp_dir()),
-        }
-        quick = {k: os.path.abspath(v) for k, v in root_map.items()}
+# --- 4. SECURE DELIVERABLE DOWNLOADS ---
+@app.get("/api/v1/download/file/{task_id}")
+async def download_deliverable(task_id: str, request: Request, response: Response):
+    """Serve completed download deliverable with path-jailing."""
+    task = active_tasks.get(task_id)
+    if not task:
+        raise HTTPException(404, "Task not found")
+    if task.get("status") != "completed":
+        raise HTTPException(400, "Task is not completed yet")
+    file_path = task.get("file_path")
+    if not file_path or not os.path.exists(file_path):
+        raise HTTPException(404, "Deliverable file not found on disk")
 
-        if path.startswith("quick:"):
-            key = path.replace("quick:", "")
-            real = quick.get(key)
-            if not real:
-                raise HTTPException(400, f"Unknown quick path: {key}")
-            entries = list_entries(real)
-            return {"path": real, "display": key, "entries": entries, "quick": list(quick.keys())}
+    real = Path(file_path).resolve()
+    temp_dir = Path(TempManager.get_temp_dir()).resolve()
 
-        real = os.path.abspath(path) if path else "/"
-        if not os.path.isdir(real):
-            raise HTTPException(400, "Not a directory")
-        entries = list_entries(real)
-        return {"path": real, "display": display_path, "entries": entries, "quick": list(quick.keys())}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(400, f"Browse error: {e}")
+    # Deliverables outside temp directory require admin authentication
+    if not real.is_relative_to(temp_dir):
+        is_auth, _ = verify_request_auth(request, response)
+        if not is_auth:
+            raise HTTPException(
+                401,
+                "Access denied: Downloading permanent library files requires authorization",
+            )
 
+    if real.is_dir():
+        raise HTTPException(
+            400,
+            "Target is a folder. Enable zip mode to download as an archive.",
+        )
 
-# --- 5. SHARE STREAM (raw file serving, no HTML, supports Range for <video>/<audio>) ---
-@app.get("/api/v1/share/stream")
-async def share_stream(request: Request):
-    path_raw = request.query_params.get("path", "")
-    if not path_raw:
-        raise HTTPException(400, "Missing 'path' query param")
-    real = os.path.abspath(path_raw)
-    if not os.path.isfile(real):
-        raise HTTPException(404, "File not found")
-    range_header = request.headers.get("range")
-    return await stream_file(real, range_header or "")
-
-
-# --- 5B. SHARE DOWNLOAD (dedicated endpoint, always attachment, no Range interference) ---
-@app.get("/api/v1/share/download")
-async def share_download(request: Request):
-    path_raw = request.query_params.get("path", "")
-    if not path_raw:
-        raise HTTPException(400, "Missing 'path' query param")
-    real = os.path.abspath(path_raw)
-    if not os.path.isfile(real):
-        raise HTTPException(404, "File not found")
-    filename = os.path.basename(real)
-    safe_name = filename.encode('ascii', 'ignore').decode('ascii') or 'download'
-    encoded_name = urllib.parse.quote(filename, safe='')
+    filename = real.name
+    safe_name = filename.encode("ascii", "ignore").decode("ascii") or "download"
+    encoded_name = urllib.parse.quote(filename, safe="")
     return FileResponse(
-        real,
+        str(real),
         media_type="application/octet-stream",
         headers={
             "Content-Disposition": f'attachment; filename="{safe_name}"; filename*=UTF-8\'\'{encoded_name}'
@@ -524,316 +537,34 @@ async def share_download(request: Request):
     )
 
 
-# --- 6. SHARE BROWSER HTML (dir listing, same glassmorphism as TetoDL Share) ---
+@app.get("/api/v1/share/download")
+async def share_download(request: Request, response: Response):
+    """Download a file with strict path jailing (sandboxed to temp unless authenticated)."""
+    path_raw = request.query_params.get("path", "")
+    if not path_raw:
+        raise HTTPException(400, "Missing 'path' query param")
+    real = Path(os.path.abspath(path_raw)).resolve()
+    temp_dir = Path(TempManager.get_temp_dir()).resolve()
 
-def _icon(ext: str):
-    return _SHARE_SVG.get(icon_for_ext(ext), _SHARE_SVG['file'])
+    if not real.is_relative_to(temp_dir):
+        is_auth, _ = verify_request_auth(request, response)
+        if not is_auth:
+            raise HTTPException(403, "Access denied: Path is outside quarantined temporary storage")
 
-@app.get("/api/v1/share/browse_html")
-async def share_browse_html(request: Request):
-    path = request.query_params.get("path", "")
-    root_raw = request.query_params.get("root") or path
-    real = os.path.abspath(path) if path else ""
-    root_abs = os.path.abspath(root_raw)
-    if not real or not os.path.isdir(real):
-        detail = f"Directory not found: {htmlmod.escape(real)}"
-        return HTMLResponse(_error_html(detail), status_code=404)
+    if not real.is_file():
+        raise HTTPException(404, "File not found")
 
-    css = _player_css()
-    dirname = htmlmod.escape(os.path.basename(real) or real)
+    filename = real.name
+    safe_name = filename.encode("ascii", "ignore").decode("ascii") or "download"
+    encoded_name = urllib.parse.quote(filename, safe="")
+    return FileResponse(
+        str(real),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="{safe_name}"; filename*=UTF-8\'\'{encoded_name}'
+        },
+    )
 
-    entries = []
-    for name in sorted(os.listdir(real), key=str.lower):
-        full = os.path.join(real, name)
-        is_dir = os.path.isdir(full)
-        ext = os.path.splitext(name)[1].lower()
-        if is_dir:
-            meta = "Directory"
-            icon = _SHARE_SVG['folder']
-            link = f"/api/v1/share/browse_html?path={urllib.parse.quote(os.path.abspath(full))}&root={urllib.parse.quote(root_abs)}"
-        else:
-            sz = 0
-            try:
-                sz = os.path.getsize(full)
-            except Exception:
-                pass
-            meta = human_size(sz)
-            icon = _icon(ext)
-            link = f"/api/v1/share/player?path={urllib.parse.quote(os.path.abspath(full))}"
-        entries.append((name, icon, link, meta))
-
-    rows = ""
-    is_root = os.path.normpath(real) == os.path.normpath(root_abs)
-    if not is_root:
-        parent = os.path.normpath(os.path.dirname(real))
-        if not parent.startswith(root_abs + os.sep) and parent != root_abs:
-            parent = root_abs
-        p_enc = urllib.parse.quote(parent)
-        rows += f'<li class="file-item parent-dir"><a class="file-link" href="/api/v1/share/browse_html?path={p_enc}&root={urllib.parse.quote(root_abs)}"><div class="icon-box">{_SHARE_SVG["back"]}</div><div class="info"><span class="name">Go Back</span><span class="meta">Parent Directory</span></div></a></li>'
-    else:
-        rows += f'<li class="file-item parent-dir"><a class="file-link" href="/web/"><div class="icon-box">{_SHARE_SVG["back"]}</div><div class="info"><span class="name">Back to Orchestrator</span><span class="meta">Return to task panel</span></div></a></li>'
-
-    for name, icon, link, meta in entries:
-        rows += f'<li class="file-item"><a class="file-link" href="{link}"><div class="icon-box">{icon}</div><div class="info"><span class="name">{htmlmod.escape(name)}</span><span class="meta">{meta}</span></div></a></li>'
-
-    html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>{dirname} - TetoDL</title>
-<style>{css}</style>
-</head>
-<body>
-<div class="branding"><h1>TetoDL Download</h1><p>Task Results</p></div>
-<div class="glass-container">
-<div class="header-section">
-<div class="path-header">{_SHARE_SVG["folder"]} <span>{dirname}</span></div>
-<input type="text" class="search-box" onkeyup="filterList()" placeholder="Type to search...">
-</div>
-<div class="scroll-area"><ul class="file-list" id="fileList">{rows}</ul></div>
-</div>
-<div class="footer">TetoDL Orchestrator — Task Results</div>
-<script>{_player_js()}</script>
-</body>
-</html>"""
-    return HTMLResponse(html)
-
-
-# --- 7. SHARE PLAYER (full HTML player page with metadata) ---
-
-_SVG_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>'
-_SVG_PLAY = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
-_SVG_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
-_SVG_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>'
-_SVG_MUSIC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'
-
-def _player_css() -> str:
-    p = Path(__file__).resolve().parent.parent / "static" / "styles.css"
-    return p.read_text() if p.exists() else ""
-
-def _player_js() -> str:
-    p = Path(__file__).resolve().parent.parent / "static" / "player.js"
-    return p.read_text() if p.exists() else ""
-
-def _get_meta(path: str) -> dict:
-    import base64
-    meta = {"title": "", "artist": "", "album": "", "cover_b64": "", "cover_mime": "image/jpeg"}
-    try:
-        ext = os.path.splitext(path)[1].lower()
-        if ext == ".mp3":
-            from mutagen.id3 import APIC
-            from mutagen.mp3 import MP3
-            a: Any = MP3(path)
-            meta["title"] = str(a.tags.get("TIT2", "")) if a.tags else ""
-            meta["artist"] = str(a.tags.get("TPE1", "")) if a.tags else ""
-            meta["album"] = str(a.tags.get("TALB", "")) if a.tags else ""
-            if a.tags:
-                for t in a.tags.values():
-                    if isinstance(t, APIC):
-                        meta["cover_b64"] = base64.b64encode(t.data).decode()  # type: ignore[attr-defined]
-                        meta["cover_mime"] = t.mime  # type: ignore[attr-defined]
-                        break
-        elif ext == ".m4a":
-            from mutagen.mp4 import MP4
-            a = MP4(path)
-            meta["title"] = a.get("\xa9nam", [""])[0]
-            meta["artist"] = a.get("\xa9ART", [""])[0]
-            meta["album"] = a.get("\xa9alb", [""])[0]
-            if "covr" in a:
-                d = a["covr"][0]
-                if isinstance(d, bytes):
-                    meta["cover_b64"] = base64.b64encode(d).decode()
-                    meta["cover_mime"] = "image/png" if d[:8] == b"\x89PNG\r\n\x1a\n" else "image/jpeg"
-        elif ext == ".flac":
-            from mutagen.flac import FLAC
-            a = FLAC(path)
-            meta["title"] = a.get("title", [""])[0]
-            meta["artist"] = a.get("artist", [""])[0]
-            meta["album"] = a.get("album", [""])[0]
-            if a.pictures:
-                meta["cover_b64"] = base64.b64encode(a.pictures[0].data).decode()
-                meta["cover_mime"] = a.pictures[0].mime
-        elif ext == ".opus":
-            from mutagen.oggopus import OggOpus
-            a = OggOpus(path)
-            meta["title"] = a.get("title", [""])[0]
-            meta["artist"] = a.get("artist", [""])[0]
-            meta["album"] = a.get("album", [""])[0]
-    except Exception:
-        pass 
-    return meta
-
-def _error_html(detail: str) -> str:
-    """Return a standalone HTML error page matching the daemon's glassmorphism theme."""
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Error - TetoDL Player</title>
-<style>
-*{{margin:0;padding:0;box-sizing:border-box}}
-body{{font-family:'Outfit',-apple-system,sans-serif;background:#0f172a;color:#fff;height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px}}
-.glass{{background:rgba(20,20,35,0.65);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.1);border-radius:24px;padding:30px;max-width:480px;text-align:center}}
-h1{{color:#f43f5e;margin-bottom:12px;font-size:1.3rem}}
-p{{color:#94a3b8;font-size:0.9rem;word-break:break-all}}
-</style>
-</head>
-<body>
-<div class="glass">
-<h1>Cannot Open Player</h1>
-<p>{htmlmod.escape(detail)}</p>
-</div>
-</body>
-</html>"""
-
-
-@app.get("/api/v1/share/player")
-async def share_player(request: Request):
-    path = request.query_params.get("path", "")
-    if not path:
-        return HTMLResponse(_error_html("Missing file path"), status_code=400)
-    real = os.path.abspath(path)
-    if not os.path.isfile(real):
-        detail = f"File not found: {htmlmod.escape(real)}"
-        return HTMLResponse(_error_html(detail), status_code=404)
-
-    filename = os.path.basename(real)
-    ext = os.path.splitext(filename)[1].lower()
-    from ...utils.formatters import AUDIO_EXTS as _AUDIO, VIDEO_EXTS as _VIDEO
-    is_video = ext in _VIDEO
-    is_audio = ext in _AUDIO
-    stream_url = f"/api/v1/share/stream?path={urllib.parse.quote(real)}"
-    back_url = request.headers.get("referer", "/web/")
-
-    meta = _get_meta(real) if is_audio else {}
-    title = htmlmod.escape(meta.get("title") or filename)
-    artist = htmlmod.escape(meta.get("artist") or "")
-    album = htmlmod.escape(meta.get("album") or "")
-    cover_b64 = meta.get("cover_b64", "")
-
-    if is_video:
-        media_html = f'<div class="video-container"><video id="mediaElement" class="video-element" src="{stream_url}" playsinline preload="metadata"></video></div>'
-    elif is_audio and cover_b64:
-        mime = meta.get("cover_mime", "image/jpeg")
-        media_html = f'<div id="mediaCover" class="media-cover" style="background-image:none"><img src="data:{mime};base64,{cover_b64}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:30px"></div><audio id="mediaElement" src="{stream_url}" preload="metadata"></audio>'
-    elif is_audio:
-        media_html = f'<div id="mediaCover" class="media-cover">{_SVG_MUSIC}</div><audio id="mediaElement" src="{stream_url}" preload="metadata"></audio>'
-    else:
-        media_html = f'<div class="video-container"><video id="mediaElement" class="video-element" src="{stream_url}" playsinline preload="metadata"></video></div>'
-
-    meta_lines = ""
-    if title and title != htmlmod.escape(filename):
-        meta_lines += f'<div class="media-title-large">{title}</div>'
-    if artist:
-        meta_lines += f'<div class="media-artist">{artist}</div>'
-    if album:
-        meta_lines += f'<div class="media-album">{album}</div>'
-
-    css = _player_css()
-    js = _player_js()
-
-    html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>{htmlmod.escape(filename)} - TetoDL</title>
-<style>{css}</style>
-</head>
-<body>
-<div class="branding"><h1>TetoDL Player</h1><p>Secured Stream</p></div>
-<div class="glass-container">
-<div class="player-layout">
-<div class="header-section">
-<div class="path-header">
-<a href="{htmlmod.escape(back_url)}" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:8px;width:100%">
-{_SVG_BACK} <span>Back to Orchestrator</span>
-</a>
-</div>
-</div>
-<div class="player-content">
-{media_html}
-{meta_lines if meta_lines else f'<div class="media-title-large">{htmlmod.escape(filename)}</div>'}
-<div class="custom-controls">
-<input type="range" id="progressBar" min="0" max="100" value="0" step="0.1">
-<div class="time-labels"><span id="currTime">0:00</span><span id="totalTime">0:00</span></div>
-<div class="btn-row">
-<a href="/api/v1/share/download?path={urllib.parse.quote(real)}" download="{htmlmod.escape(filename)}" class="btn-dl">{_SVG_DOWNLOAD}<span>Save</span></a>
-<button id="playBtn" class="btn-control btn-play">{_SVG_PLAY}</button>
-<div style="width:20px"></div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="footer">TetoDL Orchestrator - Secure Stream</div>
-<script>{js}</script>
-</body>
-</html>"""
-    return HTMLResponse(html)
-
-
-# --- 7. SHARE LAUNCH (start background uvicorn on new port) ---
-@app.post("/api/v1/share/launch")
-async def share_launch(request: Request):
-    data = await request.json()
-    path = data.get("path", "")
-    norm = os.path.abspath(path) if path else ""
-
-    if not norm or not os.path.exists(norm):
-        raise HTTPException(400, "Path not found")
-
-    if norm in share_launchers:
-        return {"url": share_launchers[norm]["url"]}
-
-    if os.path.isfile(norm):
-        serve_root = os.path.dirname(norm)
-        serve_file = os.path.basename(norm)
-    elif os.path.isdir(norm):
-        serve_root = norm
-        serve_file = None
-    else:
-        raise HTTPException(400, "Not a file or directory")
-
-    ip = get_best_ip()
-    share_app = FastAPI()
-    share_app.include_router(create_share_router(serve_root))
-
-    port = find_free_port(8989)
-    if port is None:
-        raise HTTPException(500, "No free ports available")
-
-    def _run():
-        try:
-            uvicorn.run(share_app, host="0.0.0.0", port=port, log_level="error")
-        except Exception:
-            pass
-
-    t = threading.Thread(target=_run, daemon=True)
-    t.start()
-
-    url = f"http://{ip}:{port}/{urllib.parse.quote(serve_file)}" if serve_file else f"http://{ip}:{port}/"
-
-    # Tunggu server siap (max 5 detik)
-    import time as _time
-    import urllib.error as _uerr
-    import urllib.request as _ureq
-    deadline = _time.time() + 5
-    ready = False
-    while _time.time() < deadline:
-        try:
-            _ureq.urlopen(f"http://127.0.0.1:{port}/", timeout=1)
-            ready = True
-            break
-        except (_uerr.URLError, ConnectionRefusedError, OSError):
-            _time.sleep(0.15)
-    if not ready:
-        raise HTTPException(500, "Server failed to start in time")
-
-    share_launchers[norm] = {"url": url, "thread": t, "port": port}
-    return {"url": url, "port": port, "ip": ip}
 
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")

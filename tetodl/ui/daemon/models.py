@@ -57,3 +57,7 @@ class DownloadRequest(BaseModel):
 
 class PreviewRequest(BaseModel):
     url: str = Field(..., description="Media URL to preview")
+
+
+class AuthVerifyRequest(BaseModel):
+    password: str = Field(..., description="Admin password to verify")

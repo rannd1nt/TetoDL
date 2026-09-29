@@ -143,7 +143,7 @@
       "extracting": "Extracting content...",
       "extracted": "Successfully extracted {count} {type}",
       "found_playlist": "Found {count} {type} in playlist/album: {title}",
-      "simple_mode_start": "Simple Mode: Starting {type} download → {path}",
+      "simple_mode_start": "Starting {type} download → {path}",
       "start_download": "Starting {type} download → {path}",
       "checking_existing": "Checking existing file...",
       "file_exists": "File already exists",
@@ -457,7 +457,7 @@
   "spot": {
     "invalid_url": "Invalid Spotify URL.",
     "no_internet": "No internet connection or connection is unstable.",
-    "simple_mode_download": "Simple Mode: Downloading directly to {path}",
+    "simple_mode_download": "Downloading directly to {path}",
     "cancelled": "Cancelled.",
     "type_detected": "Spotify {type} detected",
     "classification_failed": "URL Classification failed, unknown URL.",

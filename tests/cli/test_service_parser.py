@@ -144,3 +144,17 @@ class TestServiceSubcommand:
         assert handled is True
         assert isinstance(result, CliExit)
         mock_sub.assert_called_once()
+
+    @patch("tetodl.ui.cli.parser.sys.argv",
+           ["tetodl", "service", "daemon", "restart"])
+    def test_daemon_restart_routes(self):
+        """``service daemon restart`` calls manager.restart."""
+        from tetodl.ui.cli.parser import CLIHandler
+
+        handler = CLIHandler()
+        manager = MagicMock()
+        with patch("tetodl.ui.daemon.service.get_service_manager",
+                   return_value=manager):
+            handler._handle_service_subcommand()
+        manager.restart.assert_called_once()
+

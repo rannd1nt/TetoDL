@@ -50,12 +50,18 @@ SVG = {
     'pause': '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'
 }
 
-def _resolve_path(root: str, subpath: str) -> str:
+def _resolve_path(root: str, subpath: str, flat: bool = False, no_parent: bool = True) -> str:
     root = os.path.abspath(root)
     safe = urllib.parse.unquote(subpath)
     full = os.path.normpath(os.path.join(root, safe))
-    if not full.startswith(root):
+    if no_parent and not (full == root or full.startswith(root + os.sep)):
         raise HTTPException(403, "Path traversal denied")
+    if flat and full != root:
+        parent = os.path.dirname(full)
+        if parent != root:
+            raise HTTPException(403, "Subdirectory access denied in flat mode")
+        if os.path.isdir(full):
+            raise HTTPException(403, "Directory navigation denied in flat mode")
     return full
 
 
@@ -64,26 +70,28 @@ def _classify(ext: str):
     return kind, SVG.get(kind, SVG['file'])
 
 
-def render_dir_listing(serve_root: str, display_path: str, entries: list) -> str:
+def render_dir_listing(serve_root: str, display_path: str, entries: list, flat: bool = False) -> str:
     displaypath = html.escape(display_path, quote=False)
+    badge = ' <span style="font-size:0.75rem;opacity:0.6;font-weight:normal">(Flat View)</span>' if flat else ""
     r = []
     r.append('<!DOCTYPE html><html lang="en">')
     r.append(f'<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"><title>TetoDL Share</title><style>{_CSS}</style></head>')
-    r.append('<body><div class="branding"><h1>TetoDL Local Share</h1><p>by <span>rannd1nt</span></p></div><div class="glass-container">')
+    r.append(f'<body><div class="branding"><h1>TetoDL Local Share</h1><p>by <span>rannd1nt</span>{badge}</p></div><div class="glass-container">')
     r.append('<div class="header-section">')
     r.append(f'<div class="path-header">{SVG["folder"]} <span>{displaypath}</span></div>')
     r.append('<input type="text" id="searchInput" class="search-box" onkeyup="filterList()" placeholder="Type to search...">')
     r.append('</div><div class="scroll-area"><ul class="file-list" id="fileList">')
 
-    rel = display_path.replace(serve_root, "").lstrip("/")
-    if rel:
-        parent = os.path.dirname(rel)
-        if not parent:
-            parent_route = "/"
-        else:
-            parent_route = "/" + urllib.parse.quote(parent)
-        r.append(f'<li class="file-item parent-dir"><a class="file-link" href="{parent_route}">')
-        r.append(f'<div class="icon-box">{SVG["back"]}</div><div class="info"><span class="name">Go Back</span><span class="meta">Parent Directory</span></div></a></li>')
+    if not flat:
+        rel = display_path.replace(serve_root, "").lstrip("/")
+        if rel:
+            parent = os.path.dirname(rel)
+            if not parent:
+                parent_route = "/"
+            else:
+                parent_route = "/" + urllib.parse.quote(parent)
+            r.append(f'<li class="file-item parent-dir"><a class="file-link" href="{parent_route}">')
+            r.append(f'<div class="icon-box">{SVG["back"]}</div><div class="info"><span class="name">Go Back</span><span class="meta">Parent Directory</span></div></a></li>')
 
     entries.sort(key=lambda e: (not e['is_dir'], e['name'].lower()))
     for e in entries:
@@ -163,12 +171,14 @@ def render_player_page(file_path: str, serve_root: str) -> str:
     return html_content
 
 
-def list_entries(real_path: str) -> list:
+def list_entries(real_path: str, flat: bool = False) -> list:
     """Return JSON-serializable list of directory entries."""
     entries = []
     for name in sorted(os.listdir(real_path), key=str.lower):
         full = os.path.join(real_path, name)
         is_dir = os.path.isdir(full)
+        if flat and is_dir:
+            continue
         entry = {'name': name, 'is_dir': is_dir}
         if not is_dir:
             try:
@@ -237,7 +247,7 @@ def _guess_mime(path: str) -> str:
     return mimes.get(ext, 'application/octet-stream')
 
 
-def create_share_router(serve_root: str) -> APIRouter:
+def create_share_router(serve_root: str, flat: bool = False, no_parent: bool = True) -> APIRouter:
     """Create an APIRouter that serves the given directory (file browser + player)."""
     serve_root = os.path.abspath(serve_root)
     if not os.path.isdir(serve_root):
@@ -247,21 +257,23 @@ def create_share_router(serve_root: str) -> APIRouter:
 
     @router.get("/")
     async def share_index():
-        entries = list_entries(serve_root)
-        html_content = render_dir_listing(serve_root, "/", entries)
+        entries = list_entries(serve_root, flat=flat)
+        html_content = render_dir_listing(serve_root, "/", entries, flat=flat)
         return HTMLResponse(html_content)
 
     @router.get("/{path:path}")
     async def share_serve(path: str, request: Request):
-        full = _resolve_path(serve_root, path)
+        full = _resolve_path(serve_root, path, flat=flat, no_parent=no_parent)
 
         if not os.path.exists(full):
             raise HTTPException(404)
 
         if os.path.isdir(full):
-            entries = list_entries(full)
+            if flat:
+                raise HTTPException(403, "Subdirectory access disabled in flat mode")
+            entries = list_entries(full, flat=flat)
             rel_display = "/" + path if path else "/"
-            html_content = render_dir_listing(serve_root, rel_display, entries)
+            html_content = render_dir_listing(serve_root, rel_display, entries, flat=flat)
             return HTMLResponse(html_content)
 
         ext = os.path.splitext(full)[1].lower()

@@ -183,3 +183,129 @@ class TestCLIParser:
         assert isinstance(result, CliDownload)
         assert result.session.is_spotify is True
         assert result.session.media_type == "thumbnail"
+
+    def test_share_subcommand_invoked(self, tmp_path):
+        """tetodl share [PATH] invokes standalone share handler with flat and no_parent flags."""
+        from tetodl.ui.cli.parser import CLIHandler
+
+        share_target = tmp_path / "share_folder"
+        share_target.mkdir()
+
+        with patch("tetodl.ui.cli.parser.sys.argv", ["tetodl", "share", str(share_target), "--flat"]):
+            with patch("tetodl.ui.cli.network.start_share_server") as mock_start:
+                handler = CLIHandler()
+                handled, result = handler.parse()
+                assert handled is True
+                assert isinstance(result, CliExit)
+                mock_start.assert_called_once()
+                args, kwargs = mock_start.call_args
+                assert args[0] == str(share_target.resolve())
+                assert kwargs.get("flat") is True
+                assert kwargs.get("no_parent") is True
+
+    def test_config_subcommand_path(self, capsys, tmp_path):
+        """tetodl config path prints config file path."""
+        from tetodl.ui.cli.parser import CLIHandler
+
+        cfg_file = tmp_path / "tetodl.conf"
+        with patch("tetodl.ui.cli.parser.sys.argv", ["tetodl", "config", "path"]):
+            with patch("tetodl.core.domain.server_config.ensure_default_server_config", return_value=cfg_file):
+                handler = CLIHandler()
+                handled, result = handler.parse()
+                assert handled is True
+                assert isinstance(result, CliExit)
+                captured = capsys.readouterr()
+                assert str(cfg_file) in captured.out
+
+    def test_config_subcommand_show(self, capsys, tmp_path):
+        """tetodl config show prints config content."""
+        from tetodl.ui.cli.parser import CLIHandler
+
+        cfg_file = tmp_path / "tetodl.conf"
+        cfg_file.write_text("[server]\nhost = '127.0.0.1'\n", encoding="utf-8")
+        with patch("tetodl.ui.cli.parser.sys.argv", ["tetodl", "config", "show"]):
+            with patch("tetodl.core.domain.server_config.ensure_default_server_config", return_value=cfg_file):
+                handler = CLIHandler()
+                handled, result = handler.parse()
+                assert handled is True
+                assert isinstance(result, CliExit)
+                captured = capsys.readouterr()
+                assert "127.0.0.1" in captured.out
+
+    def test_config_subcommand_edit(self, tmp_path):
+        """tetodl config edit spawns editor with config path."""
+        from tetodl.ui.cli.parser import CLIHandler
+
+        cfg_file = tmp_path / "tetodl.conf"
+        cfg_file.write_text("", encoding="utf-8")
+        with patch("tetodl.ui.cli.parser.sys.argv", ["tetodl", "config", "edit"]):
+            with patch("tetodl.core.domain.server_config.ensure_default_server_config", return_value=cfg_file):
+                with patch("tetodl.ui.cli.parser.subprocess.run") as mock_run:
+                    with patch.dict("os.environ", {"EDITOR": "myeditor"}):
+                        handler = CLIHandler()
+                        handled, result = handler.parse()
+                        assert handled is True
+                        assert isinstance(result, CliExit)
+                        mock_run.assert_called_once_with(["myeditor", str(cfg_file)], check=True)
+
+    def test_system_subcommand_update_ytdlp(self):
+        """tetodl system update-ytdlp calls maintenance.update_ytdlp."""
+        from tetodl.ui.cli.parser import CLIHandler
+
+        with patch("tetodl.ui.cli.parser.sys.argv", ["tetodl", "system", "update-ytdlp"]):
+            with patch("tetodl.core.maintenance.update_ytdlp") as mock_update:
+                handler = CLIHandler()
+                handled, result = handler.parse()
+                assert handled is True
+                assert isinstance(result, CliExit)
+                mock_update.assert_called_once()
+
+    def test_history_subcommand_routes(self):
+        """tetodl history calls render_history_view."""
+        from tetodl.ui.cli.parser import CLIHandler
+
+        with patch("tetodl.ui.cli.parser.sys.argv", ["tetodl", "history", "15"]):
+            with patch("tetodl.core.domain.history.load_history"):
+                with patch("tetodl.core.domain.config.load_config"):
+                    with patch("tetodl.ui.tui.analytics.render_history_view") as mock_hist:
+                        handler = CLIHandler()
+                        handled, result = handler.parse()
+                        assert handled is True
+                        assert isinstance(result, CliExit)
+                        mock_hist.assert_called_once_with(15, False, None)
+
+    def test_analytics_subcommand_routes(self):
+        """tetodl analytics calls render_analytics_view."""
+        from tetodl.ui.cli.parser import CLIHandler
+
+        with patch("tetodl.ui.cli.parser.sys.argv", ["tetodl", "analytics"]):
+            with patch("tetodl.core.domain.config.load_config"):
+                with patch("tetodl.ui.tui.analytics.render_analytics_view") as mock_ana:
+                    handler = CLIHandler()
+                    handled, result = handler.parse()
+                    assert handled is True
+                    assert isinstance(result, CliExit)
+                    mock_ana.assert_called_once()
+
+    def test_search_subcommand_rewrites_to_clisearch(self):
+        """tetodl search <QUERY> produces CliSearch."""
+        from tetodl.ui.cli.parser import CLIHandler
+
+        with patch("tetodl.ui.cli.parser.sys.argv", ["tetodl", "search", "test song"]):
+            handler = CLIHandler()
+            handled, result = handler.parse()
+            assert handled is False
+            assert isinstance(result, CliSearch)
+            assert result.query == "test song"
+
+    def test_interactive_flag_produces_climenu(self):
+        """tetodl -i produces CliMenu."""
+        from tetodl.ui.cli.parser import CLIHandler
+
+        with patch("tetodl.ui.cli.parser.sys.argv", ["tetodl", "-i"]):
+            handler = CLIHandler()
+            handled, result = handler.parse()
+            assert handled is False
+            assert isinstance(result, CliMenu)
+
+

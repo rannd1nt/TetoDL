@@ -46,6 +46,10 @@ class ServiceManager(abc.ABC):
     def logs(self, tail: int, follow: bool) -> int:
         ...
 
+    @abc.abstractmethod
+    def restart(self) -> int:
+        ...
+
     def get_executable_path(self) -> str:
         tetodl_path = shutil.which("tetodl")
         if tetodl_path:
@@ -243,6 +247,28 @@ WantedBy=default.target
         except KeyboardInterrupt:
             pass
         return 0
+
+    def restart(self) -> int:
+        console.proc("Restarting TetoDL daemon service (systemd)...")
+        service_file = self._service_file()
+        if not service_file.exists():
+            console.err(Keys.daemon.daemon_not_installed)
+            return 1
+        try:
+            subprocess.run(
+                ["systemctl", "--user", "restart", self.SERVICE_NAME],
+                check=True,
+                stderr=subprocess.DEVNULL,
+            )
+            time.sleep(0.5)
+            if self._is_active():
+                console.ok("Daemon service restarted successfully.")
+                return 0
+            console.err("Daemon service failed to start after restart.")
+            return 1
+        except Exception as e:
+            console.err(f"Failed to restart daemon service: {e}")
+            return 1
 
 
 class WindowsServiceManager(ServiceManager):
@@ -491,6 +517,23 @@ class WindowsServiceManager(ServiceManager):
                 pass
         return 0
 
+    def restart(self) -> int:
+        console.proc("Restarting TetoDL daemon service (Windows)...")
+        if not self._conf_file().exists() and not self._pid_file().exists():
+            console.err(Keys.daemon.daemon_not_installed)
+            return 1
+        host = "0.0.0.0"
+        port = 7370
+        try:
+            if self._conf_file().exists():
+                data = json.loads(self._conf_file().read_text(encoding="utf-8"))
+                host = data.get("host", host)
+                port = int(data.get("port", port))
+        except Exception:
+            pass
+        self._stop_old()
+        return self.setup(host, port)
+
 
 class NullServiceManager(ServiceManager):
     """Stub manager for unsupported platforms (Termux, WSL, etc.)."""
@@ -511,6 +554,10 @@ class NullServiceManager(ServiceManager):
     def logs(self, tail: int, follow: bool) -> int:
         console.warn(Keys.service.not_supported)
         return 1
+
+    def restart(self) -> int:
+        console.warn(Keys.service.not_supported)
+        return 0
 
 
 _service_manager: ServiceManager | None = None

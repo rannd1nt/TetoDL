@@ -1,17 +1,3 @@
-# Copyright 2026 rannd1nt
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 """AUTO-GENERATED FILE. DO NOT EDIT."""
 from typing import Any, TypeAlias, Tuple, Dict, Union
 
@@ -623,6 +609,24 @@ class _ServiceWindowsSpawnedCallable:
         """
         return ("service.windows_spawned", {"pid": pid})
 
+class _ServiceWindowsSpawnExitedCallable:
+    """
+    [Callable Props Type] WindowsSpawnExited
+    
+    Original template: "Daemon exited immediately. See log: {log}"
+    """
+    def __call__(self, *, log: Any) -> tuple[str, dict]:
+        """
+        Formats the translation string.
+        
+        Args:
+            log (Any): Dynamic value for {log}.
+        
+        Returns:
+            tuple[str, dict]: Key path and formatting dictionary.
+        """
+        return ("service.windows_spawn_exited", {"log": log})
+
 class _ServiceWindowsKilledOldCallable:
     """
     [Callable Props Type] WindowsKilledOld
@@ -659,24 +663,6 @@ class _ServiceWindowsPortReclaimedCallable:
             tuple[str, dict]: Key path and formatting dictionary.
         """
         return ("service.windows_port_reclaimed", {"port": port, "pid": pid})
-
-class _ServiceWindowsSpawnExitedCallable:
-    """
-    [Callable Props Type] WindowsSpawnExited
-    
-    Original template: "Daemon exited immediately. See log: {log}"
-    """
-    def __call__(self, *, log: Any) -> tuple[str, dict]:
-        """
-        Formats the translation string.
-        
-        Args:
-            log (Any): Dynamic value for {log}.
-        
-        Returns:
-            tuple[str, dict]: Key path and formatting dictionary.
-        """
-        return ("service.windows_spawn_exited", {"log": log})
 
 class _ServiceFailedSystemdStartCallable:
     """
@@ -778,17 +764,17 @@ class _ServiceK:
     """[Props Type] WindowsShortcutCreated"""
     windows_shortcut_failed: str = "service.windows_shortcut_failed"
     """[Props Type] WindowsShortcutFailed"""
-    windows_spawn_exited: _ServiceWindowsSpawnExitedCallable = _ServiceWindowsSpawnExitedCallable()
-    """
-    [Callable Props Type] WindowsSpawnExited
-    
-    Original template: "Daemon exited immediately. See log: {log}"
-    """
     windows_spawned: _ServiceWindowsSpawnedCallable = _ServiceWindowsSpawnedCallable()
     """
     [Callable Props Type] WindowsSpawned
     
     Original template: "Daemon process started (PID {pid})."
+    """
+    windows_spawn_exited: _ServiceWindowsSpawnExitedCallable = _ServiceWindowsSpawnExitedCallable()
+    """
+    [Callable Props Type] WindowsSpawnExited
+    
+    Original template: "Daemon exited immediately. See log: {log}"
     """
     windows_killed_old: _ServiceWindowsKilledOldCallable = _ServiceWindowsKilledOldCallable()
     """
@@ -1329,7 +1315,7 @@ class _SpotSimpleModeDownloadCallable:
     """
     [Callable Props Type] SimpleModeDownload
     
-    Original template: "Simple Mode: Downloading directly to {path}"
+    Original template: "Downloading directly to {path}"
     """
     def __call__(self, *, path: Any) -> tuple[str, dict]:
         """
@@ -1427,7 +1413,7 @@ class _SpotK:
     """
     [Callable Props Type] SimpleModeDownload
     
-    Original template: "Simple Mode: Downloading directly to {path}"
+    Original template: "Downloading directly to {path}"
     """
     cancelled: str = "spot.cancelled"
     """[Props Type] Cancelled"""
@@ -2064,8 +2050,6 @@ class _MaintK:
     """[Props Type] UninstallWarning"""
     uninstall_details: str = "maint.uninstall_details"
     """[Props Type] UninstallDetails"""
-    stopping_daemon: str = "maint.stopping_daemon"
-    """[Props Type] StoppingDaemon"""
     invalid_choice_aborting: str = "maint.invalid_choice_aborting"
     """[Props Type] InvalidChoiceAborting"""
     alert_permanent_delete: str = "maint.alert_permanent_delete"
@@ -2136,6 +2120,8 @@ class _MaintK:
     
     Original template: "You are about to reset: {items}"
     """
+    stopping_daemon: str = "maint.stopping_daemon"
+    """[Props Type] StoppingDaemon"""
 
 class _CliStartingApiServerCallable:
     """
@@ -4027,7 +4013,7 @@ class _DownloadYoutubeSimpleModeStartCallable:
     """
     [Callable Props Type] SimpleModeStart
     
-    Original template: "Simple Mode: Starting {type} download → {path}"
+    Original template: "Starting {type} download → {path}"
     """
     def __call__(self, *, type: Any, path: Any) -> tuple[str, dict]:
         """
@@ -4526,7 +4512,7 @@ class _DownloadYoutubeK:
     """
     [Callable Props Type] SimpleModeStart
     
-    Original template: "Simple Mode: Starting {type} download → {path}"
+    Original template: "Starting {type} download → {path}"
     """
     start_download: _DownloadYoutubeStartDownloadCallable = _DownloadYoutubeStartDownloadCallable()
     """

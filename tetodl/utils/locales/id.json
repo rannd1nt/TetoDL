@@ -143,7 +143,7 @@
       "extracting": "Mengekstrak konten...",
       "extracted": "Berhasil mengekstrak {count} {type}",
       "found_playlist": "Ditemukan {count} {type} dalam playlist/album: {title}",
-      "simple_mode_start": "Simple Mode: Memulai download {type} → {path}...",
+      "simple_mode_start": "Memulai download {type} → {path}...",
       "start_download": "Mulai download {type} → {path}",
       "checking_existing": "Memeriksa existing file...",
       "file_exists": "File sudah ada",
@@ -457,7 +457,7 @@
   "spot": {
     "invalid_url": "URL Spotify tidak valid.",
     "no_internet": "Tidak ada koneksi internet atau koneksi tidak stabil.",
-    "simple_mode_download": "Simple Mode: Mendownload langsung ke {path}",
+    "simple_mode_download": "Mendownload langsung ke {path}",
     "cancelled": "Dibatalkan.",
     "type_detected": "Spotify {type} terdeteksi",
     "classification_failed": "Klasifikasi URL gagal, URL tidak dikenal.",

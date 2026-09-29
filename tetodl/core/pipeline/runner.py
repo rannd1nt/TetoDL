@@ -78,11 +78,7 @@ class MediaPipeline:
         if ctx.media_type == "video":
             label = f"video ({self._config.max_video_resolution})"
 
-        if self._config.simple_mode:
-            console.proc(Keys.download.youtube.simple_mode_start(
-                type=label, path=ctx.target_dir,
-            ))
-        else:
-            console.proc(Keys.download.youtube.start_download(
-                type=label, path=ctx.target_dir,
-            ))
+        console.proc(Keys.download.youtube.start_download(
+            type=label, path=ctx.target_dir,
+        ))
+
