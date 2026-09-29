@@ -36,6 +36,7 @@ class TestDownloadRequest:
         assert req.items is None
         assert req.group is None
         assert req.m3u is False
+        assert req.zip is False
         assert req.cover is False
         assert req.metadata is False
         assert req.no_enrich is False
@@ -62,6 +63,7 @@ class TestDownloadRequest:
             items="1,2,5-7",
             group="My Folder",
             m3u=True,
+            zip=True,
             cover=True,
             metadata=False,
             no_enrich=True,
@@ -83,6 +85,7 @@ class TestDownloadRequest:
         assert req.items == "1,2,5-7"
         assert req.group == "My Folder"
         assert req.m3u is True
+        assert req.zip is True
         assert req.cover is True
         assert req.no_enrich is True
         assert req.lyrics is True

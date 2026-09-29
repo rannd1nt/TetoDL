@@ -113,7 +113,11 @@ def create_zip_archive(source_dir_path):
     parent_dir = os.path.dirname(abs_source)
     base_name = os.path.basename(abs_source)
     
-    output_base = os.path.join(parent_dir, base_name)
+    if os.path.isfile(abs_source):
+        base_name_no_ext, _ = os.path.splitext(base_name)
+        output_base = os.path.join(parent_dir, base_name_no_ext)
+    else:
+        output_base = os.path.join(parent_dir, base_name)
     
     try:
         console.proc(Keys.files.archiving_to(name=base_name))

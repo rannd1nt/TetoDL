@@ -33,6 +33,7 @@ class DownloadRequest(BaseModel):
     items: str | None = Field(None, description="Playlist items")
     group: str | bool | None = Field(None, description="Group downloads into a subfolder")
     m3u: bool = False
+    zip: bool = False
     cover: bool = False
     metadata: bool = False
     no_enrich: bool = False

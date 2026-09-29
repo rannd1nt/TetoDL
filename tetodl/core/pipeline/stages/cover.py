@@ -17,7 +17,7 @@ import os
 from tetodl.core.cover import CoverData, CoverService
 from tetodl.core.domain.models import CoverResult, LyricsMetadata, MediaInfo, PipelineContext
 from tetodl.core.domain.step import PipelineStep
-from tetodl.core.domain.tagger import embed_cover, embed_metadata_tags
+from tetodl.core.domain.tagger import embed_metadata, embed_metadata_tags
 from tetodl.core.pipeline.cleaners.title import clean_youtube_title
 from tetodl.utils.console import console
 from tetodl.utils.files import clean_temp_files
@@ -130,8 +130,7 @@ class CoverStep(PipelineStep[PipelineContext, PipelineContext]):
         console.proc(Keys.download.youtube.embedding_cover)
         meta = _basic_metadata(info, ctx)
 
-        if embed_cover(ctx.downloaded_file.path, path, ctx.config.audio_quality):
-            embed_metadata_tags(ctx.downloaded_file.path, ctx.config.audio_quality, meta)
+        if embed_metadata(ctx.downloaded_file.path, path, ctx.config.audio_quality, meta):
             console.ok(Keys.download.youtube.cover_success)
         else:
             console.err(Keys.download.youtube.cover_failed)

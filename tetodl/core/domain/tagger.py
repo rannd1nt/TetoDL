@@ -17,12 +17,37 @@ Audio metadata tagging utilities using Mutagen.
 Handles embedding of Lyrics, Cover Art, and ID3/MP4 tags.
 """
 import os
-from typing import Any
+import time
+from typing import Any, Callable, TypeVar
 
 from tetodl.utils.tracer import trace
 
 from ...utils.console import console
 from ...utils.i18n_keys import Keys
+
+T = TypeVar("T")
+
+
+def _retry_on_permission_error(func: Callable[[], T], max_attempts: int = 5, delay: float = 0.25) -> T:
+    """
+    Retries a callable if it raises PermissionError or OSError with errno 13 (EACCES).
+    This handles transient file locks on Windows caused by real-time antivirus scanners
+    (such as Windows Defender), Windows Search Indexer, or media players immediately
+    inspecting newly written media files.
+    """
+    last_err: Exception | None = None
+    for attempt in range(max_attempts):
+        try:
+            return func()
+        except (PermissionError, OSError) as e:
+            if isinstance(e, PermissionError) or getattr(e, "errno", None) == 13:
+                last_err = e
+                time.sleep(delay * (attempt + 1))
+            else:
+                raise
+    if last_err:
+        raise last_err
+    raise RuntimeError("Retry failed without capturing exception")
 
 try:
     # Import MP3 & ID3 Handlers
@@ -72,8 +97,7 @@ def embed_lyrics(file_path: str, lyrics_text: str) -> bool:
 
     ext = os.path.splitext(file_path)[1].lower()
 
-    try:
-        audio: ID3 | MP4 | FLAC
+    def _do_embed() -> bool:
         # === MP3 (USLT Frame) ===
         if ext == '.mp3':
             try:
@@ -88,24 +112,26 @@ def embed_lyrics(file_path: str, lyrics_text: str) -> bool:
 
         # === M4A (iTunes Atom) ===
         elif ext == '.m4a':
-            audio = MP4(file_path)
+            audio_m4a = MP4(file_path)
             # iTunes atom for lyrics is ©lyr
-            audio['\xa9lyr'] = lyrics_text
-            audio.save()
+            audio_m4a['\xa9lyr'] = lyrics_text
+            audio_m4a.save()
             return True
             
         # === FLAC (Vorbis Comment) ===
         elif ext == '.flac':
-            audio = FLAC(file_path)
-            audio['LYRICS'] = lyrics_text
-            audio.save()
+            audio_flac = FLAC(file_path)
+            audio_flac['LYRICS'] = lyrics_text
+            audio_flac.save()
             return True
             
+        return False
+
+    try:
+        return _retry_on_permission_error(_do_embed)
     except Exception as e:
         console.err(Keys.tagger.failed_embed_lyrics(error=e))
         return False
-        
-    return False
 
 @trace
 def _open_audio(audio_path: str, audio_format: str):
@@ -206,74 +232,62 @@ def _embed_tags_m4a(audio_m4a: MP4, metadata: dict[str, Any]):
 
 
 @trace
-def embed_cover(audio_path: str, thumbnail_path: str, audio_format: str) -> bool:
-    """Embed cover art image only (no text tags)."""
-    if not HAS_MUTAGEN:
-        console.err(Keys.tagger.mutagen_not_found_metadata)
-        return False
-    if not os.path.exists(audio_path) or not os.path.exists(thumbnail_path):
-        return False
-
-    try:
-        if audio_format == 'mp3':
-            audio = _open_audio(audio_path, audio_format)
-            tag_container = audio.tags if isinstance(audio, MP3) else audio
-            if tag_container is not None:
-                _embed_cover_mp3(tag_container, thumbnail_path)
-            _save_audio(audio, audio_format, audio_path)
-            return True
-
-        elif audio_format == 'm4a':
-            audio_m4a = _open_audio(audio_path, audio_format)
-            _embed_cover_m4a(audio_m4a, thumbnail_path)
-            _save_audio(audio_m4a, audio_format, audio_path)
-            return True
-
-    except Exception as e:
-        console.err(Keys.tagger.metadata_embedding_error(error=e))
-    return False
-
-
-@trace
-def embed_metadata_tags(audio_path: str, audio_format: str, metadata: dict[str, Any]) -> bool:
-    """Embed rich metadata text tags only (no cover art)."""
+def embed_metadata(
+    audio_path: str,
+    thumbnail_path: str | None,
+    audio_format: str,
+    metadata: dict[str, Any] | None = None,
+) -> bool:
+    """
+    Embeds cover art and/or metadata tags in a single read-modify-save operation.
+    Retries automatically if transient file locks are encountered (e.g. Windows Defender).
+    """
     if not HAS_MUTAGEN:
         console.err(Keys.tagger.mutagen_not_found_metadata)
         return False
     if not os.path.exists(audio_path):
         return False
-    if not metadata:
+    if not thumbnail_path and not metadata:
         return True
 
-    try:
+    def _do_embed() -> bool:
         if audio_format == 'mp3':
             audio = _open_audio(audio_path, audio_format)
             tag_container = audio.tags if isinstance(audio, MP3) else audio
             if tag_container is not None:
-                _embed_tags_mp3(tag_container, metadata)
+                if thumbnail_path and os.path.exists(thumbnail_path):
+                    _embed_cover_mp3(tag_container, thumbnail_path)
+                if metadata:
+                    _embed_tags_mp3(tag_container, metadata)
             _save_audio(audio, audio_format, audio_path)
             return True
 
         elif audio_format == 'm4a':
             audio_m4a = _open_audio(audio_path, audio_format)
-            _embed_tags_m4a(audio_m4a, metadata)
-            _save_audio(audio_m4a, audio_format, audio_path)
-            return True
+            if audio_m4a is not None:
+                if thumbnail_path and os.path.exists(thumbnail_path):
+                    _embed_cover_m4a(audio_m4a, thumbnail_path)
+                if metadata:
+                    _embed_tags_m4a(audio_m4a, metadata)
+                _save_audio(audio_m4a, audio_format, audio_path)
+                return True
 
+        return False
+
+    try:
+        return _retry_on_permission_error(_do_embed)
     except Exception as e:
         console.err(Keys.tagger.metadata_embedding_error(error=e))
-    return False
+        return False
 
 
 @trace
-def embed_metadata(
-    audio_path: str,
-    thumbnail_path: str,
-    audio_format: str,
-    metadata: dict[str, Any] | None = None
-) -> bool:
-    """Embed cover art + metadata (wrapper around embed_cover + embed_metadata_tags)."""
-    ok = embed_cover(audio_path, thumbnail_path, audio_format)
-    if metadata:
-        ok = embed_metadata_tags(audio_path, audio_format, metadata) and ok
-    return ok
+def embed_cover(audio_path: str, thumbnail_path: str, audio_format: str) -> bool:
+    """Embed cover art image only (no text tags)."""
+    return embed_metadata(audio_path, thumbnail_path, audio_format, metadata=None)
+
+
+@trace
+def embed_metadata_tags(audio_path: str, audio_format: str, metadata: dict[str, Any]) -> bool:
+    """Embed rich metadata text tags only (no cover art)."""
+    return embed_metadata(audio_path, None, audio_format, metadata=metadata)

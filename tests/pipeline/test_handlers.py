@@ -221,3 +221,87 @@ class TestDownloadSpotify:
         result = download_spotify(url="https://open.spotify.com/track/x", session=session, config=config)
         assert result.success is False
         assert result.file_path is None
+
+
+class TestPlaylistZipHandling:
+    """Tests for playlist --zip auto-isolation and packaging behavior."""
+
+    def test_playlist_zip_isolates_and_cleans_temporary_folder(self, mocker, tmp_path):
+        from tetodl.core.pipeline.handlers import _handle_playlist
+
+        target_dir = str(tmp_path / "music")
+        playlist_dir = str(tmp_path / "music" / "My Playlist")
+        zip_file = str(tmp_path / "music" / "My Playlist.zip")
+
+        config = AppConfig(music_root=target_dir)
+        session = DownloadSession()
+
+        mocker.patch(
+            "tetodl.core.pipeline.handlers._playlist_sequential",
+            return_value=(3, 0, 0),
+        )
+        mock_zip = mocker.patch(
+            "tetodl.core.pipeline.handlers.create_zip_archive",
+            return_value=zip_file,
+        )
+        mock_rmtree = mocker.patch("shutil.rmtree")
+
+        result = _handle_playlist(
+            urls=["https://music.youtube.com/watch?v=1", "https://music.youtube.com/watch?v=2"],
+            content_title="My Playlist",
+            total_items=2,
+            target_dir=target_dir,
+            config=config,
+            session=session,
+            media_type="audio",
+            registry_media_type="audio",
+            is_youtube_music=True,
+            ui=mocker.MagicMock(),
+            group_folder=False,
+            zip_mode=True,
+        )
+
+        assert result.success is True
+        assert result.file_path == zip_file
+        mock_zip.assert_called_once_with(playlist_dir)
+        mock_rmtree.assert_called_once_with(playlist_dir)
+
+    def test_playlist_zip_with_group_preserves_folder(self, mocker, tmp_path):
+        from tetodl.core.pipeline.handlers import _handle_playlist
+
+        target_dir = str(tmp_path / "music")
+        playlist_dir = str(tmp_path / "music" / "My Playlist")
+        zip_file = str(tmp_path / "music" / "My Playlist.zip")
+
+        config = AppConfig(music_root=target_dir)
+        session = DownloadSession()
+
+        mocker.patch(
+            "tetodl.core.pipeline.handlers._playlist_sequential",
+            return_value=(2, 0, 0),
+        )
+        mock_zip = mocker.patch(
+            "tetodl.core.pipeline.handlers.create_zip_archive",
+            return_value=zip_file,
+        )
+        mock_rmtree = mocker.patch("shutil.rmtree")
+
+        result = _handle_playlist(
+            urls=["https://music.youtube.com/watch?v=1", "https://music.youtube.com/watch?v=2"],
+            content_title="My Playlist",
+            total_items=2,
+            target_dir=target_dir,
+            config=config,
+            session=session,
+            media_type="audio",
+            registry_media_type="audio",
+            is_youtube_music=True,
+            ui=mocker.MagicMock(),
+            group_folder=True,
+            zip_mode=True,
+        )
+
+        assert result.success is True
+        assert result.file_path == zip_file
+        mock_zip.assert_called_once_with(playlist_dir)
+        mock_rmtree.assert_not_called()

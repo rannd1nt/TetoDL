@@ -295,6 +295,7 @@ async def process_download(req: DownloadRequest, bg_tasks: BackgroundTasks):
         playlist_items=playlist_items,
         group_folder=req.group or False,
         m3u=req.m3u or False,
+        zip=req.zip or False,
         cover=req.cover or False,
         metadata=req.metadata or False,
         no_enrich=req.no_enrich or False,

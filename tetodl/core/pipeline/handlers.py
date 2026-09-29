@@ -745,6 +745,8 @@ def _handle_playlist(
         m3u_name = group_folder
     elif group_folder:
         custom_group_name = safe_title
+    elif zip_mode:
+        custom_group_name = safe_title
 
     final_dir = target_dir
     parent_if_staging: str | None = None
@@ -753,10 +755,11 @@ def _handle_playlist(
 
     if custom_group_name:
         final_dir = os.path.join(target_dir, custom_group_name)
-        try:
-            add_user_subfolder(target_dir, custom_group_name)
-        except Exception:
-            pass
+        if group_folder:
+            try:
+                add_user_subfolder(target_dir, custom_group_name)
+            except Exception:
+                pass
     elif share_mode:
         is_staging = True
         parent_if_staging = target_dir
@@ -825,15 +828,21 @@ def _handle_playlist(
             )
 
     final_path: str = final_dir
-    if zip_mode:
+    if zip_mode and success > 0:
         zip_path = create_zip_archive(final_dir)
         if zip_path:
             final_path = zip_path
-            if is_staging or (share_mode and not custom_group_name):
+            if is_staging or (share_mode and not group_folder) or not group_folder:
                 try:
                     shutil.rmtree(final_dir)
                 except Exception:
                     pass
+    elif not group_folder and final_dir != target_dir and os.path.exists(final_dir):
+        if not os.listdir(final_dir):
+            try:
+                shutil.rmtree(final_dir)
+            except Exception:
+                pass
 
     return DownloadResult(
         success=success > 0,
