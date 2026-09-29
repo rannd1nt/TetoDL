@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import asyncio
-import html as htmlmod
 import io
 import os
 import re
@@ -29,7 +28,7 @@ from typing import Any, Literal
 import uvicorn
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from ..cli.dispatch import execute_download

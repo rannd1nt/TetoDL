@@ -306,7 +306,6 @@ class CLIHandler:
 
         from ...core.domain.server_config import (
             ensure_default_server_config,
-            get_default_config_path,
         )
         from ...utils.console import console
         from ...utils.i18n_keys import Keys
@@ -321,7 +320,7 @@ class CLIHandler:
             if cfg_path.exists():
                 print(cfg_path.read_text(encoding='utf-8'))
             else:
-                console.warn(Keys.cli.file_not_found(path=str(cfg_path)))
+                console.warn(Keys.tagger.file_not_found(path=str(cfg_path)))
             return
 
         if args.subaction == 'edit':

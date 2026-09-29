@@ -68,6 +68,16 @@ def reset_history():
         console.err(Keys.core.failed_delete_history(error=e))
         return False
 
+def get_last_downloaded_file() -> str | None:
+    """Return the file path of the most recently downloaded existing file."""
+    load_history()
+    for item in reversed(_download_history):
+        if item.get('success') and item.get('file_path'):
+            fp = str(item['file_path'])
+            if os.path.exists(fp):
+                return fp
+    return None
+
 @trace
 def add_to_history(
         id, file_path, success, title, content_type, platform,

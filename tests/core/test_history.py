@@ -157,3 +157,18 @@ class TestHistory:
         stats = hist.get_history_stats()
         assert stats["yt_video"] == 1
         assert stats["total_duration"] == 120
+
+    def test_get_last_downloaded_file(self, tmp_path):
+        """get_last_downloaded_file returns path of most recent existing downloaded file."""
+        import tetodl.core.domain.history as hist
+
+        file1 = tmp_path / "song1.mp3"
+        file1.write_text("audio1")
+        file2 = tmp_path / "song2.mp3"
+        file2.write_text("audio2")
+
+        hist.add_to_history("v1", str(file1), True, "Song 1", "audio", "YT", "audio", 100)
+        hist.add_to_history("v2", str(file2), True, "Song 2", "audio", "YT", "audio", 120)
+
+        assert hist.get_last_downloaded_file() == str(file2)
+
