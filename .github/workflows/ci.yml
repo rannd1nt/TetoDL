@@ -2,8 +2,22 @@ name: CI/CD
 
 on:
   push:
+    branches: [main, staging]
+    tags: ['v*']
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.gitignore'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - 'NOTICE'
+      - '.gitignore'
   workflow_dispatch:
     inputs:
       release:
@@ -14,6 +28,10 @@ on:
         description: "Run full suite (incl E2E real YouTube download)?"
         type: boolean
         default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   PYTHON_VERSION: "3.12"
@@ -42,7 +60,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'pull_request') && fromJSON('["ubuntu-latest", "windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
         python: ["3.12"]
     runs-on: ${{ matrix.os }}
     steps:
@@ -64,7 +82,7 @@ jobs:
   test-integration:
     name: Integration (${{ matrix.os }})
     needs: [lint]
-    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && fromJSON(inputs.full_ci))
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -89,8 +107,8 @@ jobs:
 
   build:
     name: Build (${{ matrix.os }})
-    needs: [test-unit, test-integration]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: [test-unit]
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -154,7 +172,7 @@ jobs:
   verify-install-windows:
     name: Install Smoke (Windows)
     needs: [build]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     defaults:
       run:
@@ -192,7 +210,7 @@ jobs:
   verify-installer-windows:
     name: Install Script (Windows)
     needs: [build]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     defaults:
       run:
@@ -215,7 +233,7 @@ jobs:
   verify-installer-linux:
     name: Install Script (Linux)
     needs: [build]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -230,7 +248,7 @@ jobs:
   verify-installer-alpine:
     name: Install Script (Alpine)
     needs: [build]
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     container: alpine:latest
     steps:
@@ -265,7 +283,7 @@ jobs:
 
   release:
     name: Release
-    if: github.event_name == 'workflow_dispatch' && fromJSON(inputs.release)
+    if: (github.event_name == 'workflow_dispatch' && fromJSON(inputs.release)) || startsWith(github.ref, 'refs/tags/v')
     needs: [build]
     runs-on: ubuntu-latest
     permissions:
@@ -273,12 +291,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
-      - name: Generate tag
-        id: tag
-        run: echo "tag=v$(grep '^APP_VERSION' tetodl/constants.py | sed 's/.*\"\(.*\)\"/\1/')" >> $GITHUB_OUTPUT
+      - name: Resolve tag and prerelease status
+        id: meta
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="v$(grep '^APP_VERSION' tetodl/constants.py | sed 's/.*\"\(.*\)\"/\1/')"
+          fi
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          if [[ "${TAG}" == *"-rc"* || "${TAG}" == *"-beta"* || "${TAG}" == *"-staging"* ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.tag.outputs.tag }}
+          tag_name: ${{ steps.meta.outputs.tag }}
+          prerelease: ${{ steps.meta.outputs.prerelease == 'true' }}
           files: |
             tetodl-linux/tetodl*
             tetodl-windows/tetodl*

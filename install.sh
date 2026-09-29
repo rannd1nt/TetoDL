@@ -40,18 +40,36 @@ echo ""
 BINARY_NAME="tetodl-linux"
 
 # ─────────────────────────────────────────────────
-# 2. Install directory
+# 2. Install directory & Channel
 # ─────────────────────────────────────────────────
 INSTALL_DIR="${HOME}/.local/bin"
 mkdir -p "$INSTALL_DIR"
 
+CHANNEL="stable"
+for arg in "$@"; do
+    case "$arg" in
+        --staging|--beta|--prerelease)
+            CHANNEL="staging"
+            ;;
+    esac
+done
+
+if [ "${STAGING:-0}" = "1" ] || [ "${TETODL_CHANNEL:-}" = "staging" ]; then
+    CHANNEL="staging"
+fi
+
 # ─────────────────────────────────────────────────
-# 3. Fetch latest release
+# 3. Fetch release
 # ─────────────────────────────────────────────────
 REPO="rannd1nt/tetodl"
-API_URL="https://api.github.com/repos/${REPO}/releases/latest"
 
-echo -e "${YELLOW}  Fetching latest release...${NC}"
+if [ "$CHANNEL" = "staging" ]; then
+    echo -e "${YELLOW}  Fetching latest pre-release (Staging Channel)...${NC}"
+    API_URL="https://api.github.com/repos/${REPO}/releases"
+else
+    echo -e "${YELLOW}  Fetching latest release (Stable Channel)...${NC}"
+    API_URL="https://api.github.com/repos/${REPO}/releases/latest"
+fi
 
 if command -v curl &>/dev/null; then
     TAG=$(curl -sL "$API_URL" | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": "//; s/".*//')
@@ -67,7 +85,7 @@ if [ -z "$TAG" ]; then
     echo -e "${YELLOW}  Download manually from: https://github.com/${REPO}/releases${NC}"
     exit 1
 fi
-echo -e "${GREEN}  Latest version: $TAG${NC}"
+echo -e "${GREEN}  Version: $TAG [channel: $CHANNEL]${NC}"
 
 # ─────────────────────────────────────────────────
 # 4. Download binary

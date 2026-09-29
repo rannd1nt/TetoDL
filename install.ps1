@@ -8,7 +8,8 @@
 #>
 
 param(
-    [switch]$Force
+    [switch]$Force,
+    [switch]$Staging
 )
 
 $ProgressPreference = 'SilentlyContinue'
@@ -48,16 +49,25 @@ if (-not (Test-Path $installDir)) {
 }
 
 # ─────────────────────────────────────────────────
-# 3. Fetch latest release
+# 3. Fetch release & Channel
 # ─────────────────────────────────────────────────
-Write-Host ""
-Write-Host "  Fetching latest release..." -ForegroundColor Yellow
+$isStaging = $Staging.IsPresent -or ($env:STAGING -eq "1") -or ($env:TETODL_CHANNEL -eq "staging")
+$channelName = if ($isStaging) { "staging" } else { "stable" }
 
 $repo = "rannd1nt/tetodl"
-$apiUrl = "https://api.github.com/repos/$repo/releases/latest"
+if ($isStaging) {
+    Write-Host ""
+    Write-Host "  Fetching latest pre-release (Staging Channel)..." -ForegroundColor Yellow
+    $apiUrl = "https://api.github.com/repos/$repo/releases"
+} else {
+    Write-Host ""
+    Write-Host "  Fetching latest release (Stable Channel)..." -ForegroundColor Yellow
+    $apiUrl = "https://api.github.com/repos/$repo/releases/latest"
+}
 
 try {
-    $release = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "TetoDL-Installer" }
+    $res = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "TetoDL-Installer" }
+    $release = if ($isStaging -and ($res -is [array])) { $res[0] } else { $res }
     $tag = $release.tag_name
     $expectedSize = 0
     foreach ($a in $release.assets) {
@@ -66,7 +76,7 @@ try {
             break
         }
     }
-    Write-Host "  Latest version: $tag" -ForegroundColor Green
+    Write-Host "  Version: $tag [channel: $channelName]" -ForegroundColor Green
 }
 catch {
     Fail-Install "Failed to fetch release info: $_"
