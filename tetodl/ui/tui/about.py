@@ -49,7 +49,8 @@ def menu_about():
         info_content.append("Email  : ", style="bold bright_cyan")
         info_content.append("zahraandzakiits@gmail.com", style="white")
         info_content.append("\n\n")
-        info_content.append("Copyright (c) 2026 rannd1nt. All rights reserved.", style="white")
+        info_content.append("Copyright (c) 2026 rannd1nt. All rights reserved.\n", style="white")
+        info_content.append("Licensed under the Apache License, Version 2.0", style="dim white")
 
         console.rich.print(Padding(info_content, (0, 3)))
 

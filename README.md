@@ -7,7 +7,7 @@
   <p>
     <img src="https://img.shields.io/badge/Language-Python_3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
     <img src="https://img.shields.io/badge/Platform-Linux_%7C_Windows-0078D4?style=for-the-badge&logo=linux&logoColor=white" alt="Platform">
-    <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
+    <img src="https://img.shields.io/badge/License-Apache_2.0-blue?style=for-the-badge&logo=apache" alt="License">
     <img src="https://img.shields.io/badge/Version-2.3.4-orange?style=for-the-badge" alt="Version">
   </p>
 </div>
@@ -432,4 +432,4 @@ tetodl --reset all
 
 ## License
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for details.
+Distributed under the Apache License, Version 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE) for details.

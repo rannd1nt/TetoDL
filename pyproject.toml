@@ -7,9 +7,18 @@ name = "tetodl"
 dynamic = ["version"]
 description = "An User Friendly and Configurable TUI/CLI Media Downloader"
 authors = [{name = "rannd1nt"}]
-license = {text = "MIT"}
+license = {text = "Apache-2.0"}
 requires-python = ">=3.12"
 readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Multimedia :: Sound/Audio",
+]
 
 dependencies = [
     "yt-dlp>=2024.0.0",
