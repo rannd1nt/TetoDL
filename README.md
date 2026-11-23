@@ -432,4 +432,4 @@ tetodl --reset all
 
 ## License
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for details.
+Distributed under the Apache 2.0 License. See [LICENSE](LICENSE) for details.
